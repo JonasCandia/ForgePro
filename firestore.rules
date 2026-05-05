@@ -19,62 +19,73 @@ service cloud.firestore {
       return id is string && id.size() <= 128;
     }
 
-    // Exercicio Validation
-    function isValidExercicio(data) {
-      return data.keys().hasAll(['nome', 'grupoMuscular']) &&
-             data.keys().size() == 2 &&
-             data.nome is string && data.nome.size() <= 100 &&
-             data.grupoMuscular is string && data.grupoMuscular.size() <= 50;
+    // Validation Helpers
+    function isValidProfile(data) {
+      let required = ['nome', 'pesoAtualKg', 'alturaCm', 'objetivo'];
+      return data.keys().hasAll(required) &&
+             data.nome is string && data.nome.size() > 0 &&
+             data.pesoAtualKg is number && data.pesoAtualKg > 0 &&
+             data.objetivo in ['cutting', 'bulking', 'manutenção'];
     }
 
-    // Registro Validation
-    function isValidRegistro(data) {
-      let requiredFields = ['userId', 'data', 'exercicioId', 'exercicioNome', 'series', 'repeticoes', 'pesoKg', 'createdAt'];
-      return data.keys().hasAll(requiredFields) &&
+    function isValidWorkout(data) {
+      let required = ['userId', 'status', 'startTime', 'nomeTreino'];
+      return data.keys().hasAll(required) &&
              data.userId == request.auth.uid &&
-             data.data is string && 
-             data.exercicioId is string &&
-             data.exercicioNome is string && data.exercicioNome.size() <= 100 &&
-             data.series is int && data.series >= 0 &&
-             data.repeticoes is int && data.repeticoes >= 0 &&
-             data.pesoKg is number && data.pesoKg >= 0 &&
-             (data.createdAt == request.time || data.createdAt is timestamp) &&
-             (!data.keys().hasAny(['observacoes']) || (data.observacoes is string && data.observacoes.size() <= 500)) &&
-             (!data.keys().hasAny(['origem']) || (data.origem in ['Manual', 'Plano']));
+             data.status in ['in-progress', 'completed'] &&
+             data.startTime is timestamp;
     }
 
-    // Plano Validation
-    function isValidPlano(data) {
-      let requiredFields = ['userId', 'semana', 'diaDaSemana', 'nomeTreino', 'exercicios'];
-      return data.keys().hasAll(requiredFields) &&
+    function isValidSeries(data) {
+      let required = ['userId', 'workoutId', 'exerciseId', 'setNumber', 'actualReps', 'actualWeight'];
+      return data.keys().hasAll(required) &&
              data.userId == request.auth.uid &&
-             data.semana is int &&
-             data.diaDaSemana is string &&
-             data.nomeTreino is string &&
-             data.exercicios is list &&
-             data.exercicios.size() <= 20;
+             data.setNumber is int &&
+             data.actualReps is int &&
+             data.actualWeight is number;
     }
 
     // Collections
-    match /exercicios/{exercicioId} {
+    
+    // Global Catalog
+    match /exercises/{exerciseId} {
       allow read: if isSignedIn();
-      allow write: if false; 
+      allow create: if isSignedIn(); // Allow users to contribute exercises if not in catalog
+      allow update: if false; // Only admin (manual)
     }
 
-    match /registros/{registroId} {
-      allow create: if isSignedIn() && isValidId(registroId) && isValidRegistro(request.resource.data);
-      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow get, delete: if isOwner(resource.data.userId);
-      allow update: if isOwner(resource.data.userId) && 
-                      isValidRegistro(request.resource.data) &&
-                      request.resource.data.userId == resource.data.userId;
+    // User Profile
+    match /users/{userId}/profile/data {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId) && isValidProfile(request.resource.data);
     }
 
+    // Plans
     match /planos/{planoId} {
-      allow create: if isSignedIn() && isValidId(planoId) && isValidPlano(request.resource.data);
-      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow get, delete: if isOwner(resource.data.userId);
-      allow update: if isOwner(resource.data.userId) && isValidPlano(request.resource.data);
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update, delete: if isOwner(resource.data.userId);
+    }
+
+    // Workouts & Series
+    match /workouts/{workoutId} {
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId) && isValidWorkout(request.resource.data);
+      allow update: if isOwner(resource.data.userId) && isValidWorkout(request.resource.data);
+      allow delete: if isOwner(resource.data.userId);
+      
+      match /exercises/{exerciseId}/series/{seriesId} {
+        allow read: if isOwner(resource.data.userId);
+        allow create: if isOwner(request.resource.data.userId) && isValidSeries(request.resource.data);
+        allow update: if isOwner(resource.data.userId) && isValidSeries(request.resource.data);
+        allow delete: if isOwner(resource.data.userId);
+      }
+    }
+    
+    // Legacy support for Registros (if needed)
+    match /registros/{registroId} {
+       allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+       allow write: if isOwner(resource.data.userId || request.resource.data.userId);
     }
   }
 }

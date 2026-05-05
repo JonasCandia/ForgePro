@@ -10,27 +10,63 @@
       },
       "required": ["nome", "grupoMuscular"]
     },
-    "Registro": {
-      "title": "Registro de Treino",
-      "description": "Uma série realizada em um exercício.",
+    "UserProfile": {
+      "title": "Perfil do Usuário",
+      "description": "Dados biométricos e objetivos do usuário.",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string" },
+        "pesoAtualKg": { "type": "number" },
+        "alturaCm": { "type": "number" },
+        "objetivo": { "type": "string", "enum": ["cutting", "bulking", "manutenção"] },
+        "photoURL": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["nome", "pesoAtualKg", "alturaCm", "objetivo"]
+    },
+    "Workout": {
+      "title": "Sessão de Treino",
+      "description": "Uma sessão de treino específica.",
       "type": "object",
       "properties": {
         "userId": { "type": "string" },
-        "data": { "type": "string", "format": "date-time" },
-        "exercicioId": { "type": "string" },
-        "exercicioNome": { "type": "string" },
-        "series": { "type": "integer" },
-        "repeticoes": { "type": "integer" },
-        "pesoKg": { "type": "number" },
-        "observacoes": { "type": "string" },
-        "origem": { "type": "string", "enum": ["Manual", "Plano"] },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "status": { "type": "string", "enum": ["in-progress", "completed"] },
+        "startTime": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "nomeTreino": { "type": "string" },
+        "semana": { "type": "integer" },
+        "diaDaSemana": { "type": "string" },
+        "goalAtTime": { "type": "string" }
       },
-      "required": ["userId", "data", "exercicioId", "exercicioNome", "series", "repeticoes", "pesoKg", "createdAt"]
+      "required": ["userId", "status", "startTime", "nomeTreino"]
+    },
+    "SetRecord": {
+      "title": "Registro de Série",
+      "description": "Dados de uma série individual realizada.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "workoutId": { "type": "string" },
+        "exerciseId": { "type": "string" },
+        "exerciseNome": { "type": "string" },
+        "setNumber": { "type": "integer" },
+        "plannedReps": { "type": "integer" },
+        "plannedWeight": { "type": "number" },
+        "actualReps": { "type": "integer" },
+        "actualWeight": { "type": "number" },
+        "restTimeSeconds": { "type": "integer" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "failed": { "type": "boolean" },
+        "origem": { "type": "string", "enum": ["Manual", "Plano"] },
+        "goalAtTime": { "type": "string" },
+        "muscleGroup": { "type": "string" }
+      },
+      "required": ["userId", "workoutId", "exerciseId", "setNumber", "actualReps", "actualWeight"]
     },
     "Plano": {
       "title": "Plano de Treino",
-      "description": "Programação de um exercício dentro de uma semana e dia específicos.",
+      "description": "Programação semanal.",
       "type": "object",
       "properties": {
         "userId": { "type": "string" },
@@ -50,24 +86,31 @@
               "observacoesPlano": { "type": "string" }
             }
           }
-        },
-        "createdAt": { "type": "string", "format": "date-time" }
+        }
       },
       "required": ["userId", "semana", "diaDaSemana", "nomeTreino", "exercicios"]
     }
   },
   "firestore": {
-    "exercicios/{exercicioId}": {
-      "schema": "Exercicio",
-      "description": "Catálogo global de exercícios."
+    "users/{userId}/profile/data": {
+      "schema": "UserProfile",
+      "description": "Perfil do usuário."
     },
-    "registros/{registroId}": {
-      "schema": "Registro",
-      "description": "Registros de treino individuais dos usuários."
+    "exercises/{exerciseId}": {
+      "schema": "Exercicio",
+      "description": "Catálogo de exercícios."
+    },
+    "workouts/{workoutId}": {
+      "schema": "Workout",
+      "description": "Sessões de treino."
+    },
+    "workouts/{workoutId}/exercises/{exerciseId}/series/{seriesId}": {
+      "schema": "SetRecord",
+      "description": "Séries dentro de um exercício em um treino."
     },
     "planos/{planoId}": {
       "schema": "Plano",
-      "description": "Programação semanal de treinos."
+      "description": "Programação de treinos."
     }
   }
 }

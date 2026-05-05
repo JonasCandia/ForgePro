@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Trash2, Calendar, Filter } from 'lucide-react';
+import { Search, Trash2, Calendar, Filter, Archive, Dumbbell, ChevronRight } from 'lucide-react';
 import { Registro } from '../../types';
 import { workoutService } from '../../lib/workoutService';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -21,6 +21,7 @@ export default function History() {
   }, []);
 
   const handleDelete = async (id: string) => {
+    if (!confirm("Excluir este registro permanentemente?")) return;
     try {
       await workoutService.deleteRegistro(id);
       setLogs(logs.filter(l => l.id !== id));
@@ -38,7 +39,7 @@ export default function History() {
     const date = new Date(dateStr);
     if (isToday(date)) return 'Hoje, ' + format(date, 'HH:mm');
     if (isYesterday(date)) return 'Ontem, ' + format(date, 'HH:mm');
-    return format(date, "dd MMM", { locale: ptBR }).toUpperCase();
+    return format(date, "dd MMM yyyy", { locale: ptBR }).toUpperCase();
   };
 
   const groupedLogs = useMemo(() => {
@@ -51,89 +52,83 @@ export default function History() {
     return groups;
   }, [filteredLogs]);
 
+  if (loading) return <div className="flex items-center justify-center h-[60vh]"><div className="w-12 h-12 border-4 border-brand border-t-transparent animate-spin"></div></div>;
+
   return (
-    <div className="space-y-6 pt-4 pb-24">
-      <header className="flex justify-between items-end mb-6">
-        <div>
-          <h2 className="text-brand text-xs font-bold uppercase tracking-widest mb-1">Arquivo de Dados</h2>
-          <h1 className="font-display text-2xl font-black uppercase tracking-tight">Histórico de Treino</h1>
-        </div>
-        <div className="flex gap-2">
-          <div className="text-[10px] bg-surface px-3 py-1.5 rounded text-gray-400 border border-outline font-bold uppercase tracking-wider">
-            {filteredLogs.length} Registros
-          </div>
-        </div>
+    <div className="space-y-8 pt-4 pb-24">
+      <header className="space-y-2">
+        <h2 className="text-brand text-xs font-black uppercase tracking-[0.3em]">Arquivo de Treinos</h2>
+        <h1 className="font-display text-4xl font-black uppercase tracking-tighter italic">Histórico de Logs</h1>
       </header>
 
-      {/* Filters Bento Grid */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8">
+      {/* Filters */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={18} />
           <input 
-            className="w-full bg-surface-hover border border-input-border rounded px-10 py-3 text-xs focus:border-brand focus:ring-0 transition-colors placeholder:text-gray-600 font-medium"
-            placeholder="Pesquisar por exercício..."
+            type="text" 
+            placeholder="BUSCAR EXERCÍCIO..." 
+            className="form-input !pl-12 font-black uppercase tracking-tight"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
         </div>
         <div className="relative">
+          <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={18} />
           <input 
-            type="date"
-            className="w-full bg-surface-hover border border-input-border rounded px-10 py-3 text-xs focus:border-brand focus:ring-0 transition-colors appearance-none font-medium"
+            type="date" 
+            className="form-input !pl-12 font-black uppercase tracking-tight"
             value={filterDate}
             onChange={(e) => setFilterDate(e.target.value)}
           />
-          <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
         </div>
       </section>
 
-      {/* History List */}
-      <div className="space-y-10">
+      {/* List */}
+      <div className="space-y-12">
         {Object.keys(groupedLogs).length === 0 ? (
-          <div className="card border-dashed border-2 bg-transparent text-center py-20 text-gray-700">
-            <Filter size={48} className="mx-auto mb-4 opacity-10" />
-            <p className="text-xs uppercase tracking-widest font-bold">Base de dados vazia</p>
+          <div className="card py-20 text-center opacity-30 border-dashed">
+            <Archive size={64} className="mx-auto mb-4" />
+            <p className="text-[10px] font-black uppercase tracking-widest">Nenhuma atividade registrada nesta linha do tempo.</p>
           </div>
         ) : (
-          (Object.entries(groupedLogs) as [string, Registro[]][]).map(([dateKey, items]) => (
+          Object.entries(groupedLogs).map(([dateKey, items]) => (
             <div key={dateKey} className="space-y-4">
-              <div className="flex items-center gap-4">
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-brand whitespace-nowrap">
+              <div className="flex items-center gap-6">
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-brand whitespace-nowrap bg-brand/10 px-4 py-2 rounded-lg border border-brand/20">
                   {formatLogDate(items[0].data)}
                 </span>
-                <div className="h-px w-full bg-outline" />
+                <div className="h-px w-full bg-[var(--color-outline)]" />
               </div>
 
-              <div className="card p-0 overflow-hidden border-outline">
-                <table className="w-full text-left">
-                  <thead className="text-[9px] uppercase tracking-widest text-gray-600 bg-surface-hover border-b border-outline">
-                    <tr>
-                      <th className="px-6 py-3 font-black">Exercício</th>
-                      <th className="px-6 py-3 font-black text-center">Séries</th>
-                      <th className="px-6 py-3 font-black text-center">Reps</th>
-                      <th className="px-6 py-3 font-black text-center">Carga</th>
-                      <th className="px-6 py-3 font-black text-right">Ação</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-xs text-gray-400 divide-y divide-[#1A1A1A]">
-                    {items.map((log) => (
-                      <tr key={log.id} className="hover:bg-white/[0.02] transition-colors group">
-                        <td className="px-6 py-4 font-bold text-gray-200 uppercase tracking-tight">{log.exercicioNome}</td>
-                        <td className="px-6 py-4 text-center font-mono">{log.series}</td>
-                        <td className="px-6 py-4 text-center font-mono">{log.repeticoes}</td>
-                        <td className="px-6 py-4 text-center font-mono text-brand font-bold">{log.pesoKg}KG</td>
-                        <td className="px-6 py-4 text-right">
-                          <button 
-                            onClick={() => handleDelete(log.id)}
-                            className="p-2 text-gray-700 hover:text-red-500 transition-colors"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="space-y-3">
+                {items.map((log) => (
+                  <div key={log.id} className="card p-0 overflow-hidden flex flex-col md:flex-row md:items-center hover:border-brand/30 transition-all group">
+                    <div className="p-6 flex-1 flex items-center gap-6">
+                      <div className="w-12 h-12 bg-[var(--color-surface-hover)] text-brand rounded-xl flex items-center justify-center border border-[var(--color-outline)] group-hover:bg-brand group-hover:text-black transition-colors">
+                        <Dumbbell size={20} />
+                      </div>
+                      <div>
+                        <h4 className="text-xl font-black uppercase tracking-tighter italic group-hover:text-brand transition-colors">{log.exercicioNome}</h4>
+                        <div className="flex gap-6 mt-2">
+                          <DataBadge label="SÉRIES" value={log.series} />
+                          <DataBadge label="REPS" value={log.repeticoes} />
+                          <DataBadge label="CARGA" value={`${log.pesoKg}KG`} isBrand />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-[var(--color-surface-hover)]/30 backdrop-blur-sm px-6 py-4 flex items-center justify-between md:justify-end border-t md:border-t-0 md:border-l border-[var(--color-outline)]">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-text-muted)] md:hidden">Origem: {log.origem || 'Manual'}</span>
+                      <button 
+                        onClick={() => handleDelete(log.id)}
+                        className="text-[var(--color-text-muted)] hover:text-red-500 p-2 transition-all hover:scale-110 active:scale-95"
+                        title="Deletar registro"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))
@@ -143,3 +138,11 @@ export default function History() {
   );
 }
 
+function DataBadge({ label, value, isBrand }: { label: string, value: string | number, isBrand?: boolean }) {
+  return (
+    <div className="flex flex-col">
+      <span className="text-[8px] font-black uppercase text-[var(--color-text-muted)] tracking-widest leading-none mb-1">{label}</span>
+      <span className={`text-sm font-black font-mono leading-none ${isBrand ? 'text-brand' : ''}`}>{value}</span>
+    </div>
+  );
+}
