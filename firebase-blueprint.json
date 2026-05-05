@@ -1,0 +1,73 @@
+{
+  "entities": {
+    "Exercicio": {
+      "title": "Exercício",
+      "description": "Catálogo de exercícios disponíveis.",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string" },
+        "grupoMuscular": { "type": "string" }
+      },
+      "required": ["nome", "grupoMuscular"]
+    },
+    "Registro": {
+      "title": "Registro de Treino",
+      "description": "Uma série realizada em um exercício.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "data": { "type": "string", "format": "date-time" },
+        "exercicioId": { "type": "string" },
+        "exercicioNome": { "type": "string" },
+        "series": { "type": "integer" },
+        "repeticoes": { "type": "integer" },
+        "pesoKg": { "type": "number" },
+        "observacoes": { "type": "string" },
+        "origem": { "type": "string", "enum": ["Manual", "Plano"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "data", "exercicioId", "exercicioNome", "series", "repeticoes", "pesoKg", "createdAt"]
+    },
+    "Plano": {
+      "title": "Plano de Treino",
+      "description": "Programação de um exercício dentro de uma semana e dia específicos.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "semana": { "type": "integer" },
+        "diaDaSemana": { "type": "string" },
+        "nomeTreino": { "type": "string" },
+        "exercicios": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "exercicioId": { "type": "string" },
+              "exercicioNome": { "type": "string" },
+              "seriesPlanejadas": { "type": "integer" },
+              "repeticoesPlanejadas": { "type": "integer" },
+              "pesoPlanejado": { "type": "number" },
+              "observacoesPlano": { "type": "string" }
+            }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "semana", "diaDaSemana", "nomeTreino", "exercicios"]
+    }
+  },
+  "firestore": {
+    "exercicios/{exercicioId}": {
+      "schema": "Exercicio",
+      "description": "Catálogo global de exercícios."
+    },
+    "registros/{registroId}": {
+      "schema": "Registro",
+      "description": "Registros de treino individuais dos usuários."
+    },
+    "planos/{planoId}": {
+      "schema": "Plano",
+      "description": "Programação semanal de treinos."
+    }
+  }
+}

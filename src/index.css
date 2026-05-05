@@ -1,0 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lexend:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Lexend", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-brand: #CCFF00; /* Lime Green */
+  --color-background: #0A0A0A;
+  --color-surface: #111111;
+  --color-surface-hover: #1A1A1A;
+  --color-outline: #222222;
+  --color-input-border: #333333;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-gray-200 font-sans antialiased;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-brand text-black font-display font-bold py-3 px-6 rounded uppercase tracking-tighter text-sm transition-transform active:scale-95 flex items-center justify-center gap-2;
+  }
+  
+  .btn-secondary {
+    @apply border border-input-border text-gray-400 font-display font-bold py-3 px-6 rounded uppercase tracking-tighter text-sm transition-all hover:bg-white/5 flex items-center justify-center gap-2;
+  }
+
+  .card {
+    @apply bg-surface border border-outline rounded-xl p-6 shadow-2xl;
+  }
+
+  .input-label {
+    @apply text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5 block;
+  }
+
+  .form-input {
+    @apply w-full bg-surface-hover border border-input-border focus:border-brand focus:ring-0 text-sm py-3 px-4 rounded text-white transition-colors placeholder:text-gray-600;
+  }
+}
+
