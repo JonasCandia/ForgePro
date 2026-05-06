@@ -9,11 +9,11 @@
  *   - syncQueue — operações pendentes para sincronizar com Firestore
  */
 import Dexie, { type Table } from 'dexie';
-import type { WorkoutSession, WorkoutSeries, BodyMeasurement, Exercício } from '../types';
+import type { WorkoutSession, WorkoutSeries, BodyMeasurement, Exercício, TAFScore } from '../types';
 
 // ─── SyncQueue ────────────────────────────────────────────────────────────────
 
-export type SyncOperation = 'saveMeasurement' | 'saveManualWorkout';
+export type SyncOperation = 'saveMeasurement' | 'saveManualWorkout' | 'saveTAFScore';
 
 export interface SyncQueueItem {
   id?: number;          // auto-increment PK
@@ -35,6 +35,7 @@ class ForgeProDB extends Dexie {
   measurements!: Table<BodyMeasurement>;
   exercises!: Table<Exercício>;
   syncQueue!: Table<SyncQueueItem>;
+  tafScores!: Table<TAFScore>;
 
   constructor() {
     super('forgepro_v1');
@@ -44,6 +45,9 @@ class ForgeProDB extends Dexie {
       measurements: 'id, userId, data',
       exercises:    'id, nome',
       syncQueue:    '++id, operation, userId, timestamp',
+    });
+    this.version(2).stores({
+      tafScores: 'id, userId, data',
     });
   }
 }
@@ -76,6 +80,16 @@ export async function cacheMeasurements(measurements: BodyMeasurement[]) {
 
 export async function getCachedMeasurements(userId: string): Promise<BodyMeasurement[]> {
   return localDb.measurements.where('userId').equals(userId).sortBy('data');
+}
+
+// ─── TAFScore helpers ──────────────────────────────────────────────────────────
+
+export async function cacheTAFScores(scores: TAFScore[]) {
+  await localDb.tafScores.bulkPut(scores);
+}
+
+export async function getCachedTAFScores(userId: string): Promise<TAFScore[]> {
+  return localDb.tafScores.where('userId').equals(userId).sortBy('data');
 }
 
 export async function cacheSeries(series: WorkoutSeries[]) {

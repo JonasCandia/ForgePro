@@ -21,7 +21,7 @@ export default function UserProfile({ onBack, onSaved, onNavigate, isFirstTime }
   const [nome, setNome] = useState('');
   const [pesoCorporal, setPesoCorporal] = useState<number | ''>('');
   const [altura, setAltura] = useState<number | ''>('');
-  const [objetivo, setObjetivo] = useState<'cutting' | 'bulking' | 'manutencao' | ''>('');
+  const [objetivo, setObjetivo] = useState<'cutting' | 'bulking' | 'manutencao' | 'taf' | ''>('');
   const [fotoUrl, setFotoUrl] = useState('');
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');

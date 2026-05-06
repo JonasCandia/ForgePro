@@ -1,19 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Play, CheckCircle, Timer, RotateCcw, Trophy, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Play, CheckCircle, Timer, RotateCcw, Trophy, ChevronDown, ChevronUp, Activity, Dumbbell } from 'lucide-react';
 import { workoutService } from '../../lib/workoutService';
-import { Plano, WorkoutSeries } from '../../types';
+import type { Plano, WorkoutSeries, ModalidadeExercicio } from '../../types';
+import { getModalidade, LABEL_MODALIDADE, formatarTempo, calcularPace, formatarDistancia } from '../../lib/exercicioUtils';
 
 interface SerieRecord {
   seriesId: string;
   serieNum: number;
   pesoReal: number;
   repeticoesReais: number;
+  tempoSegundos: number;
+  distanciaMetros: number;
   falhou: boolean;
 }
 
 interface InputState {
   pesoReal: string;
   repeticoesReais: string;
+  tempoSegundos: string;
+  distanciaMetros: string;
   falhou: boolean;
 }
 
@@ -68,13 +73,18 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                 serieNum: s.serieNum,
                 pesoReal: s.pesoReal ?? 0,
                 repeticoesReais: s.repeticoesReais ?? 0,
+                tempoSegundos: s.tempoSegundos ?? 0,
+                distanciaMetros: s.distanciaMetros ?? 0,
                 falhou: s.falhou ?? false
               }));
             }
             const lastDone = rebuilt[idx]?.[rebuilt[idx].length - 1];
+            const mod = getModalidade(ex);
             inputs[idx] = {
               pesoReal: String(lastDone?.pesoReal ?? ex.pesoPlanejado ?? ''),
               repeticoesReais: String(lastDone?.repeticoesReais ?? ex.repeticoesPlanejadas ?? ''),
+              tempoSegundos: String(lastDone?.tempoSegundos ?? ex.tempoPlanejadoSegundos ?? ''),
+              distanciaMetros: String(lastDone?.distanciaMetros ?? ex.distanciaPlanejadaMetros ?? ''),
               falhou: false
             };
           });
@@ -135,6 +145,8 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
         inputs[idx] = {
           pesoReal: String(ex.pesoPlanejado ?? ''),
           repeticoesReais: String(ex.repeticoesPlanejadas ?? ''),
+          tempoSegundos: String(ex.tempoPlanejadoSegundos ?? ''),
+          distanciaMetros: String(ex.distanciaPlanejadaMetros ?? ''),
           falhou: false
         };
       });
@@ -152,23 +164,33 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
     if (!input) return;
     const done = completedSeries[exIdx] ?? [];
     const serieNum = done.length + 1;
+    const mod = getModalidade(ex);
     const pesoReal = parseFloat(input.pesoReal) || 0;
     const repeticoesReais = parseInt(input.repeticoesReais) || 0;
+    const tempoSegundos = parseInt(input.tempoSegundos) || 0;
+    const distanciaMetros = parseInt(input.distanciaMetros) || 0;
+    const paceMinKm = distanciaMetros > 0 && tempoSegundos > 0
+      ? (tempoSegundos / 60) / (distanciaMetros / 1000)
+      : undefined;
     try {
       const seriesId = await workoutService.addSeries(workoutId, {
         exercicioId: ex.exercicioId,
         exercicioNome: ex.exercicioNome ?? ex.exercicioId,
         grupoMuscular: '',
+        modalidade: mod,
         serieNum,
         repeticoesPlanejadas: ex.repeticoesPlanejadas ?? 0,
         pesoPlanejado: ex.pesoPlanejado ?? 0,
         repeticoesReais,
-        pesoReal,
+        pesoReal: mod === 'peso_corporal' ? 0 : pesoReal,
         falhou: input.falhou,
+        tempoSegundos: tempoSegundos || undefined,
+        distanciaMetros: distanciaMetros || undefined,
+        paceMinKm,
         tempoDescanso: defaultRestTime,
         objetivo: ''
       });
-      const newRecord: SerieRecord = { seriesId, serieNum, pesoReal, repeticoesReais, falhou: input.falhou };
+      const newRecord: SerieRecord = { seriesId, serieNum, pesoReal, repeticoesReais, tempoSegundos, distanciaMetros, falhou: input.falhou };
       setCompletedSeries(prev => ({ ...prev, [exIdx]: [...(prev[exIdx] ?? []), newRecord] }));
       setCurrentInputs(prev => ({ ...prev, [exIdx]: { ...prev[exIdx], falhou: false } }));
       startTimer();
@@ -181,17 +203,24 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
     try {
       const summary = selectedPlano.exercicios.map((ex, idx) => {
         const series = completedSeries[idx] ?? [];
+        const mod = getModalidade(ex);
+        const isCardio = mod === 'corrida' || mod === 'cardio_livre' || mod === 'isometria';
         const maxEntry = series.reduce((best, s) => s.pesoReal > best.pesoReal ? s : best, series[0] ?? { pesoReal: 0, repeticoesReais: 0 });
-        const volumeTotal = series.reduce((sum, s) => sum + s.pesoReal * s.repeticoesReais, 0);
+        const volumeTotal = isCardio ? 0 : series.reduce((sum, s) => sum + s.pesoReal * s.repeticoesReais, 0);
+        const tempoTotal = series.reduce((sum, s) => sum + (s.tempoSegundos ?? 0), 0);
+        const distanciaTotal = series.reduce((sum, s) => sum + (s.distanciaMetros ?? 0), 0);
         return {
           exercicioId: ex.exercicioId,
           exercicioNome: ex.exercicioNome ?? ex.exercicioId,
           grupoMuscular: '',
+          modalidade: mod,
           seriesRealizadas: series.length,
-          repeticoesReais: maxEntry?.repeticoesReais ?? 0,
+          repeticoesReais: series.reduce((sum, s) => sum + s.repeticoesReais, 0),
           pesoMax: maxEntry?.pesoReal ?? 0,
           repsAtMax: maxEntry?.repeticoesReais ?? 0,
-          volumeTotal
+          volumeTotal,
+          tempoTotalSegundos: tempoTotal || undefined,
+          distanciaTotalMetros: distanciaTotal || undefined,
         };
       });
       await workoutService.finalizeWorkout(workoutId, summary);
@@ -330,7 +359,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
         const planned = ex.seriesPlanejadas ?? 3;
         const isActive = activeExIdx === exIdx;
         const allDone = done.length >= planned;
-        const input = currentInputs[exIdx] ?? { pesoReal: '', repeticoesReais: '', falhou: false };
+        const input = currentInputs[exIdx] ?? { pesoReal: '', repeticoesReais: '', tempoSegundos: '', distanciaMetros: '', falhou: false };
         return (
           <div key={exIdx} className={`card overflow-hidden transition-colors ${allDone ? 'border-brand/50 bg-brand/5' : isActive ? 'border-amber-400/40 bg-amber-400/5' : 'border-outline'}`}>
             <button className="w-full flex items-center justify-between p-4" onClick={() => setActiveExIdx(isActive ? null : exIdx)}>
@@ -353,33 +382,20 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                 {done.length > 0 && (
                   <div className="pt-3">
                     <p className="text-[11px] uppercase tracking-widest text-gray-600 font-black mb-2">Séries Concluídas</p>
-                    <div className="grid grid-cols-3 gap-2 text-xs text-gray-500 mb-1 px-1">
-                      <span>#</span><span>Reps</span><span>Peso</span>
-                    </div>
-                    {done.map(s => (
-                      <div key={s.serieNum} className={`grid grid-cols-3 gap-2 text-xs px-1 py-1 rounded ${s.falhou ? 'text-red-400' : 'text-gray-300'}`}>
-                        <span className="font-bold">S{s.serieNum}{s.falhou ? ' ?' : ''}</span>
-                        <span>{s.repeticoesReais}</span>
-                        <span>{s.pesoReal}kg</span>
-                      </div>
-                    ))}
+                    <ExercicioSeriesTable done={done} modalidade={getModalidade(ex)} />
                   </div>
                 )}
                 {!allDone && (
                   <div className="pt-2 space-y-3">
                     <p className="text-[11px] uppercase tracking-widest text-gray-600 font-black">Série {done.length + 1}</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="input-label">Repetições</label>
-                        <input type="number" min="0" inputMode="numeric" className="form-input" value={input.repeticoesReais}
-                          onChange={e => setCurrentInputs(prev => ({ ...prev, [exIdx]: { ...prev[exIdx], repeticoesReais: e.target.value } }))} />
-                      </div>
-                      <div>
-                        <label className="input-label">Peso (kg)</label>
-                        <input type="number" min="0" step="0.5" inputMode="decimal" className="form-input" value={input.pesoReal}
-                          onChange={e => setCurrentInputs(prev => ({ ...prev, [exIdx]: { ...prev[exIdx], pesoReal: e.target.value } }))} />
-                      </div>
-                    </div>
+                    <SerieInputs
+                      modalidade={getModalidade(ex)}
+                      input={input}
+                      onChange={(field, value) => setCurrentInputs(prev => ({
+                        ...prev,
+                        [exIdx]: { ...prev[exIdx], [field]: value }
+                      }))}
+                    />
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" className="w-4 h-4 accent-red-500" checked={input.falhou}
                         onChange={e => setCurrentInputs(prev => ({ ...prev, [exIdx]: { ...prev[exIdx], falhou: e.target.checked } }))} />
@@ -406,6 +422,155 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
         {saving ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin motion-reduce:animate-none" /> : <Trophy size={16} />}
         {saving ? 'Salvando...' : 'Finalizar Treino'}
       </button>
+    </div>
+  );
+}
+
+// ─── Sub-componentes ──────────────────────────────────────────────────────────
+
+interface SerieInputsProps {
+  modalidade: ModalidadeExercicio;
+  input: InputState;
+  onChange: (field: string, value: string) => void;
+}
+
+function SerieInputs({ modalidade, input, onChange }: SerieInputsProps) {
+  if (modalidade === 'corrida') {
+    const dist = parseInt(input.distanciaMetros) || 0;
+    const tempo = parseInt(input.tempoSegundos) || 0;
+    const pace = dist > 0 && tempo > 0 ? calcularPace(dist, tempo) : null;
+    return (
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="input-label">Distância (m)</label>
+            <input type="number" min="0" step="50" inputMode="numeric" className="form-input"
+              value={input.distanciaMetros}
+              onChange={e => onChange('distanciaMetros', e.target.value)} />
+          </div>
+          <div>
+            <label className="input-label">Tempo (s)</label>
+            <input type="number" min="0" inputMode="numeric" className="form-input"
+              value={input.tempoSegundos}
+              onChange={e => onChange('tempoSegundos', e.target.value)} />
+          </div>
+        </div>
+        {pace && <p className="text-xs font-mono text-brand/80">{formatarDistancia(dist)} · {formatarTempo(tempo)} · {pace}</p>}
+      </div>
+    );
+  }
+
+  if (modalidade === 'isometria') {
+    return (
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="input-label">Tempo (s)</label>
+          <input type="number" min="0" inputMode="numeric" className="form-input"
+            value={input.tempoSegundos}
+            onChange={e => onChange('tempoSegundos', e.target.value)} />
+        </div>
+        <div>
+          <label className="input-label">Reps (opc.)</label>
+          <input type="number" min="0" inputMode="numeric" className="form-input"
+            value={input.repeticoesReais}
+            onChange={e => onChange('repeticoesReais', e.target.value)} />
+        </div>
+      </div>
+    );
+  }
+
+  if (modalidade === 'cardio_livre') {
+    return (
+      <div>
+        <label className="input-label">Tempo (s)</label>
+        <input type="number" min="0" inputMode="numeric" className="form-input"
+          value={input.tempoSegundos}
+          onChange={e => onChange('tempoSegundos', e.target.value)} />
+      </div>
+    );
+  }
+
+  if (modalidade === 'peso_corporal') {
+    return (
+      <div>
+        <label className="input-label">Repetições</label>
+        <input type="number" min="0" inputMode="numeric" className="form-input"
+          value={input.repeticoesReais}
+          onChange={e => onChange('repeticoesReais', e.target.value)} />
+      </div>
+    );
+  }
+
+  // forca_dinamica (default)
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <div>
+        <label className="input-label">Repetições</label>
+        <input type="number" min="0" inputMode="numeric" className="form-input" value={input.repeticoesReais}
+          onChange={e => onChange('repeticoesReais', e.target.value)} />
+      </div>
+      <div>
+        <label className="input-label">Peso (kg)</label>
+        <input type="number" min="0" step="0.5" inputMode="decimal" className="form-input" value={input.pesoReal}
+          onChange={e => onChange('pesoReal', e.target.value)} />
+      </div>
+    </div>
+  );
+}
+
+interface ExercicioSeriesTableProps {
+  done: SerieRecord[];
+  modalidade: ModalidadeExercicio;
+}
+
+function ExercicioSeriesTable({ done, modalidade }: ExercicioSeriesTableProps) {
+  if (modalidade === 'corrida') {
+    return (
+      <div className="space-y-0.5">
+        <div className="grid grid-cols-4 gap-1 text-xs text-gray-500 mb-1 px-1">
+          <span>#</span><span>Dist.</span><span>Tempo</span><span>Pace</span>
+        </div>
+        {done.map(s => (
+          <div key={s.serieNum} className="grid grid-cols-4 gap-1 text-xs px-1 py-0.5 rounded text-gray-300">
+            <span className="font-bold">S{s.serieNum}</span>
+            <span>{s.distanciaMetros ? formatarDistancia(s.distanciaMetros) : '–'}</span>
+            <span>{s.tempoSegundos ? formatarTempo(s.tempoSegundos) : '–'}</span>
+            <span className="text-brand/70">{s.distanciaMetros && s.tempoSegundos ? calcularPace(s.distanciaMetros, s.tempoSegundos) : '–'}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (modalidade === 'isometria' || modalidade === 'cardio_livre') {
+    return (
+      <div className="space-y-0.5">
+        <div className="grid grid-cols-3 gap-2 text-xs text-gray-500 mb-1 px-1">
+          <span>#</span><span>Tempo</span><span>Reps</span>
+        </div>
+        {done.map(s => (
+          <div key={s.serieNum} className={`grid grid-cols-3 gap-2 text-xs px-1 py-0.5 rounded ${s.falhou ? 'text-red-400' : 'text-gray-300'}`}>
+            <span className="font-bold">S{s.serieNum}</span>
+            <span>{s.tempoSegundos ? formatarTempo(s.tempoSegundos) : '–'}</span>
+            <span>{s.repeticoesReais || '–'}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-0.5">
+      <div className="grid grid-cols-3 gap-2 text-xs text-gray-500 mb-1 px-1">
+        <span>#</span><span>Reps</span><span>Peso</span>
+      </div>
+      {done.map(s => (
+        <div key={s.serieNum} className={`grid grid-cols-3 gap-2 text-xs px-1 py-0.5 rounded ${s.falhou ? 'text-red-400' : 'text-gray-300'}`}>
+          <span className="font-bold">S{s.serieNum}{s.falhou ? ' ✗' : ''}</span>
+          <span>{s.repeticoesReais}</span>
+          <span>{s.pesoReal}kg</span>
+        </div>
+      ))}
     </div>
   );
 }

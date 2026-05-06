@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, PlusCircle, History as HistoryIcon, TrendingUp, Dumbbell, LogIn, LogOut, Trophy, User as UserIcon, Sun, Moon, FileDown, WifiOff } from 'lucide-react';
+import { Home, PlusCircle, History as HistoryIcon, TrendingUp, Dumbbell, LogIn, LogOut, Trophy, User as UserIcon, Sun, Moon, FileDown, WifiOff, Target } from 'lucide-react';
 import Dashboard from './components/screens/Dashboard';
 import LogWorkout from './components/screens/LogWorkout';
 import History from './components/screens/History';
@@ -9,6 +9,7 @@ import ExecutePlannedWorkout from './components/screens/ExecutePlannedWorkout';
 import UserProfile from './components/screens/UserProfile';
 import Records from './components/screens/Records';
 import BodyMeasurements from './components/screens/BodyMeasurements';
+import TAFScore from './components/screens/TAFScore';
 import { auth, signIn, signOutUser } from './lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { workoutService } from './lib/workoutService';
@@ -17,7 +18,7 @@ import { useAppStore } from './store/appStore';
 import { useProfile } from './hooks/useProfile';
 import { useOnlineSync } from './hooks/useOnlineSync';
 
-export type Screen = 'home' | 'log' | 'history' | 'progress' | 'import' | 'execute' | 'profile' | 'records' | 'measurements';
+export type Screen = 'home' | 'log' | 'history' | 'progress' | 'import' | 'execute' | 'profile' | 'records' | 'measurements' | 'taf';
 
 function AppInner() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
@@ -109,6 +110,8 @@ function AppInner() {
         return <Records />;
       case 'measurements':
         return <BodyMeasurements onBack={() => setCurrentScreen('home')} />;
+      case 'taf':
+        return <TAFScore />;
       default:
         return <Dashboard onNavigate={setCurrentScreen} />;
     }
@@ -127,14 +130,14 @@ function AppInner() {
         
         {/* Desktop Nav */}
         <div className="hidden md:flex gap-8 text-[11px] font-bold uppercase tracking-widest h-full">
-          {(['home', 'log', 'history', 'progress', 'records', 'measurements', 'import'] as const).map((screen) => (
+          {(['home', 'log', 'history', 'progress', 'records', 'measurements', 'taf', 'import'] as const).map((screen) => (
             <button 
               key={screen}
               disabled={!user}
               onClick={() => setCurrentScreen(screen)}
               className={`h-full border-b-2 flex items-center px-2 transition-colors ${currentScreen === screen ? 'text-brand border-brand' : 'text-gray-500 border-transparent hover:text-gray-300'} disabled:opacity-30`}
             >
-              {screen === 'home' ? 'Painel' : screen === 'log' ? 'Registrar' : screen === 'history' ? 'Histórico' : screen === 'progress' ? 'Progresso' : screen === 'records' ? 'Recordes' : screen === 'measurements' ? 'Medidas' : 'Importar'}
+              {screen === 'home' ? 'Painél' : screen === 'log' ? 'Registrar' : screen === 'history' ? 'Histórico' : screen === 'progress' ? 'Progresso' : screen === 'records' ? 'Recordes' : screen === 'measurements' ? 'Medidas' : screen === 'taf' ? 'TAF' : 'Importar'}
             </button>
           ))}
         </div>
@@ -233,6 +236,7 @@ function AppInner() {
               <NavItem active={currentScreen === 'history'} icon={<HistoryIcon size={22} />} label="Histórico" onClick={() => setCurrentScreen('history')} />
               <div className="w-14" />{/* espaço reservado para o FAB */}
               <NavItem active={currentScreen === 'progress'} icon={<TrendingUp size={22} />} label="Progresso" onClick={() => setCurrentScreen('progress')} />
+              <NavItem active={currentScreen === 'taf'} icon={<Target size={22} />} label="TAF" onClick={() => setCurrentScreen('taf')} />
               <NavItem active={currentScreen === 'records'} icon={<Trophy size={22} />} label="Recordes" onClick={() => setCurrentScreen('records')} />
             </div>
           </nav>

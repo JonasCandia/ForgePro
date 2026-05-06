@@ -23,12 +23,15 @@ import {
   WorkoutExerciseSummary,
   Profile,
   BodyMeasurement,
+  TAFScore,
 } from '../types';
 import { MOCK_EXERCICIOS } from '../constants';
 import {
+  localDb,
   cacheWorkouts, getCachedWorkouts,
   cacheExercises, getCachedExercises,
   cacheMeasurements, getCachedMeasurements,
+  cacheTAFScores, getCachedTAFScores,
 } from './localDb';
 import { isOnline, offlineSaveMeasurement, offlineSaveManualWorkout } from './syncService';
 
@@ -228,10 +231,13 @@ export const workoutService = {
         exercicioId: string;
         exercicioNome: string;
         grupoMuscular?: string;
-        series: number;
-        repeticoes: number;
-        pesoKg: number;
-        observacoes?: string;
+        modalidade?: import('../types').ModalidadeExercicio;
+        seriesDetalhadas: Array<{
+          repeticoes: number;
+          pesoKg: number;
+          distanciaMetros?: number;
+          tempoSegundos?: number;
+        }>;
       }>;
     },
     objetivo?: string
@@ -247,7 +253,10 @@ export const workoutService = {
       const workoutId = genId();
       const seriesArr: WorkoutSeries[] = [];
       for (const e of data.entries) {
-        for (let s = 1; s <= e.series; s++) {
+        e.seriesDetalhadas.forEach((s, idx) => {
+          const paceMinKm = s.distanciaMetros && s.tempoSegundos
+            ? (s.tempoSegundos / 60) / (s.distanciaMetros / 1000)
+            : undefined;
           seriesArr.push({
             id: genId(),
             workoutId,
@@ -255,15 +264,18 @@ export const workoutService = {
             exercicioId: e.exercicioId,
             exercicioNome: e.exercicioNome,
             grupoMuscular: e.grupoMuscular || '',
-            serieNum: s,
-            repeticoesReais: e.repeticoes,
-            pesoReal: e.pesoKg,
+            modalidade: e.modalidade,
+            serieNum: idx + 1,
+            repeticoesReais: s.repeticoes,
+            pesoReal: e.modalidade === 'peso_corporal' ? 0 : s.pesoKg,
+            distanciaMetros: s.distanciaMetros || undefined,
+            tempoSegundos: s.tempoSegundos || undefined,
+            paceMinKm,
             falhou: false,
-            observacoes: e.observacoes || '',
             objetivo: objetivo || undefined,
             data: now,
           });
-        }
+        });
       }
       await setDoc(doc(db, USERS_COL, uid, WORKOUTS_COL, workoutId), {
         userId: uid,
@@ -272,18 +284,27 @@ export const workoutService = {
         status: 'finalizado',
         objetivo: objetivo || null,
         series: seriesArr,
-        exerciciosSummary: data.entries.map(
-          (e): WorkoutExerciseSummary => ({
+        exerciciosSummary: data.entries.map((e): WorkoutExerciseSummary => {
+          const mod = e.modalidade ?? 'forca_dinamica';
+          const isCardio = mod === 'corrida' || mod === 'cardio_livre' || mod === 'isometria';
+          const maxEntry = e.seriesDetalhadas.reduce(
+            (best, s) => s.pesoKg > best.pesoKg ? s : best,
+            e.seriesDetalhadas[0] ?? { pesoKg: 0, repeticoes: 0 }
+          );
+          return {
             exercicioId: e.exercicioId,
             exercicioNome: e.exercicioNome,
             grupoMuscular: e.grupoMuscular || '',
-            seriesRealizadas: e.series,
-            repeticoesReais: e.repeticoes,
-            pesoMax: e.pesoKg,
-            repsAtMax: e.repeticoes,
-            volumeTotal: e.pesoKg * e.repeticoes * e.series,
-          })
-        ),
+            modalidade: mod,
+            seriesRealizadas: e.seriesDetalhadas.length,
+            repeticoesReais: e.seriesDetalhadas.reduce((sum, s) => sum + s.repeticoes, 0),
+            pesoMax: isCardio ? 0 : (maxEntry?.pesoKg ?? 0),
+            repsAtMax: isCardio ? 0 : (maxEntry?.repeticoes ?? 0),
+            volumeTotal: isCardio ? 0 : e.seriesDetalhadas.reduce((sum, s) => sum + s.pesoKg * s.repeticoes, 0),
+            tempoTotalSegundos: e.seriesDetalhadas.reduce((sum, s) => sum + (s.tempoSegundos ?? 0), 0) || undefined,
+            distanciaTotalMetros: e.seriesDetalhadas.reduce((sum, s) => sum + (s.distanciaMetros ?? 0), 0) || undefined,
+          };
+        }),
         createdAt: serverTimestamp(),
       });
     } catch (error) {
@@ -487,6 +508,61 @@ export const workoutService = {
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `${USERS_COL}/${uid}/${MEASUREMENTS_COL}/${monthKey}`);
       throw error;
+    }
+  },
+
+  // ===== TAF SCORES (users/{uid}/tafScores/{id}) =====
+
+  async getTAFScores(): Promise<TAFScore[]> {
+    if (!auth.currentUser) return [];
+    const uid = auth.currentUser.uid;
+    try {
+      const q = query(
+        collection(db, USERS_COL, uid, 'tafScores'),
+        orderBy('data', 'asc')
+      );
+      const snap = await getDocs(q);
+      const scores = snap.docs.map(d => ({ id: d.id, ...d.data() } as TAFScore));
+      cacheTAFScores(scores).catch(() => {});
+      return scores;
+    } catch (error) {
+      const cached = await getCachedTAFScores(uid);
+      if (cached.length > 0) return cached;
+      console.warn('Failed to get TAF scores:', error);
+      return [];
+    }
+  },
+
+  async saveTAFScore(data: Omit<TAFScore, 'id' | 'userId' | 'createdAt'>): Promise<string> {
+    if (!auth.currentUser) throw new Error('User must be logged in');
+    const uid = auth.currentUser.uid;
+    const id = `taf_${genId()}`;
+    const score: TAFScore = {
+      id,
+      userId: uid,
+      createdAt: serverTimestamp(),
+      ...data,
+    };
+    // Salva localmente independente de conexão
+    await localDb.tafScores.put(score).catch(() => {});
+    if (!isOnline()) return id;
+    try {
+      await setDoc(doc(db, USERS_COL, uid, 'tafScores', id), score);
+      return id;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `${USERS_COL}/${uid}/tafScores/${id}`);
+      throw error;
+    }
+  },
+
+  async deleteTAFScore(scoreId: string): Promise<void> {
+    if (!auth.currentUser) return;
+    const uid = auth.currentUser.uid;
+    await localDb.tafScores.delete(scoreId).catch(() => {});
+    try {
+      await deleteDoc(doc(db, USERS_COL, uid, 'tafScores', scoreId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `${USERS_COL}/${uid}/tafScores/${scoreId}`);
     }
   },
 

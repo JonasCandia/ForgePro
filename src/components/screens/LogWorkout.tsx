@@ -1,14 +1,20 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Plus, Trash2, Check, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Check, ChevronDown, Timer, Dumbbell, Activity } from 'lucide-react';
 import { workoutService } from '../../lib/workoutService';
 import { useExercises } from '../../hooks/useExercises';
 import { useProfile } from '../../hooks/useProfile';
 import { useInvalidateWorkouts } from '../../hooks/useWorkouts';
+import type { ModalidadeExercicio } from '../../types';
+import { getModalidade, COLUNAS_SERIE, LABEL_MODALIDADE, formatarTempo, calcularPace, formatarDistancia } from '../../lib/exercicioUtils';
 
 interface SeriesEntry {
   series: number;
+  // força dinâmica / peso corporal
   repeticoes: number;
   pesoKg: number;
+  // corrida / cardio
+  distanciaMetros: number;
+  tempoSegundos: number;
   observacoes: string;
 }
 
@@ -16,11 +22,49 @@ interface LogEntry {
   exercicioId: string;
   exercicioNome: string;
   grupoMuscular: string;
+  modalidade: ModalidadeExercicio;
   seriesData: SeriesEntry[];
 }
 
 interface LogWorkoutProps {
   onBack: () => void;
+}
+
+function defaultSerie(num: number, modalidade: ModalidadeExercicio): SeriesEntry {
+  return { series: num, repeticoes: 10, pesoKg: 0, distanciaMetros: 0, tempoSegundos: 0, observacoes: '' };
+}
+
+// Formata tempo parcial "MM:SS" durante a digitação
+function tempoDisplay(segundos: number): string {
+  if (!segundos) return '';
+  return formatarTempo(segundos);
+}
+
+// Input de tempo que aceita segundos e mostra "MM:SS"
+function InputTempo({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [texto, setTexto] = useState(value > 0 ? String(value) : '');
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value;
+    setTexto(raw);
+    const n = parseInt(raw, 10);
+    onChange(Number.isFinite(n) && n >= 0 ? n : 0);
+  }
+
+  return (
+    <div className="relative">
+      <input
+        type="number"
+        min="0"
+        inputMode="numeric"
+        className="form-input text-center pr-6"
+        placeholder="0"
+        value={texto}
+        onChange={handleChange}
+      />
+      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 pointer-events-none">s</span>
+    </div>
+  );
 }
 
 export default function LogWorkout({ onBack }: LogWorkoutProps) {
@@ -39,11 +83,13 @@ export default function LogWorkout({ onBack }: LogWorkoutProps) {
     const ex = exercises.find(e => e.id === selectedExId);
     if (!ex) return;
     if (entries.find(e => e.exercicioId === selectedExId)) return;
+    const modalidade = getModalidade(ex);
     setEntries(prev => [...prev, {
       exercicioId: ex.id!,
       exercicioNome: ex.nome,
       grupoMuscular: ex.grupoMuscular,
-      seriesData: [{ series: 1, repeticoes: 10, pesoKg: 0, observacoes: '' }]
+      modalidade,
+      seriesData: [defaultSerie(1, modalidade)],
     }]);
     setSelectedExId('');
   }
@@ -55,44 +101,48 @@ export default function LogWorkout({ onBack }: LogWorkoutProps) {
   function addSeries(entryIdx: number) {
     setEntries(prev => prev.map((e, i) => i !== entryIdx ? e : {
       ...e,
-      seriesData: [...e.seriesData, { series: e.seriesData.length + 1, repeticoes: 10, pesoKg: 0, observacoes: '' }]
+      seriesData: [...e.seriesData, defaultSerie(e.seriesData.length + 1, e.modalidade)],
     }));
   }
 
   function removeSeries(entryIdx: number, seriesIdx: number) {
-    setEntries(prev => prev.map((e, i) => i !== entryIdx ? e : {
+    setEntries(prev => prev.map((e, i) => i !== entryIdx ? e : ({
       ...e,
-      seriesData: e.seriesData.filter((_, j) => j !== seriesIdx).map((s, j) => ({ ...s, series: j + 1 }))
-    }));
+      seriesData: e.seriesData
+        .filter((_, j) => j !== seriesIdx)
+        .map((s, j) => ({ ...s, series: j + 1 })),
+    })));
   }
 
-  function updateSeries(entryIdx: number, seriesIdx: number, field: keyof SeriesEntry, value: string | number) {
-    setEntries(prev => prev.map((e, i) => i !== entryIdx ? e : {
+  function updateSeries(entryIdx: number, seriesIdx: number, field: keyof SeriesEntry, value: number) {
+    setEntries(prev => prev.map((e, i) => i !== entryIdx ? e : ({
       ...e,
-      seriesData: e.seriesData.map((s, j) => j !== seriesIdx ? s : { ...s, [field]: value })
-    }));
+      seriesData: e.seriesData.map((s, j) => j !== seriesIdx ? s : { ...s, [field]: value }),
+    })));
   }
 
   async function handleFinish() {
     if (entries.length === 0) return;
     setSaving(true);
     try {
-      const data = {
+      await workoutService.saveManualWorkout({
         entries: entries.map(e => ({
           exercicioId: e.exercicioId,
           exercicioNome: e.exercicioNome,
           grupoMuscular: e.grupoMuscular,
-          series: e.seriesData.reduce((max, s) => Math.max(max, s.series), 0),
-          repeticoes: e.seriesData[0]?.repeticoes ?? 0,
-          pesoKg: Math.max(...e.seriesData.map(s => s.pesoKg)),
-          observacoes: e.seriesData.map(s => s.observacoes).filter(Boolean).join('; ')
-        }))
-      };
-      await workoutService.saveManualWorkout(data, objetivo);
+          modalidade: e.modalidade,
+          seriesDetalhadas: e.seriesData.map(s => ({
+            repeticoes: s.repeticoes,
+            pesoKg: s.pesoKg,
+            distanciaMetros: s.distanciaMetros,
+            tempoSegundos: s.tempoSegundos,
+          })),
+        })),
+      }, objetivo);
       invalidateWorkouts();
       setSaved(true);
       setEntries([]);
-    } catch (e) { console.error(e); }
+    } catch (err) { console.error(err); }
     finally { setSaving(false); }
   }
 
@@ -153,7 +203,10 @@ export default function LogWorkout({ onBack }: LogWorkoutProps) {
           >
             <option value="">Selecione um exercício</option>
             {exercises.map(ex => (
-              <option key={ex.id} value={ex.id}>{ex.nome}</option>
+              <option key={ex.id} value={ex.id}>
+                {ex.nome}
+                {ex.modalidade && ex.modalidade !== 'forca_dinamica' ? ` · ${LABEL_MODALIDADE[ex.modalidade]}` : ''}
+              </option>
             ))}
           </select>
           <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
@@ -170,47 +223,14 @@ export default function LogWorkout({ onBack }: LogWorkoutProps) {
       )}
 
       {entries.map((entry, entryIdx) => (
-        <div key={entryIdx} className="card overflow-hidden border-brand/25">
-          <div className="p-4 flex items-center justify-between border-b border-outline">
-            <div>
-              <p className="font-bold text-sm">{entry.exercicioNome}</p>
-              <p className="text-xs text-gray-500">{entry.grupoMuscular}</p>
-            </div>
-            <button onClick={() => removeEntry(entryIdx)} className="p-2 text-gray-600 hover:text-red-400 transition-colors">
-              <Trash2 size={16} />
-            </button>
-          </div>
-          <div className="p-4 space-y-3">
-            <div className="grid grid-cols-4 gap-3 text-[11px] text-gray-600 uppercase tracking-wider font-black px-1">
-              <span>Série</span><span>Reps</span><span>Peso (kg)</span><span></span>
-            </div>
-            {entry.seriesData.map((s, sIdx) => (
-              <div key={sIdx} className="grid grid-cols-4 gap-3 items-center">
-                <span className="text-sm font-bold text-brand text-center">S{s.series}</span>
-                <input
-                  type="number" min="1" inputMode="numeric" className="form-input text-center"
-                  value={s.repeticoes}
-                  onChange={e => updateSeries(entryIdx, sIdx, 'repeticoes', parseInt(e.target.value) || 0)}
-                />
-                <input
-                  type="number" min="0" step="0.5" inputMode="decimal" className="form-input text-center"
-                  value={s.pesoKg}
-                  onChange={e => updateSeries(entryIdx, sIdx, 'pesoKg', parseFloat(e.target.value) || 0)}
-                />
-                <button
-                  onClick={() => removeSeries(entryIdx, sIdx)}
-                  disabled={entry.seriesData.length <= 1}
-                  className="p-2 text-gray-600 hover:text-red-400 transition-colors disabled:opacity-30 mx-auto"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
-            <button onClick={() => addSeries(entryIdx)} className="btn-secondary w-full text-xs">
-              <Plus size={14} /> Adicionar Série
-            </button>
-          </div>
-        </div>
+        <ExercicioCard
+          key={entry.exercicioId}
+          entry={entry}
+          onRemoveEntry={() => removeEntry(entryIdx)}
+          onAddSeries={() => addSeries(entryIdx)}
+          onRemoveSeries={sIdx => removeSeries(entryIdx, sIdx)}
+          onUpdateSeries={(sIdx, field, value) => updateSeries(entryIdx, sIdx, field, value)}
+        />
       ))}
 
       {entries.length > 0 && (
@@ -219,6 +239,152 @@ export default function LogWorkout({ onBack }: LogWorkoutProps) {
           {saving ? 'Salvando...' : 'Finalizar e Salvar'}
         </button>
       )}
+    </div>
+  );
+}
+
+// ─── Sub-componente do card de exercício ──────────────────────────────────────
+
+interface ExercicioCardProps {
+  entry: LogEntry;
+  onRemoveEntry: () => void;
+  onAddSeries: () => void;
+  onRemoveSeries: (sIdx: number) => void;
+  onUpdateSeries: (sIdx: number, field: keyof SeriesEntry, value: number) => void;
+}
+
+function ExercicioCard({ entry, onRemoveEntry, onAddSeries, onRemoveSeries, onUpdateSeries }: ExercicioCardProps) {
+  const { modalidade, seriesData } = entry;
+  const colunas = COLUNAS_SERIE[modalidade];
+  // Largura da grid: serie + N colunas de input + botão
+  const gridCols = `grid-cols-[2rem_repeat(${colunas.length},1fr)_2rem]`;
+
+  const ModalIcon = modalidade === 'corrida' ? Activity
+    : modalidade === 'isometria' || modalidade === 'cardio_livre' ? Timer
+    : Dumbbell;
+
+  return (
+    <div className="card overflow-hidden border-brand/25">
+      <div className="p-4 flex items-center justify-between border-b border-outline">
+        <div className="flex items-center gap-2">
+          <ModalIcon size={14} className="text-brand flex-shrink-0" />
+          <div>
+            <p className="font-bold text-sm">{entry.exercicioNome}</p>
+            <p className="text-xs text-gray-500">
+              {entry.grupoMuscular}
+              {modalidade !== 'forca_dinamica' && (
+                <span className="ml-2 text-brand/70">{LABEL_MODALIDADE[modalidade]}</span>
+              )}
+            </p>
+          </div>
+        </div>
+        <button onClick={onRemoveEntry} className="p-2 text-gray-600 hover:text-red-400 transition-colors">
+          <Trash2 size={16} />
+        </button>
+      </div>
+
+      <div className="p-4 space-y-3">
+        {/* Cabeçalho da grade */}
+        <div className={`grid ${gridCols} gap-2 text-[11px] text-gray-600 uppercase tracking-wider font-black px-1`}>
+          <span>#</span>
+          {colunas.map(c => (
+            <span key={c.key}>{c.label}{c.unit ? ` (${c.unit})` : ''}</span>
+          ))}
+          <span />
+        </div>
+
+        {seriesData.map((s, sIdx) => (
+          <SerieRow
+            key={sIdx}
+            serie={s}
+            sIdx={sIdx}
+            modalidade={modalidade}
+            colunas={colunas}
+            gridCols={gridCols}
+            canRemove={seriesData.length > 1}
+            onRemove={() => onRemoveSeries(sIdx)}
+            onChange={(field, value) => onUpdateSeries(sIdx, field, value)}
+          />
+        ))}
+
+        {/* Pace / preview para corrida */}
+        {modalidade === 'corrida' && seriesData.some(s => s.distanciaMetros > 0 && s.tempoSegundos > 0) && (
+          <div className="flex flex-wrap gap-3 pt-1">
+            {seriesData.map((s, i) => s.distanciaMetros > 0 && s.tempoSegundos > 0 ? (
+              <span key={i} className="text-[11px] font-mono text-brand/80">
+                S{i + 1}: {formatarDistancia(s.distanciaMetros)} · {formatarTempo(s.tempoSegundos)} · {calcularPace(s.distanciaMetros, s.tempoSegundos)}
+              </span>
+            ) : null)}
+          </div>
+        )}
+
+        <button onClick={onAddSeries} className="btn-secondary w-full text-xs">
+          <Plus size={14} /> Adicionar Série
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface SerieRowProps {
+  serie: SeriesEntry;
+  sIdx: number;
+  modalidade: ModalidadeExercicio;
+  colunas: Array<{ key: string; label: string; unit?: string }>;
+  gridCols: string;
+  canRemove: boolean;
+  onRemove: () => void;
+  onChange: (field: keyof SeriesEntry, value: number) => void;
+}
+
+function SerieRow({ serie, sIdx, modalidade, colunas, gridCols, canRemove, onRemove, onChange }: SerieRowProps) {
+  return (
+    <div className={`grid ${gridCols} gap-2 items-center`}>
+      <span className="text-sm font-bold text-brand text-center">S{serie.series}</span>
+
+      {colunas.map(col => {
+        if (col.key === 'repeticoes') return (
+          <input key={col.key}
+            type="number" min="0" inputMode="numeric" className="form-input text-center"
+            value={serie.repeticoes || ''}
+            placeholder="0"
+            onChange={e => onChange('repeticoes', parseInt(e.target.value) || 0)}
+          />
+        );
+        if (col.key === 'pesoKg') return (
+          <input key={col.key}
+            type="number" min="0" step="0.5" inputMode="decimal" className="form-input text-center"
+            value={serie.pesoKg || ''}
+            placeholder="0"
+            onChange={e => onChange('pesoKg', parseFloat(e.target.value) || 0)}
+          />
+        );
+        if (col.key === 'distanciaMetros') return (
+          <input key={col.key}
+            type="number" min="0" step="50" inputMode="numeric" className="form-input text-center"
+            value={serie.distanciaMetros || ''}
+            placeholder="0"
+            onChange={e => onChange('distanciaMetros', parseInt(e.target.value) || 0)}
+          />
+        );
+        if (col.key === 'tempoSegundos') return (
+          <input key={col.key}
+            type="number" min="0" inputMode="numeric" className="form-input text-center"
+            value={serie.tempoSegundos || ''}
+            placeholder="0"
+            onChange={e => onChange('tempoSegundos', parseInt(e.target.value) || 0)}
+          />
+        );
+        return null;
+      })}
+
+      <button
+        onClick={onRemove}
+        disabled={!canRemove}
+        className="p-1.5 text-gray-600 hover:text-red-400 transition-colors disabled:opacity-30 mx-auto"
+      >
+        <Trash2 size={14} />
+      </button>
     </div>
   );
 }

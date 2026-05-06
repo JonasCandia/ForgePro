@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { Trash2, Search, Calendar, ChevronDown, Flame, Download } from 'lucide-react';
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay, getYear, subYears, startOfYear, endOfYear } from 'date-fns';
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay, getYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ResponsiveCalendar } from '@nivo/calendar';
 import { workoutService } from '../../lib/workoutService';
 import { WorkoutExerciseSummary, WorkoutSession } from '../../types';
 import { useWorkouts, useInvalidateWorkouts } from '../../hooks/useWorkouts';
 import { exportToCSV } from '../../lib/exportUtils';
+import { formatarResumoExercicio } from '../../lib/exercicioUtils';
 
 function toDate(raw: unknown): Date {
   if (raw instanceof Date) return raw;
@@ -325,8 +326,7 @@ export default function History({ onBack }: HistoryProps) {
                           <tr className="text-gray-600 border-b border-outline">
                             <th className="text-left p-3 font-black uppercase tracking-wider">Exercício</th>
                             <th className="text-center p-3 font-black uppercase tracking-wider">Séries</th>
-                            <th className="text-center p-3 font-black uppercase tracking-wider">Reps</th>
-                            <th className="text-center p-3 font-black uppercase tracking-wider">Carga</th>
+                            <th className="text-center p-3 font-black uppercase tracking-wider">Resultado</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -337,8 +337,7 @@ export default function History({ onBack }: HistoryProps) {
                                 {s.grupoMuscular && <p className="text-gray-600">{s.grupoMuscular}</p>}
                               </td>
                               <td className="p-3 text-center font-mono text-gray-300">{s.seriesRealizadas}</td>
-                              <td className="p-3 text-center font-mono text-gray-300">{s.repeticoesReais}</td>
-                              <td className="p-3 text-center font-mono font-bold text-brand">{s.pesoMax}kg</td>
+                              <td className="p-3 text-center font-mono font-bold text-brand">{formatarResumoExercicio(s)}</td>
                             </tr>
                           ))}
                         </tbody>
