@@ -1,14 +1,10 @@
 ﻿import React, { useState, useEffect, useMemo } from 'react';
-import { Trophy, Dumbbell, TrendingUp } from 'lucide-react';
-import { WorkoutSession, PersonalRecord } from '../../types';
-import { workoutService } from '../../lib/workoutService';
+import { Trophy, Dumbbell, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
+import { PersonalRecord } from '../../types';
+import { useWorkouts } from '../../hooks/useWorkouts';
+import { calcular1RM, calcular1RMDetalhado } from '../../lib/performanceUtils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-
-function calcularERM(peso: number, reps: number): number {
-  if (reps <= 0 || reps > 15 || peso <= 0) return peso;
-  return Math.round(peso * (36 / (37 - reps)) * 10) / 10;
-}
 
 const OBJETIVO_LABEL: Record<string, string> = {
   cutting: 'Cutting',
@@ -17,18 +13,9 @@ const OBJETIVO_LABEL: Record<string, string> = {
 };
 
 export default function Records() {
-  const [workouts, setWorkouts] = useState<WorkoutSession[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: workouts = [], isLoading: loading } = useWorkouts();
   const [filterGroup, setFilterGroup] = useState('');
-
-  useEffect(() => {
-    async function load() {
-      const data = await workoutService.getWorkouts();
-      setWorkouts(data);
-      setLoading(false);
-    }
-    load();
-  }, []);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const personalRecords = useMemo((): PersonalRecord[] => {
     const records = new Map<string, PersonalRecord>();
@@ -36,7 +23,7 @@ export default function Records() {
       w.exerciciosSummary.forEach(s => {
         const reps = s.repsAtMax;
         const peso = s.pesoMax;
-        const estimado1RM = calcularERM(peso, reps);
+        const estimado1RM = calcular1RM(peso, reps);
         const existing = records.get(s.exercicioId);
         if (!existing || estimado1RM > existing.estimado1RM) {
           records.set(s.exercicioId, {
@@ -104,7 +91,7 @@ export default function Records() {
       <div className="p-4 bg-surface-hover rounded-xl border border-dashed border-outline flex items-start gap-3">
         <TrendingUp size={16} className="text-brand mt-0.5 flex-shrink-0" />
         <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold leading-relaxed">
-          1RM Estimado calculado pela fórmula de Brzycki: <span className="text-gray-300">Peso × (36 ÷ (37 − Reps))</span>. Válido para séries de 1 a 15 repetições.
+          1RM Estimado é a <span className="text-gray-300">média de 4 fórmulas</span>: Epley, Brzycki, Lander e O'Conner. Válido para séries de 1 a 15 repetições. Toque em um recorde para ver o detalhamento.
         </p>
       </div>
 
@@ -117,37 +104,78 @@ export default function Records() {
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map((pr, idx) => (
-            <div key={pr.exercicioId} className="card p-5 border-l-4 border-l-brand hover:border-white transition-colors">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="bg-brand/10 border border-brand/20 rounded px-2 py-1 text-brand text-[10px] font-black tracking-wider flex-shrink-0">
-                    #{idx + 1}
+          {filtered.map((pr, idx) => {
+            const detalhes = calcular1RMDetalhado(pr.pesoMax, pr.repsAtMax);
+            const isExpanded = expandedId === pr.exercicioId;
+            return (
+              <div key={pr.exercicioId} className="card p-5 border-l-4 border-l-brand hover:border-white transition-colors">
+                <div
+                  className="flex items-start justify-between gap-4 cursor-pointer"
+                  onClick={() => setExpandedId(isExpanded ? null : pr.exercicioId)}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="bg-brand/10 border border-brand/20 rounded px-2 py-1 text-brand text-[10px] font-black tracking-wider flex-shrink-0">
+                      #{idx + 1}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-sm text-white uppercase tracking-tight truncate">{pr.exercicioNome}</h3>
+                      {pr.grupoMuscular && (
+                        <p className="text-[10px] text-gray-500 font-bold uppercase mt-0.5">{pr.grupoMuscular}</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="font-bold text-sm text-white uppercase tracking-tight truncate">{pr.exercicioNome}</h3>
-                    {pr.grupoMuscular && (
-                      <p className="text-[10px] text-gray-500 font-bold uppercase mt-0.5">{pr.grupoMuscular}</p>
-                    )}
+                  <div className="text-right flex-shrink-0 flex items-start gap-2">
+                    <div>
+                      <div className="flex items-baseline gap-1 justify-end">
+                        <span className="text-2xl font-display font-black text-brand tracking-tighter">{pr.estimado1RM}</span>
+                        <span className="text-[10px] text-gray-500 font-black uppercase">kg 1RM</span>
+                      </div>
+                      <p className="text-[10px] text-gray-600 font-mono mt-0.5">
+                        {pr.pesoMax}kg × {pr.repsAtMax} reps
+                      </p>
+                    </div>
+                    {isExpanded
+                      ? <ChevronUp size={14} className="text-gray-500 mt-1 flex-shrink-0" />
+                      : <ChevronDown size={14} className="text-gray-500 mt-1 flex-shrink-0" />}
                   </div>
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <div className="flex items-baseline gap-1 justify-end">
-                    <span className="text-2xl font-display font-black text-brand tracking-tighter">{pr.estimado1RM}</span>
-                    <span className="text-[10px] text-gray-500 font-black uppercase">kg 1RM</span>
+
+                {isExpanded && (
+                  <div className="mt-3 pt-3 border-t border-outline grid grid-cols-2 gap-2">
+                    <div className="bg-surface-hover rounded px-3 py-2">
+                      <p className="text-[9px] text-gray-600 uppercase tracking-wider font-black">Epley</p>
+                      <p className="text-xs font-bold text-white">{detalhes.epley} <span className="text-gray-500">kg</span></p>
+                    </div>
+                    <div className="bg-surface-hover rounded px-3 py-2">
+                      <p className="text-[9px] text-gray-600 uppercase tracking-wider font-black">Brzycki</p>
+                      <p className="text-xs font-bold text-white">{detalhes.brzycki} <span className="text-gray-500">kg</span></p>
+                    </div>
+                    <div className="bg-surface-hover rounded px-3 py-2">
+                      <p className="text-[9px] text-gray-600 uppercase tracking-wider font-black">Lander</p>
+                      <p className="text-xs font-bold text-white">{detalhes.lander} <span className="text-gray-500">kg</span></p>
+                    </div>
+                    <div className="bg-surface-hover rounded px-3 py-2">
+                      <p className="text-[9px] text-gray-600 uppercase tracking-wider font-black">O'Conner</p>
+                      <p className="text-xs font-bold text-white">{detalhes.oconner} <span className="text-gray-500">kg</span></p>
+                    </div>
+                    <div className="col-span-2 mt-1">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-gray-600">
+                        {format(new Date(pr.data), "dd MMM yyyy", { locale: ptBR }).toUpperCase()}
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-[10px] text-gray-600 font-mono mt-0.5">
-                    {pr.pesoMax}kg × {pr.repsAtMax} reps
-                  </p>
-                </div>
+                )}
+
+                {!isExpanded && (
+                  <div className="flex items-center gap-4 mt-3 pt-3 border-t border-outline">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-600">
+                      {format(new Date(pr.data), "dd MMM yyyy", { locale: ptBR }).toUpperCase()}
+                    </span>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-4 mt-3 pt-3 border-t border-outline">
-                <span className="text-[9px] font-black uppercase tracking-widest text-gray-600">
-                  {format(new Date(pr.data), "dd MMM yyyy", { locale: ptBR }).toUpperCase()}
-                </span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, PlusCircle, History as HistoryIcon, TrendingUp, Dumbbell, LogIn, LogOut, Trophy, User as UserIcon, Sun, Moon } from 'lucide-react';
+import { Home, PlusCircle, History as HistoryIcon, TrendingUp, Dumbbell, LogIn, LogOut, Trophy, User as UserIcon, Sun, Moon, FileDown, Ruler, WifiOff } from 'lucide-react';
 import Dashboard from './components/screens/Dashboard';
 import LogWorkout from './components/screens/LogWorkout';
 import History from './components/screens/History';
@@ -8,34 +8,43 @@ import ImportPlan from './components/screens/ImportPlan';
 import ExecutePlannedWorkout from './components/screens/ExecutePlannedWorkout';
 import UserProfile from './components/screens/UserProfile';
 import Records from './components/screens/Records';
+import BodyMeasurements from './components/screens/BodyMeasurements';
 import { auth, signIn, signOutUser } from './lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 import { workoutService } from './lib/workoutService';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { useAppStore } from './store/appStore';
+import { useProfile } from './hooks/useProfile';
+import { useOnlineSync } from './hooks/useOnlineSync';
 
-type Screen = 'home' | 'log' | 'history' | 'progress' | 'import' | 'execute' | 'profile' | 'records';
+type Screen = 'home' | 'log' | 'history' | 'progress' | 'import' | 'execute' | 'profile' | 'records' | 'measurements';
 
 function AppInner() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, setUser } = useAppStore();
+  const [authLoading, setAuthLoading] = useState(true);
+  const { data: profile, isLoading: profileLoading } = useProfile();
   const { theme, toggleTheme } = useTheme();
+  const { isOnline } = useOnlineSync();
 
+  // Resolve initial auth state
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
-      if (u) {
-        workoutService.seedExercises();
-        // Check if profile exists; redirect to profile setup on first login
-        const profile = await workoutService.getUserProfile();
-        if (!profile) {
-          setCurrentScreen('profile');
-        }
-      }
-      setLoading(false);
+      if (u) workoutService.seedExercises();
+      setAuthLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [setUser]);
+
+  // Redirect to profile setup on first login
+  useEffect(() => {
+    if (!authLoading && user && !profileLoading && profile === null) {
+      setCurrentScreen('profile');
+    }
+  }, [authLoading, user, profileLoading, profile]);
+
+  const loading = authLoading || (!!user && profileLoading);
 
   const renderScreen = () => {
     if (loading) return <div className="flex items-center justify-center h-[60vh]"><div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin"></div></div>;
@@ -79,10 +88,13 @@ function AppInner() {
           <UserProfile
             onBack={() => setCurrentScreen('home')}
             onSaved={() => setCurrentScreen('home')}
+            onNavigate={(screen) => setCurrentScreen(screen as any)}
           />
         );
       case 'records':
         return <Records />;
+      case 'measurements':
+        return <BodyMeasurements onBack={() => setCurrentScreen('home')} />;
       default:
         return <Dashboard onNavigate={setCurrentScreen} />;
     }
@@ -101,14 +113,14 @@ function AppInner() {
         
         {/* Desktop Nav */}
         <div className="hidden md:flex gap-8 text-[11px] font-bold uppercase tracking-widest h-full">
-          {(['home', 'log', 'history', 'progress', 'records'] as const).map((screen) => (
+          {(['home', 'log', 'history', 'progress', 'records', 'measurements', 'import'] as const).map((screen) => (
             <button 
               key={screen}
               disabled={!user}
               onClick={() => setCurrentScreen(screen)}
               className={`h-full border-b-2 flex items-center px-2 transition-colors ${currentScreen === screen ? 'text-brand border-brand' : 'text-gray-500 border-transparent hover:text-gray-300'} disabled:opacity-30`}
             >
-              {screen === 'home' ? 'Painel' : screen === 'log' ? 'Registrar' : screen === 'history' ? 'Histórico' : screen === 'progress' ? 'Progresso' : 'Recordes'}
+              {screen === 'home' ? 'Painel' : screen === 'log' ? 'Registrar' : screen === 'history' ? 'Histórico' : screen === 'progress' ? 'Progresso' : screen === 'records' ? 'Recordes' : screen === 'measurements' ? 'Medidas' : 'Importar'}
             </button>
           ))}
         </div>
@@ -148,6 +160,13 @@ function AppInner() {
                   <UserIcon size={14} />
                   Meu Perfil
                 </button>
+                <button
+                  onClick={() => setCurrentScreen('import')}
+                  className="w-full text-left px-2 py-2 text-xs text-gray-300 hover:bg-white/5 rounded flex items-center gap-2"
+                >
+                  <FileDown size={14} />
+                  Importar Plano
+                </button>
                 <button 
                   onClick={signOutUser}
                   className="w-full text-left px-2 py-2 text-xs text-red-500 hover:bg-red-500/10 rounded flex items-center gap-2"
@@ -160,6 +179,16 @@ function AppInner() {
           )}
         </div>
       </nav>
+
+      {/* Offline banner */}
+      {!isOnline && (
+        <div className="sticky top-[57px] z-40 w-full bg-yellow-900/90 border-b border-yellow-700/50 px-4 py-2 flex items-center gap-2 backdrop-blur-sm">
+          <WifiOff size={13} className="text-yellow-400 flex-shrink-0" />
+          <p className="text-[11px] font-bold uppercase tracking-wider text-yellow-300">
+            Sem conexão — dados em cache. Alterações serão sincronizadas ao reconectar.
+          </p>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-6 pt-6 pb-32 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -200,6 +229,18 @@ function AppInner() {
               icon={<Trophy size={20} />}
               label="Recordes"
               onClick={() => setCurrentScreen('records')}
+            />
+            <NavItem
+              active={currentScreen === 'measurements'}
+              icon={<Ruler size={20} />}
+              label="Medidas"
+              onClick={() => setCurrentScreen('measurements')}
+            />
+            <NavItem
+              active={currentScreen === 'import'}
+              icon={<FileDown size={20} />}
+              label="Importar"
+              onClick={() => setCurrentScreen('import')}
             />
           </div>
         </nav>

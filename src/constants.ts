@@ -23,7 +23,8 @@ export const JSON_EXEMPLO = {
           "nomeTreino": "Peito e Tríceps",
           "exercicios": [
             { "id": 1, "series": 4, "repeticoes": 10, "peso": 40, "obs": "aquecimento antes" },
-            { "id": 7, "series": 3, "repeticoes": 12, "peso": 15, "obs": "" }
+            { "id": 7, "series": 3, "repeticoes": 12, "peso": 15, "obs": "" },
+            { "id": "custom_01", "nome": "Crossover no Cabo", "grupoMuscular": "Peitoral", "series": 3, "repeticoes": 15, "peso": 10, "obs": "finalização" }
           ]
         },
         {

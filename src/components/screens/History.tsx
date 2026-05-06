@@ -1,34 +1,51 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
-import { Trash2, Search, Calendar, ChevronDown } from 'lucide-react';
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+﻿import React, { useState, useMemo } from 'react';
+import { Trash2, Search, Calendar, ChevronDown, Flame } from 'lucide-react';
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay, getYear, subYears, startOfYear, endOfYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { ResponsiveCalendar } from '@nivo/calendar';
 import { workoutService } from '../../lib/workoutService';
-import { WorkoutSession, WorkoutExerciseSummary } from '../../types';
+import { WorkoutExerciseSummary, WorkoutSession } from '../../types';
+import { useWorkouts, useInvalidateWorkouts } from '../../hooks/useWorkouts';
 
 interface HistoryProps {
   onBack?: () => void;
 }
 
 export default function History({ onBack }: HistoryProps) {
-  const [workouts, setWorkouts] = useState<WorkoutSession[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: workouts = [], isLoading: loading } = useWorkouts();
+  const invalidateWorkouts = useInvalidateWorkouts();
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [filterGroup, setFilterGroup] = useState('');
   const [filterObjetivo, setFilterObjetivo] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [calendarYear, setCalendarYear] = useState(getYear(new Date()));
 
-  useEffect(() => { loadData(); }, []);
+  // ── Heatmap data ────────────────────────────────────────────────────────────
+  const heatmapData = useMemo(() => {
+    const map = new Map<string, number>();
+    workouts.forEach(w => {
+      const d = w.data instanceof Date ? w.data : (w.data as any)?.toDate?.() ?? new Date(w.data as any);
+      if (getYear(d) !== calendarYear) return;
+      const key = format(d, 'yyyy-MM-dd');
+      map.set(key, (map.get(key) ?? 0) + 1);
+    });
+    return Array.from(map.entries()).map(([day, value]) => ({ day, value }));
+  }, [workouts, calendarYear]);
 
-  async function loadData() {
-    setLoading(true);
-    try {
-      const data = await workoutService.getWorkouts();
-      setWorkouts(data);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  }
+  const calendarFrom = `${calendarYear}-01-01`;
+  const calendarTo   = `${calendarYear}-12-31`;
+  const totalWorkoutsYear = heatmapData.reduce((s, d) => s + d.value, 0);
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    workouts.forEach(w => {
+      const d = w.data instanceof Date ? w.data : (w.data as any)?.toDate?.() ?? new Date(w.data as any);
+      years.add(getYear(d));
+    });
+    years.add(getYear(new Date()));
+    return [...years].sort((a, b) => b - a);
+  }, [workouts]);
 
   const gruposMusculares = useMemo(() => {
     const groups = new Set<string>();
@@ -71,7 +88,7 @@ export default function History({ onBack }: HistoryProps) {
     setDeleting(workoutId);
     try {
       await workoutService.deleteWorkout(workoutId);
-      setWorkouts(prev => prev.filter(w => w.id !== workoutId));
+      invalidateWorkouts();
     } catch (e) { console.error(e); }
     finally { setDeleting(null); }
   }
@@ -90,6 +107,80 @@ export default function History({ onBack }: HistoryProps) {
         <h2 className="text-brand text-xs font-bold uppercase tracking-widest mb-1">Registro</h2>
         <h1 className="font-display text-2xl font-black uppercase tracking-tight">Histórico</h1>
       </div>
+
+      {/* ── Heatmap anual ─────────────────────────────────────────────────── */}
+      <section className="card p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Flame size={14} className="text-brand" />
+            <h3 className="text-[10px] text-gray-500 uppercase tracking-widest font-black">
+              Consistência Anual
+            </h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black text-gray-500 uppercase tracking-wider">
+              {totalWorkoutsYear} treino{totalWorkoutsYear !== 1 ? 's' : ''}
+            </span>
+            <select
+              className="bg-surface-hover border border-outline rounded px-2 py-1 text-[10px] font-bold text-white"
+              value={calendarYear}
+              onChange={e => setCalendarYear(Number(e.target.value))}
+            >
+              {availableYears.map(y => (
+                <option key={y} value={y} className="bg-surface">{y}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Nivo Calendar — needs a fixed height container */}
+        <div style={{ height: 160 }} className="w-full overflow-hidden">
+          <ResponsiveCalendar
+            data={heatmapData}
+            from={calendarFrom}
+            to={calendarTo}
+            emptyColor="#1a1a1a"
+            colors={['#2d4a00', '#5a9200', '#99d000', '#CCFF00']}
+            margin={{ top: 20, right: 4, bottom: 0, left: 28 }}
+            yearSpacing={0}
+            monthBorderColor="#111"
+            dayBorderWidth={2}
+            dayBorderColor="#111"
+            monthLegendOffset={10}
+            legends={[]}
+            tooltip={({ day, value }) => (
+              <div
+                style={{
+                  background: '#1a1a1a',
+                  border: '1px solid #333',
+                  borderRadius: 6,
+                  padding: '4px 8px',
+                  fontSize: 11,
+                  color: '#CCFF00',
+                  fontWeight: 700,
+                }}
+              >
+                {format(parseISO(day), "dd 'de' MMM", { locale: ptBR })}
+                {' — '}
+                {value} treino{(value as number) !== 1 ? 's' : ''}
+              </div>
+            )}
+            theme={{
+              text: { fontSize: 10, fill: '#6b7280', fontFamily: 'inherit' },
+              tooltip: { container: { background: 'transparent', boxShadow: 'none', padding: 0 } },
+            }}
+          />
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center justify-end gap-2">
+          <span className="text-[9px] text-gray-600 font-bold uppercase tracking-wider">Menos</span>
+          {['#1a1a1a', '#2d4a00', '#5a9200', '#99d000', '#CCFF00'].map(c => (
+            <div key={c} className="w-3 h-3 rounded-sm" style={{ backgroundColor: c }} />
+          ))}
+          <span className="text-[9px] text-gray-600 font-bold uppercase tracking-wider">Mais</span>
+        </div>
+      </section>
 
       <div className="space-y-3">
         <div className="relative">

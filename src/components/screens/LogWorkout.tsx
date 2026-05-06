@@ -1,7 +1,9 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState } from 'react';
 import { ArrowLeft, Plus, Trash2, Check, ChevronDown } from 'lucide-react';
 import { workoutService } from '../../lib/workoutService';
-import type { Exercício } from '../../types';
+import { useExercises } from '../../hooks/useExercises';
+import { useProfile } from '../../hooks/useProfile';
+import { useInvalidateWorkouts } from '../../hooks/useWorkouts';
 
 interface SeriesEntry {
   series: number;
@@ -22,28 +24,15 @@ interface LogWorkoutProps {
 }
 
 export default function LogWorkout({ onBack }: LogWorkoutProps) {
-  const [exercises, setExercises] = useState<Exercício[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: exercises = [], isLoading: loadingExercises } = useExercises();
+  const { data: profile, isLoading: loadingProfile } = useProfile();
+  const invalidateWorkouts = useInvalidateWorkouts();
+  const loading = loadingExercises || loadingProfile;
+  const objetivo = profile?.objetivo;
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const [selectedExId, setSelectedExId] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [objetivo, setObjetivo] = useState<string | undefined>(undefined);
-
-  useEffect(() => { loadData(); }, []);
-
-  async function loadData() {
-    setLoading(true);
-    try {
-      const [exs, profile] = await Promise.all([
-        workoutService.getExercises(),
-        workoutService.getUserProfile()
-      ]);
-      setExercises(exs);
-      setObjetivo(profile?.objetivo);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  }
 
   function addEntry() {
     if (!selectedExId) return;
@@ -100,6 +89,7 @@ export default function LogWorkout({ onBack }: LogWorkoutProps) {
         }))
       };
       await workoutService.saveManualWorkout(data, objetivo);
+      invalidateWorkouts();
       setSaved(true);
       setEntries([]);
     } catch (e) { console.error(e); }

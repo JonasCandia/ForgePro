@@ -23,8 +23,15 @@ import {
   WorkoutSeries,
   WorkoutExerciseSummary,
   Profile,
+  BodyMeasurement,
 } from '../types';
 import { MOCK_EXERCICIOS } from '../constants';
+import {
+  cacheWorkouts, getCachedWorkouts,
+  cacheExercises, getCachedExercises,
+  cacheMeasurements, getCachedMeasurements,
+} from './localDb';
+import { isOnline, offlineSaveMeasurement, offlineSaveManualWorkout } from './syncService';
 
 const REGISTROS_COL = 'registros';
 const EXERCICIOS_COL = 'exercicios';
@@ -32,6 +39,7 @@ const PLANOS_COL = 'planos';
 const WORKOUTS_COL = 'workouts';
 const SERIES_COL = 'series';
 const USERS_COL = 'users';
+const MEASUREMENTS_COL = 'measurements';
 
 export const workoutService = {
 
@@ -94,8 +102,14 @@ export const workoutService = {
     try {
       const q = query(collection(db, EXERCICIOS_COL));
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Exercício));
+      const exercises = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Exercício));
+      // Cache for offline use
+      cacheExercises(exercises).catch(() => {});
+      return exercises;
     } catch (error) {
+      // Firestore failed — try IndexedDB cache
+      const cached = await getCachedExercises();
+      if (cached.length > 0) return cached;
       handleFirestoreError(error, OperationType.LIST, EXERCICIOS_COL);
       return [];
     }
@@ -215,6 +229,11 @@ export const workoutService = {
     objetivo?: string
   ): Promise<void> {
     if (!auth.currentUser) throw new Error('User must be logged in');
+    // Offline: queue for later sync
+    if (!isOnline()) {
+      await offlineSaveManualWorkout(data, objetivo);
+      return;
+    }
     const uid = auth.currentUser.uid;
     const now = new Date().toISOString();
     try {
@@ -272,8 +291,14 @@ export const workoutService = {
         orderBy('data', 'desc')
       );
       const snap = await getDocs(q);
-      return snap.docs.map(d => ({ id: d.id, ...d.data() } as WorkoutSession));
+      const workouts = snap.docs.map(d => ({ id: d.id, ...d.data() } as WorkoutSession));
+      // Cache for offline use
+      cacheWorkouts(auth.currentUser.uid, workouts).catch(() => {});
+      return workouts;
     } catch (error) {
+      // Firestore failed — try IndexedDB cache
+      const cached = await getCachedWorkouts(auth.currentUser.uid);
+      if (cached.length > 0) return cached;
       handleFirestoreError(error, OperationType.LIST, WORKOUTS_COL);
       return [];
     }
@@ -415,6 +440,45 @@ export const workoutService = {
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, PLANOS_COL);
       return [];
+    }
+  },
+
+  // ===== MEASUREMENTS =====
+
+  async getMeasurements(): Promise<BodyMeasurement[]> {
+    if (!auth.currentUser) return [];
+    try {
+      const ref = collection(db, USERS_COL, auth.currentUser.uid, MEASUREMENTS_COL);
+      const q = query(ref, orderBy('data', 'asc'));
+      const snap = await getDocs(q);
+      const measurements = snap.docs.map(d => ({ id: d.id, ...d.data() } as BodyMeasurement));
+      // Cache for offline use
+      cacheMeasurements(auth.currentUser.uid, measurements).catch(() => {});
+      return measurements;
+    } catch (error) {
+      // Firestore failed — try IndexedDB cache
+      const cached = await getCachedMeasurements(auth.currentUser!.uid);
+      if (cached.length > 0) return cached;
+      handleFirestoreError(error, OperationType.LIST, `${USERS_COL}/${auth.currentUser?.uid}/${MEASUREMENTS_COL}`);
+      return [];
+    }
+  },
+
+  async saveMeasurement(data: Omit<BodyMeasurement, 'id' | 'userId' | 'createdAt'>): Promise<string> {
+    if (!auth.currentUser) throw new Error('User must be logged in');
+    // Offline: queue for later sync
+    if (!isOnline()) return offlineSaveMeasurement(data);
+    try {
+      const ref = collection(db, USERS_COL, auth.currentUser.uid, MEASUREMENTS_COL);
+      const docRef = await addDoc(ref, {
+        ...data,
+        userId: auth.currentUser.uid,
+        createdAt: serverTimestamp(),
+      });
+      return docRef.id;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `${USERS_COL}/${auth.currentUser?.uid}/${MEASUREMENTS_COL}`);
+      throw error;
     }
   },
 

@@ -1,15 +1,18 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Save, User } from 'lucide-react';
+import { ArrowLeft, Save, User, Ruler } from 'lucide-react';
 import { workoutService } from '../../lib/workoutService';
+import { useProfile, useInvalidateProfile } from '../../hooks/useProfile';
 
 interface UserProfileProps {
   onBack: () => void;
   onSaved?: () => void;
+  onNavigate?: (screen: string) => void;
   isFirstTime?: boolean;
 }
 
-export default function UserProfile({ onBack, onSaved, isFirstTime }: UserProfileProps) {
-  const [loading, setLoading] = useState(true);
+export default function UserProfile({ onBack, onSaved, onNavigate, isFirstTime }: UserProfileProps) {
+  const { data: profileData, isLoading: loading } = useProfile();
+  const invalidateProfile = useInvalidateProfile();
   const [saving, setSaving] = useState(false);
   const [nome, setNome] = useState('');
   const [pesoCorporal, setPesoCorporal] = useState<number | ''>('');
@@ -19,20 +22,16 @@ export default function UserProfile({ onBack, onSaved, isFirstTime }: UserProfil
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
 
+  // Populate form when profile data arrives
   useEffect(() => {
-    async function load() {
-      const profile = await workoutService.getUserProfile();
-      if (profile) {
-        setNome(profile.nome || '');
-        setPesoCorporal(profile.pesoCorporal ?? '');
-        setAltura(profile.altura ?? '');
-        setObjetivo(profile.objetivo || '');
-        setFotoUrl(profile.fotoUrl || '');
-      }
-      setLoading(false);
+    if (profileData) {
+      setNome(profileData.nome || '');
+      setPesoCorporal(profileData.pesoCorporal ?? '');
+      setAltura(profileData.altura ?? '');
+      setObjetivo(profileData.objetivo || '');
+      setFotoUrl(profileData.fotoUrl || '');
     }
-    load();
-  }, []);
+  }, [profileData]);
 
   const handleSave = async () => {
     if (!nome.trim()) { setError('O campo Nome é obrigatório.'); return; }
@@ -48,6 +47,7 @@ export default function UserProfile({ onBack, onSaved, isFirstTime }: UserProfil
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+      invalidateProfile();
       if (onSaved) onSaved();
     } catch (err) {
       setError('Falha ao salvar. Tente novamente.');
@@ -187,6 +187,16 @@ export default function UserProfile({ onBack, onSaved, isFirstTime }: UserProfil
           O objetivo selecionado será automaticamente associado a todas as séries registradas, permitindo filtrar e analisar seu desempenho por fase de treino (cutting, bulking ou manutenção).
         </p>
       </div>
+
+      {onNavigate && (
+        <button
+          onClick={() => onNavigate('measurements')}
+          className="btn-secondary w-full justify-center"
+        >
+          <Ruler size={16} />
+          Medidas Corporais
+        </button>
+      )}
     </div>
   );
 }

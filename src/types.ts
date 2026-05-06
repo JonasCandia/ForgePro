@@ -44,12 +44,21 @@ export interface Profile {
   altura?: number;
   objetivo?: 'cutting' | 'bulking' | 'manutencao';
   fotoUrl?: string;
-  // Future nutrition/sleep/measurements fields (no UI yet)
-  calorias?: number;
-  sono?: number;
-  medidasCorporais?: Record<string, number>;
+  zeppConnected?: boolean; // reservado para integração futura Zepp Health
   createdAt?: any;
   updatedAt?: any;
+}
+
+export interface BodyMeasurement {
+  id: string;
+  userId: string;
+  data: string; // ISO date YYYY-MM-DD
+  pesoKg?: number;
+  bracoCm?: number;
+  cinturaCm?: number;
+  quadrilCm?: number;
+  pescocoCm?: number;
+  createdAt?: any;
 }
 
 export interface WorkoutExerciseSummary {
