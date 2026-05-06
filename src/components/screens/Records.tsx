@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Trophy, Dumbbell, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Trophy, Dumbbell, TrendingUp, ChevronDown, ChevronUp, TrendingDown } from 'lucide-react';
 import { PersonalRecord } from '../../types';
 import { useWorkouts } from '../../hooks/useWorkouts';
-import { calcular1RM, calcular1RMDetalhado } from '../../lib/performanceUtils';
+import { calcular1RM, calcular1RMDetalhado, projetarPR, ProjecaoPR } from '../../lib/performanceUtils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -39,6 +39,22 @@ export default function Records() {
       });
     });
     return Array.from(records.values()).sort((a, b) => b.estimado1RM - a.estimado1RM);
+  }, [workouts]);
+
+  const projecoesPorExercicio = useMemo((): Map<string, ProjecaoPR | null> => {
+    const map = new Map<string, ProjecaoPR | null>();
+    const histPorExercicio = new Map<string, { data: string; pesoMax: number }[]>();
+    workouts.forEach(w => {
+      w.exerciciosSummary.forEach(s => {
+        const hist = histPorExercicio.get(s.exercicioId) ?? [];
+        hist.push({ data: w.data, pesoMax: s.pesoMax });
+        histPorExercicio.set(s.exercicioId, hist);
+      });
+    });
+    histPorExercicio.forEach((hist, exercicioId) => {
+      map.set(exercicioId, projetarPR(hist));
+    });
+    return map;
   }, [workouts]);
 
   const muscleGroups = useMemo(() => {
@@ -118,6 +134,7 @@ export default function Records() {
           {filtered.map((pr, idx) => {
             const detalhes = calcular1RMDetalhado(pr.pesoMax, pr.repsAtMax);
             const isExpanded = expandedId === pr.exercicioId;
+            const projecao = projecoesPorExercicio.get(pr.exercicioId) ?? null;
             return (
               <div key={pr.exercicioId} className="card p-5 border-brand/20 hover:border-brand/40 transition-colors">
                 <div
@@ -178,10 +195,16 @@ export default function Records() {
                 )}
 
                 {!isExpanded && (
-                  <div className="flex items-center gap-4 mt-3 pt-3 border-t border-outline">
+                  <div className="flex items-center justify-between gap-4 mt-3 pt-3 border-t border-outline">
                     <span className="text-[11px] font-black uppercase tracking-widest text-gray-600">
                       {format(new Date(pr.data), "dd MMM yyyy", { locale: ptBR }).toUpperCase()}
                     </span>
+                    {projecao && (
+                      <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-emerald-500">
+                        <TrendingUp size={11} />
+                        ~{projecao.semanas}sem → {projecao.pesoAlvo}kg
+                      </span>
+                    )}
                   </div>
                 )}
               </div>

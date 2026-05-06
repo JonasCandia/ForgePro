@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { Trash2, Search, Calendar, ChevronDown, Flame } from 'lucide-react';
+import { Trash2, Search, Calendar, ChevronDown, Flame, Download } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, getYear, subYears, startOfYear, endOfYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ResponsiveCalendar } from '@nivo/calendar';
 import { workoutService } from '../../lib/workoutService';
 import { WorkoutExerciseSummary, WorkoutSession } from '../../types';
 import { useWorkouts, useInvalidateWorkouts } from '../../hooks/useWorkouts';
+import { exportToCSV } from '../../lib/exportUtils';
 
 function toDate(raw: unknown): Date {
   if (raw instanceof Date) return raw;
@@ -123,9 +124,20 @@ export default function History({ onBack }: HistoryProps) {
 
   return (
     <div className="space-y-6 pt-4 pb-24">
-      <div>
-        <h2 className="text-brand text-xs font-bold uppercase tracking-widest mb-1">Registro</h2>
-        <h1 className="font-display text-2xl font-black uppercase tracking-tight">Histórico</h1>
+      <div className="flex items-end justify-between">
+        <div>
+          <h2 className="text-brand text-xs font-bold uppercase tracking-widest mb-1">Registro</h2>
+          <h1 className="font-display text-2xl font-black uppercase tracking-tight">Histórico</h1>
+        </div>
+        <button
+          onClick={() => exportToCSV(workouts)}
+          disabled={workouts.length === 0}
+          className="btn-secondary disabled:opacity-40 flex items-center gap-2 text-xs"
+          title="Exportar histórico como CSV"
+        >
+          <Download size={14} />
+          CSV
+        </button>
       </div>
 
       {/* -- Heatmap anual --------------------------------------------------- */}

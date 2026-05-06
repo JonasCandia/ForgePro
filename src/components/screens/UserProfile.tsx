@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Save, User, Ruler, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Save, User, Ruler, ChevronDown, Download } from 'lucide-react';
 import { workoutService } from '../../lib/workoutService';
 import { useProfile, useInvalidateProfile } from '../../hooks/useProfile';
+import { useWorkouts } from '../../hooks/useWorkouts';
+import { exportToCSV } from '../../lib/exportUtils';
 import type { Screen } from '../../App';
 
 interface UserProfileProps {
@@ -13,6 +15,7 @@ interface UserProfileProps {
 
 export default function UserProfile({ onBack, onSaved, onNavigate, isFirstTime }: UserProfileProps) {
   const { data: profileData, isLoading: loading } = useProfile();
+  const { data: workouts = [] } = useWorkouts();
   const invalidateProfile = useInvalidateProfile();
   const [saving, setSaving] = useState(false);
   const [nome, setNome] = useState('');
@@ -217,6 +220,21 @@ export default function UserProfile({ onBack, onSaved, onNavigate, isFirstTime }
           Medidas Corporais
         </button>
       )}
+
+      <section className="card space-y-3">
+        <h3 className="text-brand text-xs font-bold uppercase tracking-widest border-b border-outline pb-4">Dados</h3>
+        <button
+          onClick={() => exportToCSV(workouts)}
+          disabled={workouts.length === 0}
+          className="btn-secondary w-full justify-center disabled:opacity-40"
+        >
+          <Download size={16} />
+          Exportar Histórico (CSV)
+        </button>
+        <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider">
+          Exporta todas as sessões finalizadas. Use o arquivo para análise externa ou IA.
+        </p>
+      </section>
     </div>
   );
 }
