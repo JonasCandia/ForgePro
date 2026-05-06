@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, PlusCircle, History as HistoryIcon, TrendingUp, Dumbbell, LogIn, LogOut, Trophy, User as UserIcon, Sun, Moon, FileDown, Ruler, WifiOff } from 'lucide-react';
+import { Home, PlusCircle, History as HistoryIcon, TrendingUp, Dumbbell, LogIn, LogOut, Trophy, User as UserIcon, Sun, Moon, FileDown, WifiOff } from 'lucide-react';
 import Dashboard from './components/screens/Dashboard';
 import LogWorkout from './components/screens/LogWorkout';
 import History from './components/screens/History';
@@ -207,59 +207,36 @@ function AppInner() {
       )}
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-6 pt-6 pb-32 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <main className="max-w-4xl mx-auto px-6 pt-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
         {renderScreen()}
       </main>
 
       {/* Mobile Bottom Navigation */}
       {user && (
-        <nav className="md:hidden fixed bottom-0 left-0 w-full bg-surface border-t border-outline px-6 py-4 pb-8 z-50">
-          <div className="flex justify-around items-end">
-            <NavItem 
-              active={currentScreen === 'home'} 
-              icon={<Home size={20} />} 
-              label="Início" 
-              onClick={() => setCurrentScreen('home')} 
-            />
-            <NavItem 
-              active={currentScreen === 'log'} 
-              icon={<PlusCircle size={20} />} 
-              label="Novo" 
-              onClick={() => setCurrentScreen('log')} 
-              isCenter
-            />
-            <NavItem 
-              active={currentScreen === 'history'} 
-              icon={<HistoryIcon size={20} />} 
-              label="Histórico" 
-              onClick={() => setCurrentScreen('history')} 
-            />
-            <NavItem 
-              active={currentScreen === 'progress'} 
-              icon={<TrendingUp size={20} />} 
-              label="Progresso" 
-              onClick={() => setCurrentScreen('progress')} 
-            />
-            <NavItem
-              active={currentScreen === 'records'}
-              icon={<Trophy size={20} />}
-              label="Recordes"
-              onClick={() => setCurrentScreen('records')}
-            />
-            <NavItem
-              active={currentScreen === 'measurements'}
-              icon={<Ruler size={20} />}
-              label="Medidas"
-              onClick={() => setCurrentScreen('measurements')}
-            />
-            <NavItem
-              active={currentScreen === 'import'}
-              icon={<FileDown size={20} />}
-              label="Importar"
-              onClick={() => setCurrentScreen('import')}
-            />
-          </div>
-        </nav>
+        <>
+          {/* FAB — Novo Treino */}
+          <button
+            onClick={() => setCurrentScreen('log')}
+            aria-label="Novo treino"
+            className={`md:hidden fixed bottom-[5.5rem] right-4 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 active:scale-95 ${
+              currentScreen === 'log'
+                ? 'bg-brand text-black scale-110 shadow-brand/50'
+                : 'bg-brand text-black hover:brightness-110 shadow-brand/30'
+            }`}
+          >
+            <PlusCircle size={24} />
+          </button>
+
+          <nav className="md:hidden fixed bottom-0 left-0 w-full bg-surface border-t border-outline z-40 pb-[env(safe-area-inset-bottom,1.5rem)]">
+            <div className="flex justify-around items-center py-2">
+              <NavItem active={currentScreen === 'home'} icon={<Home size={22} />} label="Início" onClick={() => setCurrentScreen('home')} />
+              <NavItem active={currentScreen === 'history'} icon={<HistoryIcon size={22} />} label="Histórico" onClick={() => setCurrentScreen('history')} />
+              <div className="w-14" />{/* espaço reservado para o FAB */}
+              <NavItem active={currentScreen === 'progress'} icon={<TrendingUp size={22} />} label="Progresso" onClick={() => setCurrentScreen('progress')} />
+              <NavItem active={currentScreen === 'records'} icon={<Trophy size={22} />} label="Recordes" onClick={() => setCurrentScreen('records')} />
+            </div>
+          </nav>
+        </>
       )}
     </div>
   );
@@ -278,38 +255,19 @@ interface NavItemProps {
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
-  isCenter?: boolean;
 }
 
-function NavItem({ active, icon, label, onClick, isCenter }: NavItemProps) {
-  if (isCenter) {
-    return (
-      <button 
-        onClick={onClick}
-        className="flex flex-col items-center gap-1 group -mt-8"
-      >
-        <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 ${active ? 'bg-brand text-black scale-110 shadow-lg shadow-brand/40' : 'bg-surface border-2 border-brand text-brand hover:scale-110'}`}>
-          {icon}
-        </div>
-        <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${active ? 'text-brand' : 'text-gray-500'}`}>
-          {label}
-        </span>
-      </button>
-    );
-  }
-
+function NavItem({ active, icon, label, onClick }: NavItemProps) {
   return (
-    <button 
+    <button
       onClick={onClick}
-      className={`flex flex-col items-center justify-center gap-1 min-h-[44px] transition-all duration-300 ${active ? 'text-brand scale-110' : 'text-gray-500 hover:text-gray-300'}`}
+      aria-label={label}
+      className={`flex flex-col items-center justify-center gap-1 min-h-[44px] min-w-[44px] px-3 transition-all duration-300 ${active ? 'text-brand' : 'text-gray-500 hover:text-gray-300'}`}
     >
-      <div className="flex items-center justify-center">
+      <div className={`flex items-center justify-center transition-transform duration-300 ${active ? 'scale-110' : ''}`}>
         {icon}
       </div>
-      <span className="text-[10px] font-bold uppercase tracking-widest">
-        {label}
-      </span>
-      {active && <div className="w-1 h-1 rounded-full bg-brand animate-in zoom-in" />}
+      {active && <div className="w-1 h-1 rounded-full bg-brand" />}
     </button>
   );
 }
