@@ -7,7 +7,7 @@
  * Para evitar dependência circular com workoutService, este arquivo
  * chama o Firestore diretamente para as operações da fila.
  */
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, arrayUnion } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import {
   getPendingSyncItems,
@@ -81,11 +81,15 @@ export async function processQueue(): Promise<void> {
       try {
         if (item.operation === 'saveMeasurement') {
           const uid = item.userId;
-          await addDoc(collection(db, 'users', uid, 'measurements'), {
-            ...item.payload,
-            userId: uid,
-            createdAt: serverTimestamp(),
-          });
+          const data = item.payload as Omit<BodyMeasurement, 'id' | 'userId' | 'createdAt'>;
+          const id = `m_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+          const monthKey = data.data.slice(0, 7); // YYYY-MM
+          const measurement: BodyMeasurement = { id, userId: uid, createdAt: new Date().toISOString(), ...data };
+          await setDoc(
+            doc(db, 'users', uid, 'measurements', monthKey),
+            { entries: arrayUnion(measurement) },
+            { merge: true }
+          );
         } else if (item.operation === 'saveManualWorkout') {
           // Lazy-import to avoid circular dep
           const { workoutService } = await import('./workoutService');

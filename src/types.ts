@@ -83,6 +83,8 @@ export interface WorkoutSession {
   status: 'em_andamento' | 'finalizado';
   objetivo?: string;
   exerciciosSummary: WorkoutExerciseSummary[];
+  /** Séries embutidas no documento (nova estrutura — elimina subcoleção series/) */
+  series?: WorkoutSeries[];
   createdAt?: any;
 }
 

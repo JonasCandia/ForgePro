@@ -15,59 +15,12 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isValidId(id) {
-      return id is string && id.size() <= 128;
-    }
-
     // Exercicio Validation
     function isValidExercicio(data) {
       return data.keys().hasAll(['nome', 'grupoMuscular']) &&
              data.keys().size() == 2 &&
              data.nome is string && data.nome.size() <= 100 &&
              data.grupoMuscular is string && data.grupoMuscular.size() <= 50;
-    }
-
-    // Registro Validation
-    function isValidRegistro(data) {
-      let requiredFields = ['userId', 'data', 'exercicioId', 'exercicioNome', 'series', 'repeticoes', 'pesoKg', 'createdAt'];
-      return data.keys().hasAll(requiredFields) &&
-             data.userId == request.auth.uid &&
-             data.data is string && 
-             data.exercicioId is string &&
-             data.exercicioNome is string && data.exercicioNome.size() <= 100 &&
-             data.series is int && data.series >= 0 &&
-             data.repeticoes is int && data.repeticoes >= 0 &&
-             data.pesoKg is number && data.pesoKg >= 0 &&
-             (data.createdAt == request.time || data.createdAt is timestamp) &&
-             (!data.keys().hasAny(['observacoes']) || (data.observacoes is string && data.observacoes.size() <= 500)) &&
-             (!data.keys().hasAny(['origem']) || (data.origem in ['Manual', 'Plano']));
-    }
-
-    // Plano Validation
-    function isValidPlano(data) {
-      let requiredFields = ['userId', 'semana', 'diaDaSemana', 'nomeTreino', 'exercicios'];
-      return data.keys().hasAll(requiredFields) &&
-             data.userId == request.auth.uid &&
-             data.semana is int &&
-             data.diaDaSemana is string &&
-             data.nomeTreino is string &&
-             data.exercicios is list &&
-             data.exercicios.size() <= 20;
-    }
-
-    // Workout Validation
-    function isValidWorkout(data) {
-      return data.userId == request.auth.uid &&
-             data.data is string &&
-             data.status in ['em_andamento', 'finalizado'] &&
-             data.exerciciosSummary is list;
-    }
-
-    function isValidSeries(data) {
-      return data.userId == request.auth.uid &&
-             data.exercicioId is string &&
-             data.pesoReal is number && data.pesoReal >= 0 &&
-             data.repeticoesReais is int && data.repeticoesReais >= 0;
     }
 
     // Collections
@@ -85,31 +38,31 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Workouts (new structure replacing registros)
-    match /workouts/{workoutId} {
-      allow create: if isSignedIn() && isValidId(workoutId) && isValidWorkout(request.resource.data);
-      allow read, update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    // All user data scoped under users/{userId}
+    match /users/{userId} {
+      // Profile stored directly in the user document
+      allow read, write: if isOwner(userId);
 
-      match /series/{seriesId} {
-        allow create: if isSignedIn() && isValidId(seriesId) && isValidSeries(request.resource.data);
-        allow read, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
-        allow update: if false;
+      // Plans scoped to user (eliminates global planos/ collection)
+      match /planos/{planoId} {
+        allow read, write: if isOwner(userId);
       }
-    }
 
-    // Legacy registros (read/delete only)
-    match /registros/{registroId} {
-      allow create: if false;
-      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow get, delete: if isOwner(resource.data.userId);
-      allow update: if false;
-    }
+      // Workouts with series[] embedded (eliminates series/ subcollection)
+      match /workouts/{workoutId} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.data is string
+          && request.resource.data.status in ['em_andamento', 'finalizado'];
+        allow update: if isOwner(userId)
+          && resource.data.userId == userId;
+      }
 
-    match /planos/{planoId} {
-      allow create: if isSignedIn() && isValidId(planoId) && isValidPlano(request.resource.data);
-      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow get, delete: if isOwner(resource.data.userId);
-      allow update: if isOwner(resource.data.userId) && isValidPlano(request.resource.data);
+      // Measurements grouped by month (YYYY-MM documents with entries[] array)
+      match /measurements/{monthId} {
+        allow read, write: if isOwner(userId);
+      }
     }
   }
 }

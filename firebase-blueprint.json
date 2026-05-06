@@ -2,7 +2,7 @@
   "entities": {
     "Exercicio": {
       "title": "Exercício",
-      "description": "Catálogo de exercícios disponíveis.",
+      "description": "Catálogo global de exercícios disponíveis.",
       "type": "object",
       "properties": {
         "nome": { "type": "string" },
@@ -10,27 +10,24 @@
       },
       "required": ["nome", "grupoMuscular"]
     },
-    "Registro": {
-      "title": "Registro de Treino",
-      "description": "Uma série realizada em um exercício.",
+    "UserProfile": {
+      "title": "Perfil do Usuário",
+      "description": "Dados do perfil armazenados diretamente no documento users/{uid}.",
       "type": "object",
       "properties": {
-        "userId": { "type": "string" },
-        "data": { "type": "string", "format": "date-time" },
-        "exercicioId": { "type": "string" },
-        "exercicioNome": { "type": "string" },
-        "series": { "type": "integer" },
-        "repeticoes": { "type": "integer" },
-        "pesoKg": { "type": "number" },
-        "observacoes": { "type": "string" },
-        "origem": { "type": "string", "enum": ["Manual", "Plano"] },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "uid": { "type": "string" },
+        "nome": { "type": "string" },
+        "pesoCorporal": { "type": "number" },
+        "altura": { "type": "number" },
+        "objetivo": { "type": "string", "enum": ["cutting", "bulking", "manutencao"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["userId", "data", "exercicioId", "exercicioNome", "series", "repeticoes", "pesoKg", "createdAt"]
+      "required": ["uid", "nome"]
     },
     "Plano": {
       "title": "Plano de Treino",
-      "description": "Programação de um exercício dentro de uma semana e dia específicos.",
+      "description": "Programação de treino por semana e dia. Scoped ao usuário.",
       "type": "object",
       "properties": {
         "userId": { "type": "string" },
@@ -50,24 +47,91 @@
               "observacoesPlano": { "type": "string" }
             }
           }
+        }
+      },
+      "required": ["userId", "semana", "diaDaSemana", "nomeTreino", "exercicios"]
+    },
+    "WorkoutSession": {
+      "title": "Sessão de Treino",
+      "description": "Treino realizado com séries embutidas no mesmo documento.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "data": { "type": "string", "format": "date-time" },
+        "nomeTreino": { "type": "string" },
+        "status": { "type": "string", "enum": ["em_andamento", "finalizado"] },
+        "objetivo": { "type": "string" },
+        "exerciciosSummary": { "type": "array" },
+        "series": {
+          "type": "array",
+          "description": "Séries embutidas — elimina a necessidade de subcoleção series/.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "exercicioId": { "type": "string" },
+              "exercicioNome": { "type": "string" },
+              "serieNum": { "type": "integer" },
+              "repeticoesReais": { "type": "integer" },
+              "pesoReal": { "type": "number" },
+              "falhou": { "type": "boolean" }
+            }
+          }
         },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["userId", "semana", "diaDaSemana", "nomeTreino", "exercicios"]
+      "required": ["userId", "data", "status", "exerciciosSummary", "series"]
+    },
+    "MeasurementMonth": {
+      "title": "Medições do Mês",
+      "description": "Medições corporais agrupadas por mês (ID = YYYY-MM). Reduz docs de N/medição para 1/mês.",
+      "type": "object",
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "userId": { "type": "string" },
+              "data": { "type": "string", "format": "date" },
+              "pesoKg": { "type": "number" },
+              "bracoCm": { "type": "number" },
+              "cinturaCm": { "type": "number" },
+              "quadrilCm": { "type": "number" },
+              "pescocoCm": { "type": "number" },
+              "createdAt": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      }
     }
   },
   "firestore": {
     "exercicios/{exercicioId}": {
       "schema": "Exercicio",
-      "description": "Catálogo global de exercícios."
+      "description": "Catálogo global de exercícios. Cacheado no IndexedDB."
     },
-    "registros/{registroId}": {
-      "schema": "Registro",
-      "description": "Registros de treino individuais dos usuários."
+    "users/{uid}": {
+      "schema": "UserProfile",
+      "description": "Perfil do usuário. Antes era users/{uid}/profile/data (2 leituras → 1)."
     },
-    "planos/{planoId}": {
+    "users/{uid}/planos/{planoId}": {
       "schema": "Plano",
-      "description": "Programação semanal de treinos."
+      "description": "Planos scoped ao usuário. Antes era coleção global com where('userId') desnecessário."
+    },
+    "users/{uid}/workouts/{workoutId}": {
+      "schema": "WorkoutSession",
+      "description": "Sessão completa com series[] embutido. Elimina subcoleção series/ (era N+1 leituras por treino)."
+    },
+    "users/{uid}/measurements/{YYYY-MM}": {
+      "schema": "MeasurementMonth",
+      "description": "1 doc por mês com array entries[]. Antes era 1 doc por medição."
     }
+  },
+  "costReduction": {
+    "before": "30 treinos × (1 workout + ~20 series) = ~630 leituras",
+    "after": "30 treinos × 1 doc = 30 leituras",
+    "reduction": "~95% menos leituras no Firestore"
   }
 }
