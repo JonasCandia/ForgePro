@@ -1,245 +1,224 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, CheckCircle, ArrowLeft, Dumbbell } from 'lucide-react';
+﻿import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Plus, Trash2, Check, ChevronDown } from 'lucide-react';
 import { workoutService } from '../../lib/workoutService';
-import { Registro, Exercício } from '../../types';
+import type { Exercício } from '../../types';
+
+interface SeriesEntry {
+  series: number;
+  repeticoes: number;
+  pesoKg: number;
+  observacoes: string;
+}
+
+interface LogEntry {
+  exercicioId: string;
+  exercicioNome: string;
+  grupoMuscular: string;
+  seriesData: SeriesEntry[];
+}
 
 interface LogWorkoutProps {
   onBack: () => void;
 }
 
-type SessionLog = Omit<Registro, 'userId' | 'createdAt'>;
-
 export default function LogWorkout({ onBack }: LogWorkoutProps) {
   const [exercises, setExercises] = useState<Exercício[]>([]);
-  const [selectedEx, setSelectedEx] = useState<Exercício | null>(null);
-  const [search, setSearch] = useState('');
-  const [series, setSeries] = useState(1);
-  const [reps, setReps] = useState<number | ''>('');
-  const [weight, setWeight] = useState<number | ''>('');
-  const [obs, setObs] = useState('');
-  const [sessionLogs, setSessionLogs] = useState<SessionLog[]>([]); // Temp logs before final save
-  const [showSearch, setShowSearch] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [entries, setEntries] = useState<LogEntry[]>([]);
+  const [selectedExId, setSelectedExId] = useState('');
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [objetivo, setObjetivo] = useState<string | undefined>(undefined);
 
-  useEffect(() => {
-    async function load() {
-      const data = await workoutService.getExercises();
-      setExercises(data);
-    }
-    load();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
-  const filteredExs = exercises.filter(ex => 
-    ex.nome.toLowerCase().includes(search.toLowerCase())
-  );
+  async function loadData() {
+    setLoading(true);
+    try {
+      const [exs, profile] = await Promise.all([
+        workoutService.getExercises(),
+        workoutService.getUserProfile()
+      ]);
+      setExercises(exs);
+      setObjetivo(profile?.objetivo);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }
 
-  const handleAddSerie = () => {
-    if (!selectedEx || reps === '' || weight === '') return;
+  function addEntry() {
+    if (!selectedExId) return;
+    const ex = exercises.find(e => e.id === selectedExId);
+    if (!ex) return;
+    if (entries.find(e => e.exercicioId === selectedExId)) return;
+    setEntries(prev => [...prev, {
+      exercicioId: ex.id!,
+      exercicioNome: ex.nome,
+      grupoMuscular: ex.grupoMuscular,
+      seriesData: [{ series: 1, repeticoes: 10, pesoKg: 0, observacoes: '' }]
+    }]);
+    setSelectedExId('');
+  }
 
-    const newLog: SessionLog = {
-      id: Math.random().toString(36).substr(2, 9),
-      data: new Date().toISOString(),
-      exercicioId: selectedEx.id,
-      exercicioNome: selectedEx.nome,
-      series,
-      repeticoes: Number(reps),
-      pesoKg: Number(weight),
-      observacoes: obs,
-      origem: 'Manual'
-    };
+  function removeEntry(idx: number) {
+    setEntries(prev => prev.filter((_, i) => i !== idx));
+  }
 
-    setSessionLogs([newLog, ...sessionLogs]);
-    // Clear inputs but keep exercise
-    setReps('');
-    setWeight('');
-    setObs('');
-  };
+  function addSeries(entryIdx: number) {
+    setEntries(prev => prev.map((e, i) => i !== entryIdx ? e : {
+      ...e,
+      seriesData: [...e.seriesData, { series: e.seriesData.length + 1, repeticoes: 10, pesoKg: 0, observacoes: '' }]
+    }));
+  }
 
-  const handleFinish = async () => {
+  function removeSeries(entryIdx: number, seriesIdx: number) {
+    setEntries(prev => prev.map((e, i) => i !== entryIdx ? e : {
+      ...e,
+      seriesData: e.seriesData.filter((_, j) => j !== seriesIdx).map((s, j) => ({ ...s, series: j + 1 }))
+    }));
+  }
+
+  function updateSeries(entryIdx: number, seriesIdx: number, field: keyof SeriesEntry, value: string | number) {
+    setEntries(prev => prev.map((e, i) => i !== entryIdx ? e : {
+      ...e,
+      seriesData: e.seriesData.map((s, j) => j !== seriesIdx ? s : { ...s, [field]: value })
+    }));
+  }
+
+  async function handleFinish() {
+    if (entries.length === 0) return;
     setSaving(true);
     try {
-      // Save each log to Firestore
-      for (const log of sessionLogs) {
-        const { id, ...data } = log;
-        await workoutService.addRegistro(data);
-      }
-      onBack();
-    } catch (error) {
-      console.error("Failed to save workout session:", error);
-    } finally {
-      setSaving(false);
-    }
-  };
+      const data = {
+        entries: entries.map(e => ({
+          exercicioId: e.exercicioId,
+          exercicioNome: e.exercicioNome,
+          grupoMuscular: e.grupoMuscular,
+          series: e.seriesData.reduce((max, s) => Math.max(max, s.series), 0),
+          repeticoes: e.seriesData[0]?.repeticoes ?? 0,
+          pesoKg: Math.max(...e.seriesData.map(s => s.pesoKg)),
+          observacoes: e.seriesData.map(s => s.observacoes).filter(Boolean).join('; ')
+        }))
+      };
+      await workoutService.saveManualWorkout(data, objetivo);
+      setSaved(true);
+      setEntries([]);
+    } catch (e) { console.error(e); }
+    finally { setSaving(false); }
+  }
 
-  const handleRemove = (id: string) => {
-    setSessionLogs(sessionLogs.filter(l => l.id !== id));
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (saved) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-6 pt-8">
+        <div className="w-16 h-16 bg-brand/20 rounded-full flex items-center justify-center">
+          <Check size={32} className="text-brand" />
+        </div>
+        <div className="text-center">
+          <h2 className="font-display text-2xl font-black uppercase tracking-tight">Treino Salvo!</h2>
+          <p className="text-gray-400 text-sm mt-2">Seu treino foi registrado com sucesso.</p>
+        </div>
+        <div className="flex gap-3">
+          <button onClick={() => setSaved(false)} className="btn-secondary">Novo Treino</button>
+          <button onClick={onBack} className="btn-primary">Voltar</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 pb-32 pt-4">
-      <header className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-4">
-          <button onClick={onBack} className="p-2 hover:bg-surface-hover rounded-full transition-colors text-brand">
-            <ArrowLeft size={20} />
-          </button>
-          <div>
-            <h2 className="text-brand text-xs font-bold uppercase tracking-widest">Painel de Registro</h2>
-            <h1 className="font-display text-xl font-black uppercase tracking-tight">Nova Atividade</h1>
-          </div>
-        </div>
-        <div className="text-[10px] font-mono text-gray-500 bg-surface px-3 py-1 border border-outline rounded">
-          {new Date().toLocaleDateString('pt-BR')}
+    <div className="space-y-6 pt-4 pb-24">
+      <header className="flex items-center gap-4 mb-2">
+        <button onClick={onBack} className="p-2 -ml-2 text-gray-400 hover:text-white transition-colors">
+          <ArrowLeft size={20} />
+        </button>
+        <div>
+          <h2 className="text-brand text-xs font-bold uppercase tracking-widest mb-1">Registro Manual</h2>
+          <h1 className="font-display text-2xl font-black uppercase tracking-tight">Registrar Treino</h1>
         </div>
       </header>
 
-      {/* Main Container Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-        {/* Form Side */}
-        <section className="card space-y-6">
-          <h3 className="text-brand text-xs font-bold uppercase tracking-widest border-b border-outline pb-4">Detalhes do Exercício</h3>
-          
-          {/* Exercise Selection */}
-          <div className="space-y-1.5">
-            <label className="input-label">Identificação do Exercício</label>
-            <div className="relative">
-              <div 
-                onClick={() => setShowSearch(true)}
-                className="w-full bg-surface-hover border border-input-border p-3 rounded flex justify-between items-center text-sm cursor-pointer hover:border-brand/40 transition-colors"
-              >
-                <span className={selectedEx ? 'text-white' : 'text-gray-500 font-medium'}>
-                  {selectedEx ? selectedEx.nome : 'Selecionar da base de dados...'}
-                </span>
-                <Search size={16} className="text-brand" />
-              </div>
-
-              {showSearch && (
-                <div className="absolute top-0 left-0 w-full z-[100] bg-surface border border-outline rounded shadow-2xl p-2 animate-in fade-in zoom-in duration-200">
-                  <input 
-                    autoFocus
-                    className="w-full bg-background border border-input-border rounded px-4 py-2 mb-2 focus:ring-brand focus:border-brand text-sm"
-                    placeholder="Pesquisar catálogo..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                  <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                    {filteredExs.map(ex => (
-                      <div 
-                        key={ex.id}
-                        onClick={() => {
-                          setSelectedEx(ex);
-                          setShowSearch(false);
-                          setSearch('');
-                        }}
-                        className="p-3 hover:bg-brand hover:text-black rounded text-xs font-bold uppercase transition-colors cursor-pointer"
-                      >
-                        {ex.nome}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Metrics Grid */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-1.5">
-              <label className="input-label">Séries</label>
-              <input 
-                type="number" 
-                className="form-input text-center" 
-                value={series}
-                onChange={(e) => setSeries(Number(e.target.value))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="input-label">Reps</label>
-              <input 
-                type="number" 
-                placeholder="10"
-                className="form-input text-center" 
-                value={reps}
-                onChange={(e) => setReps(e.target.value === '' ? '' : Number(e.target.value))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="input-label">Carga (kg)</label>
-              <input 
-                type="number" 
-                placeholder="0"
-                className="form-input text-center" 
-                value={weight}
-                onChange={(e) => setWeight(e.target.value === '' ? '' : Number(e.target.value))}
-              />
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-1.5">
-            <label className="input-label">Notas Adicionais</label>
-            <textarea 
-              className="form-input min-h-[90px] resize-none" 
-              placeholder="Ex: Última série com falha concêntrica..."
-              value={obs}
-              onChange={(e) => setObs(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-col gap-3 pt-2">
-            <button 
-              onClick={handleAddSerie}
-              disabled={!selectedEx || reps === '' || weight === ''}
-              className="btn-primary"
-            >
-              <Plus size={18} />
-              Confirmar Série
-            </button>
-            <button 
-              onClick={handleFinish}
-              disabled={sessionLogs.length === 0}
-              className="btn-secondary"
-            >
-              Encerrar Sessão
-            </button>
-          </div>
-        </section>
-
-        {/* List Side */}
-        <section className="space-y-4">
-          <div className="flex justify-between items-center px-1">
-            <h3 className="text-brand text-xs font-bold uppercase tracking-widest">Registros da Sessão</h3>
-            <span className="text-[10px] text-gray-500 font-mono italic">{sessionLogs.length} ITENS</span>
-          </div>
-
-          <div className="space-y-3">
-            {sessionLogs.length === 0 ? (
-              <div className="border-2 border-dashed border-outline rounded-xl py-12 flex flex-col items-center justify-center text-gray-600">
-                <Dumbbell size={32} className="mb-2 opacity-20" />
-                <p className="text-xs uppercase tracking-widest">Nenhum dado pendente</p>
-              </div>
-            ) : (
-              sessionLogs.map((log) => (
-                <div key={log.id} className="bg-surface border border-outline p-4 rounded-lg flex items-center justify-between group animate-in slide-in-from-right-4 duration-300">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                       <div className="w-1.5 h-1.5 bg-brand rounded-full"></div>
-                       <h4 className="font-bold text-[11px] uppercase tracking-tight">{log.exercicioNome}</h4>
-                    </div>
-                    <div className="flex gap-4 text-[10px] font-mono text-gray-500">
-                      <span>SERIES: {log.series}</span>
-                      <span>REPS: {log.repeticoes}</span>
-                      <span className="text-brand">PESO: {log.pesoKg}KG</span>
-                    </div>
-                  </div>
-                  <button onClick={() => handleRemove(log.id)} className="p-2 text-red-500/50 hover:text-red-500 transition-colors">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        </section>
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <select
+            className="form-input appearance-none pr-8"
+            value={selectedExId}
+            onChange={e => setSelectedExId(e.target.value)}
+          >
+            <option value="">Selecione um exercício</option>
+            {exercises.map(ex => (
+              <option key={ex.id} value={ex.id}>{ex.nome}</option>
+            ))}
+          </select>
+          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+        </div>
+        <button onClick={addEntry} disabled={!selectedExId} className="btn-primary disabled:opacity-40 px-4">
+          <Plus size={16} />
+        </button>
       </div>
+
+      {entries.length === 0 && (
+        <div className="card p-8 text-center text-gray-500">
+          <p className="text-sm">Adicione exercícios acima para começar.</p>
+        </div>
+      )}
+
+      {entries.map((entry, entryIdx) => (
+        <div key={entryIdx} className="card overflow-hidden border-l-4 border-brand">
+          <div className="p-4 flex items-center justify-between border-b border-outline">
+            <div>
+              <p className="font-bold text-sm">{entry.exercicioNome}</p>
+              <p className="text-xs text-gray-500">{entry.grupoMuscular}</p>
+            </div>
+            <button onClick={() => removeEntry(entryIdx)} className="p-2 text-gray-600 hover:text-red-400 transition-colors">
+              <Trash2 size={16} />
+            </button>
+          </div>
+          <div className="p-4 space-y-3">
+            <div className="grid grid-cols-4 gap-2 text-[10px] text-gray-600 uppercase tracking-wider font-black px-1">
+              <span>Série</span><span>Reps</span><span>Peso (kg)</span><span></span>
+            </div>
+            {entry.seriesData.map((s, sIdx) => (
+              <div key={sIdx} className="grid grid-cols-4 gap-2 items-center">
+                <span className="text-sm font-bold text-brand text-center">S{s.series}</span>
+                <input
+                  type="number" min="1" className="form-input text-center"
+                  value={s.repeticoes}
+                  onChange={e => updateSeries(entryIdx, sIdx, 'repeticoes', parseInt(e.target.value) || 0)}
+                />
+                <input
+                  type="number" min="0" step="0.5" className="form-input text-center"
+                  value={s.pesoKg}
+                  onChange={e => updateSeries(entryIdx, sIdx, 'pesoKg', parseFloat(e.target.value) || 0)}
+                />
+                <button
+                  onClick={() => removeSeries(entryIdx, sIdx)}
+                  disabled={entry.seriesData.length <= 1}
+                  className="p-2 text-gray-600 hover:text-red-400 transition-colors disabled:opacity-30 mx-auto"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+            <button onClick={() => addSeries(entryIdx)} className="btn-secondary w-full text-xs">
+              <Plus size={14} /> Adicionar Série
+            </button>
+          </div>
+        </div>
+      ))}
+
+      {entries.length > 0 && (
+        <button onClick={handleFinish} disabled={saving} className="btn-primary w-full">
+          {saving ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <Check size={16} />}
+          {saving ? 'Salvando...' : 'Finalizar e Salvar'}
+        </button>
+      )}
     </div>
   );
 }

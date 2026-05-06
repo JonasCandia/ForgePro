@@ -1,0 +1,20 @@
+﻿/* Enable class-based dark mode for Tailwind CSS v4 */
+@variant dark (&:where(.dark, .dark *));
+
+/* Light mode base overrides */
+.light body {
+  background-color: #f5f5f5;
+  color: #111111;
+}
+
+.light .bg-background { background-color: #f5f5f5; }
+.light .bg-surface { background-color: #ffffff; }
+.light .bg-surface-hover { background-color: #ebebeb; }
+.light .border-outline { border-color: #d4d4d4; }
+.light .border-input-border { border-color: #c0c0c0; }
+.light .text-gray-200 { color: #1a1a1a; }
+.light .text-gray-400 { color: #4a4a4a; }
+.light .text-gray-500 { color: #6a6a6a; }
+.light .text-gray-600 { color: #7a7a7a; }
+.light .text-white { color: #111111; }
+.light .shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15); }

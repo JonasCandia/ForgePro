@@ -55,19 +55,54 @@ service cloud.firestore {
              data.exercicios.size() <= 20;
     }
 
-    // Collections
-    match /exercicios/{exercicioId} {
-      allow read: if isSignedIn();
-      allow write: if false; 
+    // Workout Validation
+    function isValidWorkout(data) {
+      return data.userId == request.auth.uid &&
+             data.data is string &&
+             data.status in ['em_andamento', 'finalizado'] &&
+             data.exerciciosSummary is list;
     }
 
+    function isValidSeries(data) {
+      return data.userId == request.auth.uid &&
+             data.exercicioId is string &&
+             data.pesoReal is number && data.pesoReal >= 0 &&
+             data.repeticoesReais is int && data.repeticoesReais >= 0;
+    }
+
+    // Collections
+
+    // User profile
+    match /users/{userId}/profile/{document} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Global exercise catalog
+    match /exercicios/{exercicioId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidExercicio(request.resource.data);
+      allow update: if isSignedIn() && isValidExercicio(request.resource.data);
+      allow delete: if false;
+    }
+
+    // Workouts (new structure replacing registros)
+    match /workouts/{workoutId} {
+      allow create: if isSignedIn() && isValidId(workoutId) && isValidWorkout(request.resource.data);
+      allow read, update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      match /series/{seriesId} {
+        allow create: if isSignedIn() && isValidId(seriesId) && isValidSeries(request.resource.data);
+        allow read, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+        allow update: if false;
+      }
+    }
+
+    // Legacy registros (read/delete only)
     match /registros/{registroId} {
-      allow create: if isSignedIn() && isValidId(registroId) && isValidRegistro(request.resource.data);
+      allow create: if false;
       allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
       allow get, delete: if isOwner(resource.data.userId);
-      allow update: if isOwner(resource.data.userId) && 
-                      isValidRegistro(request.resource.data) &&
-                      request.resource.data.userId == resource.data.userId;
+      allow update: if false;
     }
 
     match /planos/{planoId} {

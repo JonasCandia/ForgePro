@@ -1,162 +1,167 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Registro, Exercício } from '../../types';
-import { workoutService } from '../../lib/workoutService';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+﻿import React, { useState, useEffect, useMemo } from 'react';
+import { TrendingUp, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
-import { TrendingUp, Dumbbell, Calendar } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { workoutService } from '../../lib/workoutService';
+import { WorkoutSession } from '../../types';
+import type { Exercício } from '../../types';
 
 export default function Progress() {
-  const [logs, setLogs] = useState<Registro[]>([]);
+  const [workouts, setWorkouts] = useState<WorkoutSession[]>([]);
   const [exercises, setExercises] = useState<Exercício[]>([]);
-  const [selectedExId, setSelectedExId] = useState('1'); // Default to Supino
+  const [loading, setLoading] = useState(true);
+  const [selectedExId, setSelectedExId] = useState('');
+  const [chartMode, setChartMode] = useState<'weight' | 'volume'>('weight');
 
-  useEffect(() => {
-    async function load() {
-      const [logsData, exsData] = await Promise.all([
-        workoutService.getRegistros(),
-        workoutService.getExercises()
-      ]);
-      setLogs(logsData);
-      setExercises(exsData);
-    }
-    load();
-  }, []);
+  useEffect(() => { loadData(); }, []);
+
+  async function loadData() {
+    setLoading(true);
+    try {
+      const [w, ex] = await Promise.all([workoutService.getWorkouts(), workoutService.getExercises()]);
+      setWorkouts(w);
+      setExercises(ex);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }
 
   const chartData = useMemo(() => {
-    return logs
-      .filter(log => log.exercicioId === selectedExId)
-      .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())
-      .map(log => ({
-        date: format(new Date(log.data), 'dd/MM'),
-        dateObj: new Date(log.data),
-        weight: log.pesoKg,
-        volume: log.pesoKg * log.repeticoes * log.series
-      }));
-  }, [logs, selectedExId]);
+    if (!selectedExId) return [];
+    return workouts
+      .filter(w => w.exerciciosSummary?.some(s => s.exercicioId === selectedExId))
+      .sort((a, b) => {
+        const da = a.data instanceof Date ? a.data : (a.data as any)?.toDate?.() ?? new Date(a.data as any);
+        const db = b.data instanceof Date ? b.data : (b.data as any)?.toDate?.() ?? new Date(b.data as any);
+        return da.getTime() - db.getTime();
+      })
+      .map(w => {
+        const date = w.data instanceof Date ? w.data : (w.data as any)?.toDate?.() ?? new Date(w.data as any);
+        const s = w.exerciciosSummary!.find(s => s.exercicioId === selectedExId)!;
+        return { date: format(date, 'dd/MM'), weight: s.pesoMax, volume: s.volumeTotal ?? 0 };
+      });
+  }, [workouts, selectedExId]);
 
   const stats = useMemo(() => {
-    if (chartData.length === 0) return { max: 0, growth: 0 };
+    if (chartData.length === 0) return null;
     const maxWeight = Math.max(...chartData.map(d => d.weight));
     const first = chartData[0].weight;
     const last = chartData[chartData.length - 1].weight;
-    const growth = first === 0 ? 0 : ((last - first) / first) * 100;
-    return { max: maxWeight, growth: growth.toFixed(1) };
+    const growth = first > 0 ? ((last - first) / first) * 100 : 0;
+    const totalSessions = chartData.length;
+    return { maxWeight, growth, totalSessions };
   }, [chartData]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pt-4 pb-24">
-      <header className="mb-6">
-        <h2 className="text-brand text-xs font-bold uppercase tracking-widest mb-1">Métricas de Performance</h2>
-        <h1 className="font-display text-2xl font-black uppercase tracking-tight">Análise de Progresso</h1>
-      </header>
+      <div>
+        <h2 className="text-brand text-xs font-bold uppercase tracking-widest mb-1">Analytics</h2>
+        <h1 className="font-display text-2xl font-black uppercase tracking-tight">Progresso</h1>
+      </div>
 
-      {/* Exercise Picker */}
-      <section className="space-y-1.5">
-        <label className="input-label">Selecionar Unidade de Medida</label>
+      <div>
+        <label className="input-label">Exercício</label>
         <div className="relative">
-          <select 
-            className="w-full bg-surface-hover border border-input-border rounded px-4 py-3 text-xs focus:border-brand focus:ring-0 transition-colors appearance-none font-bold uppercase text-white"
+          <select
+            className="form-input appearance-none pr-8"
             value={selectedExId}
-            onChange={(e) => setSelectedExId(e.target.value)}
+            onChange={e => setSelectedExId(e.target.value)}
           >
+            <option value="">Selecione um exercício</option>
             {exercises.map(ex => (
-              <option key={ex.id} value={ex.id} className="bg-surface">{ex.nome}</option>
+              <option key={ex.id} value={ex.id}>{ex.nome}</option>
             ))}
           </select>
-          <Dumbbell size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand" />
+          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
         </div>
-      </section>
+      </div>
 
-      {/* Summary Stats */}
-      <section className="grid grid-cols-2 gap-4">
-        <div className="card flex flex-col justify-center border-l-4 border-l-brand">
-          <span className="input-label !mb-0 !text-[9px]">Recorde Pessoal</span>
-          <div className="flex items-baseline gap-1 mt-1">
-            <span className="text-3xl font-display font-black text-brand tracking-tighter">{stats.max}</span>
-            <span className="text-[10px] text-gray-500 font-black uppercase tracking-wider">KG</span>
-          </div>
-        </div>
-        <div className="card flex flex-col justify-center border-l-4 border-l-white">
-          <span className="input-label !mb-0 !text-[9px]">Ganhos Brutos</span>
-          <div className="flex items-baseline gap-1 mt-1">
-            <span className={`text-3xl font-display font-black tracking-tighter ${Number(stats.growth) >= 0 ? 'text-white' : 'text-red-500'}`}>
-              {Number(stats.growth) >= 0 ? '+' : ''}{stats.growth}%
-            </span>
-            <TrendingUp size={14} className={Number(stats.growth) >= 0 ? 'text-brand' : 'text-red-500'} />
-          </div>
-        </div>
-      </section>
-
-      {/* Chart */}
-      <section className="card p-6 min-h-[380px] bg-surface-hover border-outline">
-        <div className="flex justify-between items-center mb-10">
-          <h3 className="text-brand text-[10px] font-black tracking-[0.2em] uppercase">Evolução de Carga / Tempo</h3>
-          <div className="flex gap-1">
-            <div className="w-1.5 h-1.5 bg-brand rounded-full"></div>
-            <div className="w-1.5 h-1.5 bg-gray-800 rounded-full"></div>
-          </div>
-        </div>
-        
-        <div className="h-[250px] w-full">
-          {chartData.length > 1 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#CCFF00" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#CCFF00" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                <XAxis 
-                  dataKey="date" 
-                  stroke="#444" 
-                  fontSize={9} 
-                  tickLine={false} 
-                  axisLine={false} 
-                  dy={10}
-                  fontFamily="JetBrains Mono"
-                />
-                <YAxis 
-                  stroke="#444" 
-                  fontSize={9} 
-                  tickLine={false} 
-                  axisLine={false} 
-                  tickFormatter={(val) => `${val}kg`}
-                  fontFamily="JetBrains Mono"
-                />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#111', border: '1px solid #222', borderRadius: '4px', fontSize: '10px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)' }}
-                  itemStyle={{ color: '#CCFF00', fontWeight: 'bold' }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="weight" 
-                  stroke="#CCFF00" 
-                  strokeWidth={4}
-                  fillOpacity={1} 
-                  fill="url(#colorWeight)" 
-                  animationDuration={1500}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-full flex flex-col items-center justify-center text-gray-700 text-[11px] uppercase tracking-widest font-black text-center px-12">
-              <Dumbbell size={32} className="mb-4 opacity-5" />
-              <p>Dados insuficientes para geração de telemetria.</p>
+      {selectedExId && (
+        <>
+          {stats && (
+            <div className="grid grid-cols-3 gap-3">
+              <div className="card p-4 text-center">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-black mb-1">Carga Máx.</p>
+                <p className="font-display text-xl font-black text-brand">{stats.maxWeight}<span className="text-xs text-gray-500 ml-1">kg</span></p>
+              </div>
+              <div className="card p-4 text-center">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-black mb-1">Evolução</p>
+                <p className={`font-display text-xl font-black ${stats.growth >= 0 ? 'text-brand' : 'text-red-400'}`}>
+                  {stats.growth >= 0 ? '+' : ''}{stats.growth.toFixed(1)}%
+                </p>
+              </div>
+              <div className="card p-4 text-center">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-black mb-1">Sessões</p>
+                <p className="font-display text-xl font-black">{stats.totalSessions}</p>
+              </div>
             </div>
           )}
-        </div>
-      </section>
 
-      <div className="p-4 bg-brand/5 border border-brand/10 rounded flex items-center gap-4">
-        <div className="bg-brand p-2 rounded">
-           <TrendingUp size={16} className="text-black" />
+          <div className="card p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-black text-sm uppercase tracking-wide flex items-center gap-2">
+                <TrendingUp size={16} className="text-brand" />
+                Evolução
+              </h3>
+              <div className="flex gap-1">
+                {(['weight', 'volume'] as const).map(mode => (
+                  <button
+                    key={mode}
+                    onClick={() => setChartMode(mode)}
+                    className={`px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-wider border transition-colors ${chartMode === mode ? 'bg-brand text-black border-brand' : 'bg-surface-hover border-outline text-gray-400'}`}
+                  >
+                    {mode === 'weight' ? 'Carga' : 'Volume'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#222" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#666' }} />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: '#666' }}
+                    tickFormatter={val => chartMode === 'volume' && val >= 1000 ? `${Math.round(val / 1000)}k` : `${val}`}
+                  />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '8px', fontSize: '12px' }}
+                    labelStyle={{ color: '#CCFF00' }}
+                    formatter={(val: number) => [chartMode === 'volume' ? `${val.toLocaleString()}kg` : `${val}kg`, chartMode === 'weight' ? 'Carga' : 'Volume']}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey={chartMode === 'weight' ? 'weight' : 'volume'}
+                    stroke="#CCFF00"
+                    strokeWidth={2}
+                    dot={{ fill: '#CCFF00', r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-48 flex items-center justify-center text-gray-600 text-sm">
+                Sem dados para exibir
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {!selectedExId && (
+        <div className="card p-8 text-center text-gray-500">
+          <TrendingUp size={32} className="mx-auto mb-3 text-gray-700" />
+          <p className="text-sm">Selecione um exercício para visualizar o progresso.</p>
         </div>
-        <p className="text-[10px] text-gray-400 leading-normal uppercase tracking-wider font-bold">
-          A otimização de carga foi detectada. <span className="text-white">Mantenha o protocolo atual</span> para maximizar a hipertrofia.
-        </p>
-      </div>
+      )}
     </div>
   );
 }

@@ -1,29 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { Home, PlusCircle, History as HistoryIcon, TrendingUp, Dumbbell, LogIn, LogOut } from 'lucide-react';
+import { Home, PlusCircle, History as HistoryIcon, TrendingUp, Dumbbell, LogIn, LogOut, Trophy, User as UserIcon, Sun, Moon } from 'lucide-react';
 import Dashboard from './components/screens/Dashboard';
 import LogWorkout from './components/screens/LogWorkout';
 import History from './components/screens/History';
 import Progress from './components/screens/Progress';
 import ImportPlan from './components/screens/ImportPlan';
 import ExecutePlannedWorkout from './components/screens/ExecutePlannedWorkout';
+import UserProfile from './components/screens/UserProfile';
+import Records from './components/screens/Records';
 import { auth, signIn, signOutUser } from './lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { workoutService } from './lib/workoutService';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 
-type Screen = 'home' | 'log' | 'history' | 'progress' | 'import' | 'execute';
+type Screen = 'home' | 'log' | 'history' | 'progress' | 'import' | 'execute' | 'profile' | 'records';
 
-export default function App() {
+function AppInner() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
       setUser(u);
-      setLoading(false);
       if (u) {
         workoutService.seedExercises();
+        // Check if profile exists; redirect to profile setup on first login
+        const profile = await workoutService.getUserProfile();
+        if (!profile) {
+          setCurrentScreen('profile');
+        }
       }
+      setLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -65,6 +74,15 @@ export default function App() {
         return <ImportPlan onBack={() => setCurrentScreen('home')} />;
       case 'execute':
         return <ExecutePlannedWorkout onBack={() => setCurrentScreen('home')} />;
+      case 'profile':
+        return (
+          <UserProfile
+            onBack={() => setCurrentScreen('home')}
+            onSaved={() => setCurrentScreen('home')}
+          />
+        );
+      case 'records':
+        return <Records />;
       default:
         return <Dashboard onNavigate={setCurrentScreen} />;
     }
@@ -83,26 +101,38 @@ export default function App() {
         
         {/* Desktop Nav */}
         <div className="hidden md:flex gap-8 text-[11px] font-bold uppercase tracking-widest h-full">
-          {(['home', 'log', 'history', 'progress'] as const).map((screen) => (
+          {(['home', 'log', 'history', 'progress', 'records'] as const).map((screen) => (
             <button 
               key={screen}
               disabled={!user}
               onClick={() => setCurrentScreen(screen)}
               className={`h-full border-b-2 flex items-center px-2 transition-colors ${currentScreen === screen ? 'text-brand border-brand' : 'text-gray-500 border-transparent hover:text-gray-300'} disabled:opacity-30`}
             >
-              {screen === 'home' ? 'Painel' : screen === 'log' ? 'Registrar' : screen === 'history' ? 'Histórico' : 'Progresso'}
+              {screen === 'home' ? 'Painel' : screen === 'log' ? 'Registrar' : screen === 'history' ? 'Histórico' : screen === 'progress' ? 'Progresso' : 'Recordes'}
             </button>
           ))}
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            className="p-2 text-gray-500 hover:text-brand transition-colors rounded-lg hover:bg-white/5"
+            aria-label="Alternar tema"
+          >
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
           <div className="hidden sm:flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-brand">
             <span className={`w-2 h-2 rounded-full ${user ? 'bg-brand' : 'bg-gray-500'} animate-pulse`}></span>
             {user ? 'CONECTADO' : 'OFFLINE'}
           </div>
           {user && (
             <div className="group relative">
-              <div className="w-8 h-8 rounded-full bg-surface-hover border border-input-border overflow-hidden cursor-pointer">
+              <div
+                className="w-8 h-8 rounded-full bg-surface-hover border border-input-border overflow-hidden cursor-pointer"
+                onClick={() => setCurrentScreen('profile')}
+              >
                 <img 
                   src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} 
                   alt="Avatar" 
@@ -111,6 +141,13 @@ export default function App() {
               </div>
               <div className="absolute right-0 top-full mt-2 hidden group-hover:block w-48 bg-surface border border-outline rounded-lg shadow-xl p-2 animate-in fade-in slide-in-from-top-2">
                 <p className="text-[10px] font-bold text-gray-500 px-2 py-1 uppercase">{user.displayName}</p>
+                <button
+                  onClick={() => setCurrentScreen('profile')}
+                  className="w-full text-left px-2 py-2 text-xs text-gray-300 hover:bg-white/5 rounded flex items-center gap-2"
+                >
+                  <UserIcon size={14} />
+                  Meu Perfil
+                </button>
                 <button 
                   onClick={signOutUser}
                   className="w-full text-left px-2 py-2 text-xs text-red-500 hover:bg-red-500/10 rounded flex items-center gap-2"
@@ -158,10 +195,24 @@ export default function App() {
               label="Progresso" 
               onClick={() => setCurrentScreen('progress')} 
             />
+            <NavItem
+              active={currentScreen === 'records'}
+              icon={<Trophy size={20} />}
+              label="Recordes"
+              onClick={() => setCurrentScreen('records')}
+            />
           </div>
         </nav>
       )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppInner />
+    </ThemeProvider>
   );
 }
 
