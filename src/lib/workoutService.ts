@@ -463,6 +463,27 @@ export const workoutService = {
     }
   },
 
+  async updatePlano(plano: Plano): Promise<void> {
+    if (!auth.currentUser) throw new Error('User must be logged in');
+    const uid = auth.currentUser.uid;
+    try {
+      const { id, ...data } = plano;
+      await setDoc(doc(db, USERS_COL, uid, PLANOS_COL, id), { ...data, userId: uid });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `${USERS_COL}/${uid}/${PLANOS_COL}`);
+    }
+  },
+
+  async deletePlano(planoId: string): Promise<void> {
+    if (!auth.currentUser) throw new Error('User must be logged in');
+    const uid = auth.currentUser.uid;
+    try {
+      await deleteDoc(doc(db, USERS_COL, uid, PLANOS_COL, planoId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `${USERS_COL}/${uid}/${PLANOS_COL}`);
+    }
+  },
+
   // ===== MEASUREMENTS (users/{uid}/measurements/{YYYY-MM} — entries[] embutido) =====
 
   async getMeasurements(): Promise<BodyMeasurement[]> {

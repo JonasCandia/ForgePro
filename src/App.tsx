@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, PlusCircle, History as HistoryIcon, TrendingUp, Dumbbell, LogIn, LogOut, Trophy, User as UserIcon, Sun, Moon, FileDown, WifiOff, Target } from 'lucide-react';
+import { Home, PlusCircle, History as HistoryIcon, TrendingUp, Dumbbell, LogIn, LogOut, Trophy, User as UserIcon, Sun, Moon, FileDown, WifiOff, Target, ClipboardList } from 'lucide-react';
 import Dashboard from './components/screens/Dashboard';
 import LogWorkout from './components/screens/LogWorkout';
 import History from './components/screens/History';
@@ -10,6 +10,7 @@ import UserProfile from './components/screens/UserProfile';
 import Records from './components/screens/Records';
 import BodyMeasurements from './components/screens/BodyMeasurements';
 import TAFScore from './components/screens/TAFScore';
+import ViewPlan from './components/screens/ViewPlan';
 import { auth, signIn, signOutUser } from './lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { workoutService } from './lib/workoutService';
@@ -18,7 +19,7 @@ import { useAppStore } from './store/appStore';
 import { useProfile } from './hooks/useProfile';
 import { useOnlineSync } from './hooks/useOnlineSync';
 
-export type Screen = 'home' | 'log' | 'history' | 'progress' | 'import' | 'execute' | 'profile' | 'records' | 'measurements' | 'taf';
+export type Screen = 'home' | 'log' | 'history' | 'progress' | 'import' | 'execute' | 'profile' | 'records' | 'measurements' | 'taf' | 'plan';
 
 function AppInner() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
@@ -112,6 +113,8 @@ function AppInner() {
         return <BodyMeasurements onBack={() => setCurrentScreen('home')} />;
       case 'taf':
         return <TAFScore />;
+      case 'plan':
+        return <ViewPlan onNavigateImport={() => setCurrentScreen('import')} />;
       default:
         return <Dashboard onNavigate={setCurrentScreen} />;
     }
@@ -130,14 +133,14 @@ function AppInner() {
         
         {/* Desktop Nav */}
         <div className="hidden md:flex gap-8 text-[11px] font-bold uppercase tracking-widest h-full">
-          {(['home', 'log', 'history', 'progress', 'records', 'measurements', 'taf', 'import'] as const).map((screen) => (
+          {(['home', 'plan', 'log', 'history', 'progress', 'records', 'measurements', 'taf', 'import'] as const).map((screen) => (
             <button 
               key={screen}
               disabled={!user}
               onClick={() => setCurrentScreen(screen)}
               className={`h-full border-b-2 flex items-center px-2 transition-colors ${currentScreen === screen ? 'text-brand border-brand' : 'text-gray-500 border-transparent hover:text-gray-300'} disabled:opacity-30`}
             >
-              {screen === 'home' ? 'Painél' : screen === 'log' ? 'Registrar' : screen === 'history' ? 'Histórico' : screen === 'progress' ? 'Progresso' : screen === 'records' ? 'Recordes' : screen === 'measurements' ? 'Medidas' : screen === 'taf' ? 'TAF' : 'Importar'}
+              {screen === 'home' ? 'Painél' : screen === 'plan' ? 'Plano' : screen === 'log' ? 'Registrar' : screen === 'history' ? 'Histórico' : screen === 'progress' ? 'Progresso' : screen === 'records' ? 'Recordes' : screen === 'measurements' ? 'Medidas' : screen === 'taf' ? 'TAF' : 'Importar'}
             </button>
           ))}
         </div>
@@ -178,6 +181,13 @@ function AppInner() {
                 >
                   <UserIcon size={14} />
                   Meu Perfil
+                </button>
+                <button
+                  onClick={() => { setCurrentScreen('plan'); setDropdownOpen(false); }}
+                  className="w-full text-left px-2 py-2 text-xs text-gray-300 hover:bg-white/5 rounded flex items-center gap-2"
+                >
+                  <ClipboardList size={14} />
+                  Ver Plano
                 </button>
                 <button
                   onClick={() => { setCurrentScreen('import'); setDropdownOpen(false); }}

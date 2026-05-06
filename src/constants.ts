@@ -157,6 +157,27 @@ export const JSON_EXEMPLO = {
           ]
         }
       ]
+    },
+    {
+      "semana": 2,
+      "dias": [
+        {
+          "dia": "Segunda",
+          "nomeTreino": "Peito e Tríceps (sobrecarga)",
+          "exercicios": [
+            { "id": 1, "series": 4, "repeticoes": 10, "peso": 42.5, "obs": "" },
+            { "id": 7, "series": 3, "repeticoes": 12, "peso": 17.5, "obs": "" },
+            { "id": "custom_01", "nome": "Crossover no Cabo", "grupoMuscular": "Peitoral", "series": 3, "repeticoes": 15, "peso": 12, "obs": "" }
+          ]
+        },
+        {
+          "dia": "Quarta",
+          "nomeTreino": "Pernas (sobrecarga)",
+          "exercicios": [
+            { "id": 2, "series": 4, "repeticoes": 10, "peso": 82.5, "obs": "" }
+          ]
+        }
+      ]
     }
   ]
 };
