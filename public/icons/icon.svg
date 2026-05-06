@@ -1,1 +1,9 @@
-﻿PLACEHOLDER
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="#0A0A0A"/>
+  <!-- Letter F bold -->
+  <text x="256" y="360" font-family="Arial Black, Arial, sans-serif" font-size="320" font-weight="900"
+        text-anchor="middle" fill="#CCFF00" letter-spacing="-10">F</text>
+  <!-- Bottom accent bar -->
+  <rect x="96" y="420" width="320" height="18" rx="9" fill="#CCFF00" opacity="0.6"/>
+</svg>
