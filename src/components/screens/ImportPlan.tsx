@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileDown, CheckCircle, AlertCircle, ArrowLeft, Copy, Info } from 'lucide-react';
+import { FileDown, CheckCircle, AlertCircle, ArrowLeft, Copy } from 'lucide-react';
 import { workoutService } from '../../lib/workoutService';
 import { JSON_EXEMPLO } from '../../constants';
 
@@ -15,7 +15,7 @@ export default function ImportPlan({ onBack }: ImportPlanProps) {
   const handleCopyExample = () => {
     navigator.clipboard.writeText(JSON.stringify(JSON_EXEMPLO, null, 2));
     setMessage('Exemplo copiado para a área de transferência!');
-    setStatus('idle');
+    setStatus('idle'); // Clear previous status
     setTimeout(() => setMessage(''), 3000);
   };
 
@@ -28,6 +28,7 @@ export default function ImportPlan({ onBack }: ImportPlanProps) {
     try {
       const data = JSON.parse(jsonInput);
       
+      // Basic validation
       if (!data.plano || !Array.isArray(data.plano)) {
         throw new Error('Formato JSON inválido. O objeto raiz deve conter a chave "plano" como um array.');
       }
@@ -35,7 +36,7 @@ export default function ImportPlan({ onBack }: ImportPlanProps) {
       await workoutService.importPlan(data);
       
       setStatus('success');
-      setMessage('Plano importado com sucesso! Exercícios novos foram catalogados e a agenda foi atualizada.');
+      setMessage('Plano importado com sucesso! Os dados foram sincronizados na nuvem.');
       setJsonInput('');
     } catch (error: any) {
       console.error(error);
@@ -45,94 +46,71 @@ export default function ImportPlan({ onBack }: ImportPlanProps) {
   };
 
   return (
-    <div className="space-y-8 pt-4 pb-24">
-      <header className="flex items-center gap-4">
-        <button onClick={onBack} className="p-2 -ml-2 text-[var(--color-text-muted)] hover:text-brand transition-colors">
-          <ArrowLeft size={24} />
+    <div className="space-y-6 pt-4 pb-24">
+      <header className="flex items-center gap-4 mb-2">
+        <button onClick={onBack} className="p-2 -ml-2 text-gray-400 hover:text-white transition-colors">
+          <ArrowLeft size={20} />
         </button>
         <div>
-          <h2 className="text-brand text-[10px] font-black uppercase tracking-widest">Configurações</h2>
-          <h1 className="font-display text-3xl font-black uppercase tracking-tighter italic">Importar Plano</h1>
+          <h2 className="text-brand text-xs font-bold uppercase tracking-widest mb-1">Configurações</h2>
+          <h1 className="font-display text-2xl font-black uppercase tracking-tight">Importar Plano</h1>
         </div>
       </header>
 
-      <section className="card p-8 space-y-8">
-        <div className="flex justify-between items-center">
-          <label className="input-label !mb-0">Estrutura JSON</label>
+      <section className="card p-6 space-y-4">
+        <div className="flex justify-between items-center mb-1">
+          <label className="input-label !mb-0">Cole o JSON do Plano</label>
           <button 
             onClick={handleCopyExample}
-            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-brand hover:text-brand/80 transition-colors"
+            className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-brand hover:text-white transition-colors"
           >
-            <Copy size={14} />
+            <Copy size={12} />
             Copiar Exemplo
           </button>
         </div>
-
-        <textarea 
-          className="form-input min-h-[300px] font-mono text-[11px] leading-relaxed resize-none bg-[var(--color-background)]"
-          placeholder='{ "plano": [ ... ] }'
-          value={jsonInput}
-          onChange={(e) => setJsonInput(e.target.value)}
-        />
+        <div className="space-y-1.5">
+          <textarea 
+            className="w-full h-80 bg-surface-hover border border-input-border rounded-xl px-4 py-3 text-xs font-mono focus:border-brand focus:ring-0 transition-colors resize-none"
+            placeholder='{ "plano": [ ... ] }'
+            value={jsonInput}
+            onChange={(e) => setJsonInput(e.target.value)}
+          />
+        </div>
 
         {message && (status === 'success' || status === 'idle') && (
-          <div className="flex items-center gap-4 p-5 bg-brand/10 border border-brand/20 rounded-2xl text-brand text-xs font-bold uppercase tracking-tight animate-in zoom-in-95 duration-300">
-            <CheckCircle size={20} />
+          <div className="flex items-center gap-3 p-4 bg-brand/10 border border-brand/20 rounded-lg text-brand text-sm animate-in fade-in slide-in-from-top-1">
+            <CheckCircle size={18} />
             <p>{message}</p>
           </div>
         )}
 
         {status === 'error' && (
-          <div className="flex items-center gap-4 p-5 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-xs font-bold uppercase tracking-tight">
-            <AlertCircle size={20} />
+          <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
+            <AlertCircle size={18} />
             <p>{message}</p>
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-          <button 
-            onClick={handleImport}
-            disabled={status === 'loading' || !jsonInput.trim()}
-            className="btn-primary"
-          >
-            {status === 'loading' ? (
-              <div className="w-5 h-5 border-4 border-black border-t-transparent animate-spin"></div>
-            ) : (
-              <FileDown size={20} />
-            )}
-            {status === 'loading' ? 'PROCESSANDO...' : 'EXECUTAR IMPORTAÇÃO'}
-          </button>
-
-          <button 
-            onClick={async () => {
-              const data = await workoutService.exportPlan();
-              const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = 'forge-plano-exportado.json';
-              a.click();
-            }}
-            className="btn-secondary"
-          >
-            <Copy size={20} />
-            EXPORTAR ATUAL
-          </button>
-        </div>
+        <button 
+          onClick={handleImport}
+          disabled={status === 'loading' || !jsonInput.trim()}
+          className="btn-primary w-full disabled:opacity-50"
+        >
+          {status === 'loading' ? (
+            <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+          ) : (
+            <FileDown size={18} />
+          )}
+          {status === 'loading' ? 'Importando...' : 'Processar Importação'}
+        </button>
       </section>
 
-      <div className="card bg-[var(--color-surface-hover)] border-dashed border border-brand/20 p-8 space-y-5 rounded-3xl">
-        <div className="flex items-center gap-4 text-brand">
-          <div className="p-2 bg-brand/10 rounded-lg">
-            <Info size={20} />
-          </div>
-          <h4 className="text-[10px] font-black uppercase tracking-[0.3em]">Protocolo de Sincronia</h4>
-        </div>
-        <ul className="space-y-3 text-xs text-[var(--color-text-muted)] font-medium list-none">
-          <li className="flex gap-3"><span className="text-brand">•</span> Novos exercícios são mapeados automaticamente ao catálogo.</li>
-          <li className="flex gap-3"><span className="text-brand">•</span> Semanas conflitantes serão substituídas pela nova matriz.</li>
-          <li className="flex gap-3"><span className="text-brand">•</span> IDs de exercícios devem ser únicos na base global.</li>
-        </ul>
+      <div className="p-4 bg-surface-hover rounded-xl border border-outline space-y-2">
+        <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Instruções</h4>
+        <p className="text-xs text-gray-400 leading-relaxed">
+          A importação substituirá qualquer plano existente para as mesmas semanas mencionadas no JSON. 
+          Certifique-se de que os IDs dos exercícios correspondem ao catálogo atual.
+        </p>
       </div>
     </div>
   );

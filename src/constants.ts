@@ -19,27 +19,18 @@ export const JSON_EXEMPLO = {
       "semana": 1,
       "dias": [
         {
-          "dia": "Segunda-feira",
-          "nomeTreino": "Upper Body (Foco Empurre)",
+          "dia": "Segunda",
+          "nomeTreino": "Peito e Tríceps",
           "exercicios": [
-            { 
-              "id": "1", 
-              "nome": "Supino Reto", 
-              "grupoMuscular": "Peitoral", 
-              "series": 4, 
-              "repeticoes": 8, 
-              "peso": 60, 
-              "obs": "Manter técnica rigorosa" 
-            },
-            { 
-              "id": "new_ex_01", 
-              "nome": "Supino Fly Máquina", 
-              "grupoMuscular": "Peitoral", 
-              "series": 3, 
-              "repeticoes": 12, 
-              "peso": 45, 
-              "obs": "Squeeze no final da contração" 
-            }
+            { "id": 1, "series": 4, "repeticoes": 10, "peso": 40, "obs": "aquecimento antes" },
+            { "id": 7, "series": 3, "repeticoes": 12, "peso": 15, "obs": "" }
+          ]
+        },
+        {
+          "dia": "Quarta",
+          "nomeTreino": "Pernas",
+          "exercicios": [
+            { "id": 2, "series": 4, "repeticoes": 10, "peso": 80, "obs": "" }
           ]
         }
       ]

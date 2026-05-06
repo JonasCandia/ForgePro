@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Lexend:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lexend:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -6,66 +6,39 @@
   --font-display: "Lexend", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
-  --color-brand: #CCFF00;
-  
-  /* Theme-aware variables */
-  --bg-primary: var(--color-background);
-  --bg-surface: var(--color-surface);
-  --bg-surface-hover: var(--color-surface-hover);
-  --border-outline: var(--color-outline);
-  --text-main: var(--color-text-main);
-  --text-muted: var(--color-text-muted);
+  --color-brand: #CCFF00; /* Lime Green */
+  --color-background: #0A0A0A;
+  --color-surface: #111111;
+  --color-surface-hover: #1A1A1A;
+  --color-outline: #222222;
+  --color-input-border: #333333;
 }
 
 @layer base {
-  :root {
-    --color-background: #050505;
-    --color-surface: #0F0F0F;
-    --color-surface-hover: #161616;
-    --color-outline: #222222;
-    --color-text-main: #FFFFFF;
-    --color-text-muted: #888888;
-    --color-input-border: #333333;
-  }
-
-  :root.light {
-    --color-background: #F4F4F5;
-    --color-surface: #FFFFFF;
-    --color-surface-hover: #F8F8F8;
-    --color-outline: #E4E4E7;
-    --color-text-main: #09090B;
-    --color-text-muted: #71717A;
-    --color-input-border: #E4E4E7;
-  }
-
   body {
-    @apply bg-[var(--color-background)] text-[var(--color-text-main)] font-sans antialiased transition-colors duration-500 selection:bg-brand selection:text-black;
+    @apply bg-background text-gray-200 font-sans antialiased;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply relative bg-brand text-black font-display font-black py-4 px-8 rounded-xl uppercase tracking-tighter text-sm transition-all active:scale-95 flex items-center justify-center gap-2 shadow-[0_0_20px_-5px_rgba(204,255,0,0.3)] hover:shadow-[0_0_30px_-5px_rgba(204,255,0,0.5)] cursor-pointer min-h-[52px];
+    @apply bg-brand text-black font-display font-bold py-3 px-6 rounded uppercase tracking-tighter text-sm transition-transform active:scale-95 flex items-center justify-center gap-2;
   }
   
   .btn-secondary {
-    @apply bg-transparent text-[var(--color-text-main)] border border-[var(--color-outline)] font-display font-bold py-4 px-8 rounded-xl uppercase tracking-tighter text-sm transition-all hover:bg-[var(--color-surface-hover)] hover:border-brand/40 flex items-center justify-center gap-2 cursor-pointer min-h-[52px];
+    @apply border border-input-border text-gray-400 font-display font-bold py-3 px-6 rounded uppercase tracking-tighter text-sm transition-all hover:bg-white/5 flex items-center justify-center gap-2;
   }
 
   .card {
-    @apply bg-[var(--color-surface)] border border-[var(--color-outline)] rounded-2xl p-6 shadow-xl backdrop-blur-sm transition-all duration-300;
+    @apply bg-surface border border-outline rounded-xl p-6 shadow-2xl;
   }
 
   .input-label {
-    @apply text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-text-muted)] mb-2 block;
+    @apply text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5 block;
   }
 
   .form-input {
-    @apply w-full bg-[var(--color-surface-hover)] border border-[var(--color-outline)] focus:border-brand/50 focus:ring-1 focus:ring-brand/20 text-sm py-4 px-5 rounded-xl text-[var(--color-text-main)] transition-all placeholder:text-[var(--color-text-muted)] min-h-[52px];
-  }
-
-  .nav-item-active {
-    @apply text-brand drop-shadow-[0_0_8px_rgba(204,255,0,0.4)];
+    @apply w-full bg-surface-hover border border-input-border focus:border-brand focus:ring-0 text-sm py-3 px-4 rounded text-white transition-colors placeholder:text-gray-600;
   }
 }
 
