@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Trophy, Dumbbell, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { PersonalRecord } from '../../types';
 import { useWorkouts } from '../../hooks/useWorkouts';
@@ -51,8 +51,19 @@ export default function Records() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin"></div>
+      <div className="space-y-6 pt-4 pb-24">
+        <div className="flex justify-between items-end">
+          <div className="space-y-1">
+            <div className="h-3 w-28 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+            <div className="h-7 w-44 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+          </div>
+          <div className="w-24 h-7 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+        </div>
+        <div className="h-11 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+        <div className="h-16 rounded-xl bg-surface-hover animate-pulse motion-reduce:animate-none" />
+        {[0, 1, 2, 3].map(i => (
+          <div key={i} className="card p-5 h-24 animate-pulse motion-reduce:animate-none" />
+        ))}
       </div>
     );
   }
@@ -99,8 +110,8 @@ export default function Records() {
       {filtered.length === 0 ? (
         <div className="card border-dashed border-2 bg-transparent text-center py-20 text-gray-700">
           <Trophy size={48} className="mx-auto mb-4 opacity-10" />
-          <p className="text-xs uppercase tracking-widest font-bold">Nenhum recorde registrado</p>
-          <p className="text-[10px] text-gray-600 mt-2">Complete treinos para gerar seus recordes pessoais.</p>
+          <p className="text-xs uppercase tracking-widest font-bold">Sem recordes ainda.</p>
+          <p className="text-[10px] text-gray-600 mt-2">Complete séries com carga. O algoritmo calcula seu 1RM estimado.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -108,7 +119,7 @@ export default function Records() {
             const detalhes = calcular1RMDetalhado(pr.pesoMax, pr.repsAtMax);
             const isExpanded = expandedId === pr.exercicioId;
             return (
-              <div key={pr.exercicioId} className="card p-5 border-l-4 border-l-brand hover:border-white transition-colors">
+              <div key={pr.exercicioId} className="card p-5 border-brand/20 hover:border-brand/40 transition-colors">
                 <div
                   className="flex items-start justify-between gap-4 cursor-pointer"
                   onClick={() => setExpandedId(isExpanded ? null : pr.exercicioId)}
@@ -127,7 +138,7 @@ export default function Records() {
                   <div className="text-right flex-shrink-0 flex items-start gap-2">
                     <div>
                       <div className="flex items-baseline gap-1 justify-end">
-                        <span className="text-2xl font-display font-black text-brand tracking-tighter">{pr.estimado1RM}</span>
+                        <span className="text-2xl font-mono font-black text-brand tracking-tighter">{pr.estimado1RM}</span>
                         <span className="text-[10px] text-gray-500 font-black uppercase">kg 1RM</span>
                       </div>
                       <p className="text-[10px] text-gray-600 font-mono mt-0.5">
@@ -141,25 +152,25 @@ export default function Records() {
                 </div>
 
                 {isExpanded && (
-                  <div className="mt-3 pt-3 border-t border-outline grid grid-cols-2 gap-2">
+                  <div className="mt-3 pt-3 border-t border-outline grid grid-cols-2 gap-3">
                     <div className="bg-surface-hover rounded px-3 py-2">
-                      <p className="text-[9px] text-gray-600 uppercase tracking-wider font-black">Epley</p>
+                      <p className="text-[11px] text-gray-600 uppercase tracking-wider font-black">Epley</p>
                       <p className="text-xs font-bold text-white">{detalhes.epley} <span className="text-gray-500">kg</span></p>
                     </div>
                     <div className="bg-surface-hover rounded px-3 py-2">
-                      <p className="text-[9px] text-gray-600 uppercase tracking-wider font-black">Brzycki</p>
+                      <p className="text-[11px] text-gray-600 uppercase tracking-wider font-black">Brzycki</p>
                       <p className="text-xs font-bold text-white">{detalhes.brzycki} <span className="text-gray-500">kg</span></p>
                     </div>
                     <div className="bg-surface-hover rounded px-3 py-2">
-                      <p className="text-[9px] text-gray-600 uppercase tracking-wider font-black">Lander</p>
+                      <p className="text-[11px] text-gray-600 uppercase tracking-wider font-black">Lander</p>
                       <p className="text-xs font-bold text-white">{detalhes.lander} <span className="text-gray-500">kg</span></p>
                     </div>
                     <div className="bg-surface-hover rounded px-3 py-2">
-                      <p className="text-[9px] text-gray-600 uppercase tracking-wider font-black">O'Conner</p>
+                      <p className="text-[11px] text-gray-600 uppercase tracking-wider font-black">O'Conner</p>
                       <p className="text-xs font-bold text-white">{detalhes.oconner} <span className="text-gray-500">kg</span></p>
                     </div>
                     <div className="col-span-2 mt-1">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-gray-600">
+                      <span className="text-[11px] font-black uppercase tracking-widest text-gray-600">
                         {format(new Date(pr.data), "dd MMM yyyy", { locale: ptBR }).toUpperCase()}
                       </span>
                     </div>
@@ -168,7 +179,7 @@ export default function Records() {
 
                 {!isExpanded && (
                   <div className="flex items-center gap-4 mt-3 pt-3 border-t border-outline">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-600">
+                    <span className="text-[11px] font-black uppercase tracking-widest text-gray-600">
                       {format(new Date(pr.data), "dd MMM yyyy", { locale: ptBR }).toUpperCase()}
                     </span>
                   </div>

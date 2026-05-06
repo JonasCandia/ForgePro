@@ -22,11 +22,11 @@
 
 @layer components {
   .btn-primary {
-    @apply bg-brand text-black font-display font-bold py-3 px-6 rounded uppercase tracking-tighter text-sm transition-transform active:scale-95 flex items-center justify-center gap-2;
+    @apply bg-brand text-black font-display font-bold py-3 px-6 rounded uppercase tracking-tighter text-sm transition-all hover:brightness-110 active:scale-[0.98] active:brightness-90 flex items-center justify-center gap-2;
   }
   
   .btn-secondary {
-    @apply border border-input-border text-gray-400 font-display font-bold py-3 px-6 rounded uppercase tracking-tighter text-sm transition-all hover:bg-white/5 flex items-center justify-center gap-2;
+    @apply border border-input-border text-gray-400 font-display font-bold py-3 px-6 rounded uppercase tracking-tighter text-sm transition-all hover:bg-white/5 active:scale-[0.98] flex items-center justify-center gap-2;
   }
 
   .card {
@@ -38,7 +38,17 @@
   }
 
   .form-input {
-    @apply w-full bg-surface-hover border border-input-border focus:border-brand focus:ring-0 text-sm py-3 px-4 rounded text-white transition-colors placeholder:text-gray-600;
+    @apply w-full bg-surface-hover border border-input-border focus:border-brand focus:ring-0 text-base py-3 px-4 rounded text-white transition-colors placeholder:text-gray-600;
   }
+}
+
+@keyframes forge-pop {
+  0%   { transform: scale(0.65); opacity: 0; }
+  65%  { transform: scale(1.1);  opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+.forge-pop {
+  animation: forge-pop 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 

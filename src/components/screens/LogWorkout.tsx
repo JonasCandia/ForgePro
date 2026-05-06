@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { ArrowLeft, Plus, Trash2, Check, ChevronDown } from 'lucide-react';
 import { workoutService } from '../../lib/workoutService';
 import { useExercises } from '../../hooks/useExercises';
@@ -98,8 +98,18 @@ export default function LogWorkout({ onBack }: LogWorkoutProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-6 pt-4 pb-24">
+        <div className="flex items-center gap-4">
+          <div className="w-8 h-8 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+          <div className="space-y-1">
+            <div className="h-3 w-24 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+            <div className="h-6 w-40 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+          </div>
+        </div>
+        <div className="h-11 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+        {[0, 1].map(i => (
+          <div key={i} className="card p-4 h-40 animate-pulse motion-reduce:animate-none" />
+        ))}
       </div>
     );
   }
@@ -107,12 +117,12 @@ export default function LogWorkout({ onBack }: LogWorkoutProps) {
   if (saved) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-6 pt-8">
-        <div className="w-16 h-16 bg-brand/20 rounded-full flex items-center justify-center">
+        <div className="w-16 h-16 bg-brand/20 rounded-full flex items-center justify-center forge-pop">
           <Check size={32} className="text-brand" />
         </div>
         <div className="text-center">
           <h2 className="font-display text-2xl font-black uppercase tracking-tight">Treino Salvo!</h2>
-          <p className="text-gray-400 text-sm mt-2">Seu treino foi registrado com sucesso.</p>
+          <p className="text-gray-400 text-sm mt-2">Dados registrados. Referência criada para a próxima sessão.</p>
         </div>
         <div className="flex gap-3">
           <button onClick={() => setSaved(false)} className="btn-secondary">Novo Treino</button>
@@ -125,7 +135,7 @@ export default function LogWorkout({ onBack }: LogWorkoutProps) {
   return (
     <div className="space-y-6 pt-4 pb-24">
       <header className="flex items-center gap-4 mb-2">
-        <button onClick={onBack} className="p-2 -ml-2 text-gray-400 hover:text-white transition-colors">
+        <button onClick={onBack} className="p-3 -ml-3 text-gray-400 hover:text-white transition-colors">
           <ArrowLeft size={20} />
         </button>
         <div>
@@ -160,7 +170,7 @@ export default function LogWorkout({ onBack }: LogWorkoutProps) {
       )}
 
       {entries.map((entry, entryIdx) => (
-        <div key={entryIdx} className="card overflow-hidden border-l-4 border-brand">
+        <div key={entryIdx} className="card overflow-hidden border-brand/25">
           <div className="p-4 flex items-center justify-between border-b border-outline">
             <div>
               <p className="font-bold text-sm">{entry.exercicioNome}</p>
@@ -171,19 +181,19 @@ export default function LogWorkout({ onBack }: LogWorkoutProps) {
             </button>
           </div>
           <div className="p-4 space-y-3">
-            <div className="grid grid-cols-4 gap-2 text-[10px] text-gray-600 uppercase tracking-wider font-black px-1">
+            <div className="grid grid-cols-4 gap-3 text-[11px] text-gray-600 uppercase tracking-wider font-black px-1">
               <span>Série</span><span>Reps</span><span>Peso (kg)</span><span></span>
             </div>
             {entry.seriesData.map((s, sIdx) => (
-              <div key={sIdx} className="grid grid-cols-4 gap-2 items-center">
+              <div key={sIdx} className="grid grid-cols-4 gap-3 items-center">
                 <span className="text-sm font-bold text-brand text-center">S{s.series}</span>
                 <input
-                  type="number" min="1" className="form-input text-center"
+                  type="number" min="1" inputMode="numeric" className="form-input text-center"
                   value={s.repeticoes}
                   onChange={e => updateSeries(entryIdx, sIdx, 'repeticoes', parseInt(e.target.value) || 0)}
                 />
                 <input
-                  type="number" min="0" step="0.5" className="form-input text-center"
+                  type="number" min="0" step="0.5" inputMode="decimal" className="form-input text-center"
                   value={s.pesoKg}
                   onChange={e => updateSeries(entryIdx, sIdx, 'pesoKg', parseFloat(e.target.value) || 0)}
                 />
@@ -205,7 +215,7 @@ export default function LogWorkout({ onBack }: LogWorkoutProps) {
 
       {entries.length > 0 && (
         <button onClick={handleFinish} disabled={saving} className="btn-primary w-full">
-          {saving ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <Check size={16} />}
+          {saving ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin motion-reduce:animate-none" /> : <Check size={16} />}
           {saving ? 'Salvando...' : 'Finalizar e Salvar'}
         </button>
       )}

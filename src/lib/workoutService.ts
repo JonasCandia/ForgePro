@@ -237,7 +237,10 @@ export const workoutService = {
     const uid = auth.currentUser.uid;
     const now = new Date().toISOString();
     try {
-      const workoutRef = await addDoc(collection(db, WORKOUTS_COL), {
+      const batch = writeBatch(db);
+      const workoutRef = doc(collection(db, WORKOUTS_COL));
+
+      batch.set(workoutRef, {
         userId: uid,
         data: now,
         nomeTreino: data.nomeTreino || 'Treino Manual',
@@ -260,7 +263,8 @@ export const workoutService = {
 
       for (const e of data.entries) {
         for (let s = 1; s <= e.series; s++) {
-          await addDoc(collection(db, WORKOUTS_COL, workoutRef.id, SERIES_COL), {
+          const seriesRef = doc(collection(db, WORKOUTS_COL, workoutRef.id, SERIES_COL));
+          batch.set(seriesRef, {
             workoutId: workoutRef.id,
             userId: uid,
             exercicioId: e.exercicioId,
@@ -276,6 +280,8 @@ export const workoutService = {
           } as Omit<WorkoutSeries, 'id'>);
         }
       }
+
+      await batch.commit();
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, WORKOUTS_COL);
     }
@@ -453,7 +459,7 @@ export const workoutService = {
       const snap = await getDocs(q);
       const measurements = snap.docs.map(d => ({ id: d.id, ...d.data() } as BodyMeasurement));
       // Cache for offline use
-      cacheMeasurements(auth.currentUser.uid, measurements).catch(() => {});
+      cacheMeasurements(measurements).catch(() => {});
       return measurements;
     } catch (error) {
       // Firestore failed — try IndexedDB cache

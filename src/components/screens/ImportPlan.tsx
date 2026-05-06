@@ -67,7 +67,7 @@ export default function ImportPlan({ onBack }: ImportPlanProps) {
   return (
     <div className="space-y-6 pt-4 pb-24">
       <header className="flex items-center gap-4 mb-2">
-        <button onClick={onBack} className="p-2 -ml-2 text-gray-400 hover:text-white transition-colors">
+        <button onClick={onBack} className="p-3 -ml-3 text-gray-400 hover:text-white transition-colors">
           <ArrowLeft size={20} />
         </button>
         <div>
@@ -82,7 +82,7 @@ export default function ImportPlan({ onBack }: ImportPlanProps) {
         className="btn-secondary w-full min-h-[48px]"
       >
         {exporting ? (
-          <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin motion-reduce:animate-none"></div>
         ) : (
           <FileUp size={18} />
         )}
@@ -126,7 +126,7 @@ export default function ImportPlan({ onBack }: ImportPlanProps) {
           className="btn-primary w-full disabled:opacity-50 min-h-[48px]"
         >
           {status === 'loading' ? (
-            <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin motion-reduce:animate-none"></div>
           ) : (
             <FileDown size={18} />
           )}

@@ -70,7 +70,7 @@ export async function getCachedExercises(): Promise<Exercício[]> {
   return localDb.exercises.toArray();
 }
 
-export async function cacheMeasurements(userId: string, measurements: BodyMeasurement[]) {
+export async function cacheMeasurements(measurements: BodyMeasurement[]) {
   await localDb.measurements.bulkPut(measurements);
 }
 

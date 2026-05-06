@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { TrendingUp, ChevronDown, BarChart2, Activity } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import {
@@ -13,9 +13,15 @@ import { useExercises } from '../../hooks/useExercises';
 type Tab = 'evolution' | 'volume' | 'radar';
 type RadarPeriod = 7 | 30 | 90;
 
+function toDate(raw: unknown): Date {
+  if (raw instanceof Date) return raw;
+  if (raw && typeof (raw as any).toDate === 'function') return (raw as any).toDate();
+  return new Date(raw as string);
+}
+
 // Truncate long group names for chart labels
 function shortLabel(s: string, max = 10) {
-  return s.length > max ? s.slice(0, max - 1) + '�' : s;
+  return s.length > max ? s.slice(0, max - 1) + '…' : s;
 }
 
 export default function Progress() {
@@ -34,12 +40,12 @@ export default function Progress() {
     return workouts
       .filter(w => w.exerciciosSummary?.some(s => s.exercicioId === selectedExId))
       .sort((a, b) => {
-        const da = a.data instanceof Date ? a.data : (a.data as any)?.toDate?.() ?? new Date(a.data as any);
-        const db = b.data instanceof Date ? b.data : (b.data as any)?.toDate?.() ?? new Date(b.data as any);
+        const da = toDate(a.data);
+        const db = toDate(b.data);
         return da.getTime() - db.getTime();
       })
       .map(w => {
-        const date = w.data instanceof Date ? w.data : (w.data as any)?.toDate?.() ?? new Date(w.data as any);
+        const date = toDate(w.data);
         const s = w.exerciciosSummary!.find(s => s.exercicioId === selectedExId)!;
         return { date: format(date, 'dd/MM'), weight: s.pesoMax, volume: s.volumeTotal ?? 0 };
       });
@@ -77,7 +83,7 @@ export default function Progress() {
     const map = new Map<string, number>();
     workouts
       .filter(w => {
-        const d = w.data instanceof Date ? w.data : (w.data as any)?.toDate?.() ?? new Date(w.data as any);
+        const d = toDate(w.data);
         return d >= cutoff;
       })
       .forEach(w => {
@@ -91,8 +97,18 @@ export default function Progress() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-6 pt-4 pb-24">
+        <div className="space-y-1">
+          <div className="h-3 w-20 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+          <div className="h-7 w-36 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+        </div>
+        <div className="h-11 rounded-xl bg-surface-hover animate-pulse motion-reduce:animate-none" />
+        <div className="grid grid-cols-3 gap-3">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="card p-4 h-20 animate-pulse motion-reduce:animate-none" />
+          ))}
+        </div>
+        <div className="card p-4 h-64 animate-pulse motion-reduce:animate-none" />
       </div>
     );
   }
@@ -107,14 +123,14 @@ export default function Progress() {
       {/* Tab bar */}
       <div className="flex gap-1 p-1 bg-surface-hover rounded-xl border border-outline">
         {([
-          { key: 'evolution', label: 'Evolu��o',      icon: <TrendingUp size={12} /> },
+          { key: 'evolution', label: 'Evolução',      icon: <TrendingUp size={12} /> },
           { key: 'volume',    label: 'Volume',         icon: <BarChart2  size={12} /> },
           { key: 'radar',     label: 'Mapa Muscular',  icon: <Activity   size={12} /> },
         ] as const).map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-colors ${
               tab === t.key ? 'bg-brand text-black' : 'text-gray-400 hover:text-white'
             }`}
           >
@@ -127,14 +143,14 @@ export default function Progress() {
       {tab === 'evolution' && (
         <>
           <div>
-            <label className="input-label">Exerc�cio</label>
+            <label className="input-label">Exercício</label>
             <div className="relative">
               <select
                 className="form-input appearance-none pr-8"
                 value={selectedExId}
                 onChange={e => setSelectedExId(e.target.value)}
               >
-                <option value="">Selecione um exerc�cio</option>
+                <option value="">Selecione um exercício</option>
                 {exercises.map(ex => (
                   <option key={ex.id} value={ex.id}>{ex.nome}</option>
                 ))}
@@ -146,22 +162,22 @@ export default function Progress() {
           {selectedExId ? (
             <>
               {stats && (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="card p-4 text-center">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-black mb-1">Carga M�x.</p>
-                    <p className="font-display text-xl font-black text-brand">
+                    <p className="text-[11px] text-gray-500 uppercase tracking-wider font-black mb-1">Carga Máx.</p>
+                    <p className="font-mono text-xl font-black text-brand">
                       {stats.maxWeight}<span className="text-xs text-gray-500 ml-1">kg</span>
                     </p>
                   </div>
                   <div className="card p-4 text-center">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-black mb-1">Evolu��o</p>
-                    <p className={`font-display text-xl font-black ${stats.growth >= 0 ? 'text-brand' : 'text-red-400'}`}>
+                    <p className="text-[11px] text-gray-500 uppercase tracking-wider font-black mb-1">Evolução</p>
+                    <p className={`font-mono text-xl font-black ${stats.growth >= 0 ? 'text-brand' : 'text-red-400'}`}>
                       {stats.growth >= 0 ? '+' : ''}{stats.growth.toFixed(1)}%
                     </p>
                   </div>
                   <div className="card p-4 text-center">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wider font-black mb-1">Sess�es</p>
-                    <p className="font-display text-xl font-black">{stats.totalSessions}</p>
+                    <p className="text-[11px] text-gray-500 uppercase tracking-wider font-black mb-1">Sessões</p>
+                    <p className="font-mono text-xl font-black">{stats.totalSessions}</p>
                   </div>
                 </div>
               )}
@@ -170,7 +186,7 @@ export default function Progress() {
                 <div className="flex items-center justify-between">
                   <h3 className="font-black text-sm uppercase tracking-wide flex items-center gap-2">
                     <TrendingUp size={16} className="text-brand" />
-                    Evolu��o
+                    Evolução
                   </h3>
                   <div className="flex gap-1">
                     {(['weight', 'volume'] as const).map(mode => (
@@ -199,8 +215,8 @@ export default function Progress() {
                       <Tooltip
                         contentStyle={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '8px', fontSize: '12px' }}
                         labelStyle={{ color: '#CCFF00' }}
-                        formatter={(val: number) => [
-                          chartMode === 'volume' ? `${val.toLocaleString()}kg` : `${val}kg`,
+                        formatter={(val) => [
+                          chartMode === 'volume' ? `${Number(val).toLocaleString()}kg` : `${val}kg`,
                           chartMode === 'weight' ? 'Carga' : 'Volume',
                         ]}
                       />
@@ -224,7 +240,7 @@ export default function Progress() {
           ) : (
             <div className="card p-8 text-center text-gray-500">
               <TrendingUp size={32} className="mx-auto mb-3 text-gray-700" />
-              <p className="text-sm">Selecione um exerc�cio para visualizar o progresso.</p>
+              <p className="text-sm">Selecione um exercício. O gráfico mostra cada evolução de carga.</p>
             </div>
           )}
         </>
@@ -264,7 +280,7 @@ export default function Progress() {
                   <Tooltip
                     contentStyle={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '8px', fontSize: '12px' }}
                     labelStyle={{ color: '#fff' }}
-                    formatter={(val: number) => [`${val.toLocaleString()} kg`, 'Volume']}
+                    formatter={(val) => [`${Number(val).toLocaleString()} kg`, 'Volume']}
                   />
                   <Bar dataKey="volume" radius={[0, 4, 4, 0]}>
                     {volumeByGroup.map((entry, index) => (
@@ -276,13 +292,13 @@ export default function Progress() {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
-              <p className="text-[9px] text-gray-600 text-center">
+              <p className="text-[11px] text-gray-600 text-center">
                 Volume acumulado (kg) em todos os treinos registrados
               </p>
             </>
           ) : (
             <div className="h-48 flex items-center justify-center text-gray-600 text-sm">
-              Nenhum dado dispon�vel ainda.
+              Nenhum dado disponível ainda.
             </div>
           )}
         </div>
@@ -337,12 +353,12 @@ export default function Progress() {
                   />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '8px', fontSize: '12px' }}
-                    formatter={(val: number) => [`${val} sess�o${val !== 1 ? '�es' : ''}`, 'Treinos']}
+                    formatter={(val) => { const n = Number(val); return [`${n} sessão${n !== 1 ? 'ões' : ''}`, 'Treinos']; }}
                   />
                 </RadarChart>
               </ResponsiveContainer>
-              <p className="text-[9px] text-gray-600 text-center">
-                Sess�es por grupo muscular nos �ltimos {radarPeriod} dias
+              <p className="text-[11px] text-gray-600 text-center">
+                Sessões por grupo muscular nos últimos {radarPeriod} dias
               </p>
             </>
           ) : radarData.length > 0 ? (
@@ -355,18 +371,18 @@ export default function Progress() {
                   <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#666' }} />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '8px', fontSize: '12px' }}
-                    formatter={(val: number) => [`${val} sess�o${val !== 1 ? '�es' : ''}`, 'Treinos']}
+                    formatter={(val) => { const n = Number(val); return [`${n} sessão${n !== 1 ? 'ões' : ''}`, 'Treinos']; }}
                   />
                   <Bar dataKey="count" fill="#CCFF00" fillOpacity={0.8} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-              <p className="text-[9px] text-gray-600 text-center">
-                Sess�es nos �ltimos {radarPeriod} dias � radar dispon�vel com = 3 grupos
+              <p className="text-[11px] text-gray-600 text-center">
+                Sessões nos últimos {radarPeriod} dias. O radar está disponível com = 3 grupos.
               </p>
             </>
           ) : (
             <div className="h-48 flex items-center justify-center text-gray-600 text-sm">
-              Nenhum treino nos �ltimos {radarPeriod} dias.
+              Nenhum treino nos últimos {radarPeriod} dias.
             </div>
           )}
         </div>

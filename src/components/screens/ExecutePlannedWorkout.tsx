@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Play, CheckCircle, Timer, RotateCcw, Trophy, ChevronDown, ChevronUp } from 'lucide-react';
 import { workoutService } from '../../lib/workoutService';
 import { Plano, WorkoutSeries } from '../../types';
@@ -34,7 +34,10 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
   const [activeExIdx, setActiveExIdx] = useState<number | null>(null);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
-  const [defaultRestTime] = useState(() => parseInt(localStorage.getItem('forge_rest_time') || '90', 10));
+  const [defaultRestTime] = useState(() => {
+    const parsed = parseInt(localStorage.getItem('forge_rest_time') || '90', 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 90;
+  });
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [saving, setSaving] = useState(false);
   const [finished, setFinished] = useState(false);
@@ -200,8 +203,22 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-6 pt-4 pb-24">
+        <div className="flex items-center gap-4">
+          <div className="w-8 h-8 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+          <div className="space-y-1">
+            <div className="h-3 w-20 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+            <div className="h-6 w-36 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+          </div>
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          {[0, 1, 2, 3].map(i => (
+            <div key={i} className="h-10 rounded-lg bg-surface-hover animate-pulse motion-reduce:animate-none" />
+          ))}
+        </div>
+        {[0, 1, 2].map(i => (
+          <div key={i} className="card p-4 h-20 animate-pulse motion-reduce:animate-none" />
+        ))}
       </div>
     );
   }
@@ -209,12 +226,12 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
   if (finished) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-6 pt-8">
-        <div className="w-16 h-16 bg-brand/20 rounded-full flex items-center justify-center">
+        <div className="w-16 h-16 bg-brand/20 rounded-full flex items-center justify-center forge-pop">
           <Trophy size={32} className="text-brand" />
         </div>
         <div className="text-center">
           <h2 className="font-display text-2xl font-black uppercase tracking-tight">Treino Finalizado!</h2>
-          <p className="text-gray-400 text-sm mt-2">Ótimo trabalho. Continue assim!</p>
+          <p className="text-gray-400 text-sm mt-2">Todas as séries registradas. O progresso é permanente.</p>
         </div>
         <button onClick={onBack} className="btn-primary">Voltar ao Início</button>
       </div>
@@ -225,7 +242,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
     return (
       <div className="space-y-6 pt-4 pb-24">
         <header className="flex items-center gap-4 mb-2">
-          <button onClick={onBack} className="p-2 -ml-2 text-gray-400 hover:text-white transition-colors">
+          <button onClick={onBack} className="p-3 -ml-3 text-gray-400 hover:text-white transition-colors">
             <ArrowLeft size={20} />
           </button>
           <div>
@@ -266,14 +283,14 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
             {planoForDia && (
               <div className="card p-4 space-y-3">
                 <h3 className="font-black text-sm uppercase tracking-wide">
-                  {planoForDia.diaDaSemana} — {planoForDia.exercicios.length} exercícios
+                  {planoForDia.diaDaSemana}: {planoForDia.exercicios.length} exercícios
                 </h3>
                 <ul className="space-y-1">
                   {planoForDia.exercicios.map((ex, i) => (
                     <li key={i} className="text-xs text-gray-400 flex gap-2">
                       <span className="text-brand font-bold w-4">{i + 1}.</span>
                       <span>{ex.exercicioNome ?? ex.exercicioId}</span>
-                      <span className="text-gray-600">— {ex.seriesPlanejadas}×{ex.repeticoesPlanejadas} @ {ex.pesoPlanejado}kg</span>
+                      <span className="text-gray-600">{ex.seriesPlanejadas}×{ex.repeticoesPlanejadas} @ {ex.pesoPlanejado}kg</span>
                     </li>
                   ))}
                 </ul>
@@ -292,7 +309,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
   return (
     <div className="space-y-4 pt-4 pb-24">
       <header className="flex items-center gap-4 mb-2">
-        <button onClick={onBack} className="p-2 -ml-2 text-gray-400 hover:text-white transition-colors">
+        <button onClick={onBack} className="p-3 -ml-3 text-gray-400 hover:text-white transition-colors">
           <ArrowLeft size={20} />
         </button>
         <div className="flex-1">
@@ -301,7 +318,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
         </div>
         {timerActive && (
           <div className="flex items-center gap-2 bg-brand/20 border border-brand/40 px-3 py-1.5 rounded-lg">
-            <Timer size={14} className="text-brand animate-pulse" />
+            <Timer size={14} className="text-brand animate-pulse motion-reduce:animate-none" />
             <span className="font-mono font-bold text-brand text-sm">{formatTimer(timerSeconds)}</span>
             <button onClick={stopTimer} className="text-gray-400 hover:text-white ml-1"><RotateCcw size={12} /></button>
           </div>
@@ -315,7 +332,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
         const allDone = done.length >= planned;
         const input = currentInputs[exIdx] ?? { pesoReal: '', repeticoesReais: '', falhou: false };
         return (
-          <div key={exIdx} className={`card overflow-hidden border-l-4 transition-colors ${allDone ? 'border-brand' : isActive ? 'border-yellow-400' : 'border-outline'}`}>
+          <div key={exIdx} className={`card overflow-hidden transition-colors ${allDone ? 'border-brand/50 bg-brand/5' : isActive ? 'border-amber-400/40 bg-amber-400/5' : 'border-outline'}`}>
             <button className="w-full flex items-center justify-between p-4" onClick={() => setActiveExIdx(isActive ? null : exIdx)}>
               <div className="flex items-center gap-3 text-left">
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black border-2 transition-colors ${allDone ? 'bg-brand border-brand text-black' : 'border-outline text-gray-500'}`}>
@@ -324,7 +341,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                 <div>
                   <p className="font-bold text-sm">{ex.exercicioNome ?? ex.exercicioId}</p>
                   <p className="text-xs text-gray-500">
-                    {ex.seriesPlanejadas}×{ex.repeticoesPlanejadas} @ {ex.pesoPlanejado ?? '—'}kg
+                    {ex.seriesPlanejadas}×{ex.repeticoesPlanejadas} @ {ex.pesoPlanejado ?? '–'}kg
                     {done.length > 0 && <span className="ml-2 text-brand font-bold">{done.length}/{planned}</span>}
                   </p>
                 </div>
@@ -335,13 +352,13 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
               <div className="px-4 pb-4 space-y-3 border-t border-outline">
                 {done.length > 0 && (
                   <div className="pt-3">
-                    <p className="text-[10px] uppercase tracking-widest text-gray-600 font-black mb-2">Séries Concluídas</p>
-                    <div className="grid grid-cols-3 gap-1 text-xs text-gray-500 mb-1 px-1">
+                    <p className="text-[11px] uppercase tracking-widest text-gray-600 font-black mb-2">Séries Concluídas</p>
+                    <div className="grid grid-cols-3 gap-2 text-xs text-gray-500 mb-1 px-1">
                       <span>#</span><span>Reps</span><span>Peso</span>
                     </div>
                     {done.map(s => (
-                      <div key={s.serieNum} className={`grid grid-cols-3 gap-1 text-xs px-1 py-1 rounded ${s.falhou ? 'text-red-400' : 'text-gray-300'}`}>
-                        <span className="font-bold">S{s.serieNum}{s.falhou ? ' ✗' : ''}</span>
+                      <div key={s.serieNum} className={`grid grid-cols-3 gap-2 text-xs px-1 py-1 rounded ${s.falhou ? 'text-red-400' : 'text-gray-300'}`}>
+                        <span className="font-bold">S{s.serieNum}{s.falhou ? ' ?' : ''}</span>
                         <span>{s.repeticoesReais}</span>
                         <span>{s.pesoReal}kg</span>
                       </div>
@@ -350,16 +367,16 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                 )}
                 {!allDone && (
                   <div className="pt-2 space-y-3">
-                    <p className="text-[10px] uppercase tracking-widest text-gray-600 font-black">Série {done.length + 1}</p>
+                    <p className="text-[11px] uppercase tracking-widest text-gray-600 font-black">Série {done.length + 1}</p>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="input-label">Repetições</label>
-                        <input type="number" min="0" className="form-input" value={input.repeticoesReais}
+                        <input type="number" min="0" inputMode="numeric" className="form-input" value={input.repeticoesReais}
                           onChange={e => setCurrentInputs(prev => ({ ...prev, [exIdx]: { ...prev[exIdx], repeticoesReais: e.target.value } }))} />
                       </div>
                       <div>
                         <label className="input-label">Peso (kg)</label>
-                        <input type="number" min="0" step="0.5" className="form-input" value={input.pesoReal}
+                        <input type="number" min="0" step="0.5" inputMode="decimal" className="form-input" value={input.pesoReal}
                           onChange={e => setCurrentInputs(prev => ({ ...prev, [exIdx]: { ...prev[exIdx], pesoReal: e.target.value } }))} />
                       </div>
                     </div>
@@ -386,7 +403,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
       })}
 
       <button onClick={handleFinalize} disabled={saving} className="btn-primary w-full mt-4">
-        {saving ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /> : <Trophy size={16} />}
+        {saving ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin motion-reduce:animate-none" /> : <Trophy size={16} />}
         {saving ? 'Salvando...' : 'Finalizar Treino'}
       </button>
     </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Home, PlusCircle, History as HistoryIcon, TrendingUp, Dumbbell, LogIn, LogOut, Trophy, User as UserIcon, Sun, Moon, FileDown, Ruler, WifiOff } from 'lucide-react';
 import Dashboard from './components/screens/Dashboard';
 import LogWorkout from './components/screens/LogWorkout';
@@ -17,15 +17,29 @@ import { useAppStore } from './store/appStore';
 import { useProfile } from './hooks/useProfile';
 import { useOnlineSync } from './hooks/useOnlineSync';
 
-type Screen = 'home' | 'log' | 'history' | 'progress' | 'import' | 'execute' | 'profile' | 'records' | 'measurements';
+export type Screen = 'home' | 'log' | 'history' | 'progress' | 'import' | 'execute' | 'profile' | 'records' | 'measurements';
 
 function AppInner() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const { user, setUser } = useAppStore();
   const [authLoading, setAuthLoading] = useState(true);
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { theme, toggleTheme } = useTheme();
   const { isOnline } = useOnlineSync();
+
+  // Close avatar dropdown on outside click
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [dropdownOpen]);
 
   // Resolve initial auth state
   useEffect(() => {
@@ -88,7 +102,7 @@ function AppInner() {
           <UserProfile
             onBack={() => setCurrentScreen('home')}
             onSaved={() => setCurrentScreen('home')}
-            onNavigate={(screen) => setCurrentScreen(screen as any)}
+            onNavigate={(screen) => setCurrentScreen(screen)}
           />
         );
       case 'records':
@@ -140,35 +154,37 @@ function AppInner() {
             {user ? 'CONECTADO' : 'OFFLINE'}
           </div>
           {user && (
-            <div className="group relative">
-              <div
+            <div className="relative" ref={dropdownRef}>
+              <button
                 className="w-8 h-8 rounded-full bg-surface-hover border border-input-border overflow-hidden cursor-pointer"
-                onClick={() => setCurrentScreen('profile')}
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                aria-label="Menu do usuário"
+                aria-expanded={dropdownOpen}
               >
                 <img 
                   src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} 
                   alt="Avatar" 
                   className="w-full h-full object-cover"
                 />
-              </div>
-              <div className="absolute right-0 top-full mt-2 hidden group-hover:block w-48 bg-surface border border-outline rounded-lg shadow-xl p-2 animate-in fade-in slide-in-from-top-2">
+              </button>
+              <div className={`absolute right-0 top-full mt-2 w-48 bg-surface border border-outline rounded-lg shadow-xl p-2 animate-in fade-in slide-in-from-top-2 ${dropdownOpen ? 'block' : 'hidden'}`}>
                 <p className="text-[10px] font-bold text-gray-500 px-2 py-1 uppercase">{user.displayName}</p>
                 <button
-                  onClick={() => setCurrentScreen('profile')}
+                  onClick={() => { setCurrentScreen('profile'); setDropdownOpen(false); }}
                   className="w-full text-left px-2 py-2 text-xs text-gray-300 hover:bg-white/5 rounded flex items-center gap-2"
                 >
                   <UserIcon size={14} />
                   Meu Perfil
                 </button>
                 <button
-                  onClick={() => setCurrentScreen('import')}
+                  onClick={() => { setCurrentScreen('import'); setDropdownOpen(false); }}
                   className="w-full text-left px-2 py-2 text-xs text-gray-300 hover:bg-white/5 rounded flex items-center gap-2"
                 >
                   <FileDown size={14} />
                   Importar Plano
                 </button>
                 <button 
-                  onClick={signOutUser}
+                  onClick={() => { signOutUser(); setDropdownOpen(false); }}
                   className="w-full text-left px-2 py-2 text-xs text-red-500 hover:bg-red-500/10 rounded flex items-center gap-2"
                 >
                   <LogOut size={14} />
@@ -285,7 +301,7 @@ function NavItem({ active, icon, label, onClick, isCenter }: NavItemProps) {
   return (
     <button 
       onClick={onClick}
-      className={`flex flex-col items-center gap-1 transition-all duration-300 ${active ? 'text-brand scale-110' : 'text-gray-500 hover:text-gray-300'}`}
+      className={`flex flex-col items-center justify-center gap-1 min-h-[44px] transition-all duration-300 ${active ? 'text-brand scale-110' : 'text-gray-500 hover:text-gray-300'}`}
     >
       <div className="flex items-center justify-center">
         {icon}

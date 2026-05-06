@@ -1,12 +1,13 @@
-﻿import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Save, User, Ruler } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Save, User, Ruler, ChevronDown } from 'lucide-react';
 import { workoutService } from '../../lib/workoutService';
 import { useProfile, useInvalidateProfile } from '../../hooks/useProfile';
+import type { Screen } from '../../App';
 
 interface UserProfileProps {
   onBack: () => void;
   onSaved?: () => void;
-  onNavigate?: (screen: string) => void;
+  onNavigate?: (screen: Screen) => void;
   isFirstTime?: boolean;
 }
 
@@ -58,8 +59,24 @@ export default function UserProfile({ onBack, onSaved, onNavigate, isFirstTime }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin"></div>
+      <div className="space-y-6 pt-4 pb-24">
+        <div className="space-y-1">
+          <div className="h-3 w-32 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+          <div className="h-7 w-28 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+        </div>
+        <div className="card p-6 space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-surface-hover animate-pulse motion-reduce:animate-none" />
+            <div className="flex-1 h-11 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+          </div>
+          <div className="h-11 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="h-11 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+            <div className="h-11 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+          </div>
+          <div className="h-11 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+          <div className="h-12 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+        </div>
       </div>
     );
   }
@@ -68,7 +85,7 @@ export default function UserProfile({ onBack, onSaved, onNavigate, isFirstTime }
     <div className="space-y-6 pt-4 pb-24">
       <header className="flex items-center gap-4 mb-2">
         {!isFirstTime && (
-          <button onClick={onBack} className="p-2 -ml-2 text-gray-400 hover:text-white transition-colors">
+          <button onClick={onBack} className="p-3 -ml-3 text-gray-400 hover:text-white transition-colors">
             <ArrowLeft size={20} />
           </button>
         )}
@@ -83,7 +100,7 @@ export default function UserProfile({ onBack, onSaved, onNavigate, isFirstTime }
       {isFirstTime && (
         <div className="p-4 bg-brand/10 border border-brand/20 rounded-lg">
           <p className="text-xs text-brand font-bold uppercase tracking-wider">
-            Primeiro acesso — configure seu perfil para personalizar sua experiência.
+            Primeiro acesso é configure seu perfil para personalizar sua experiência.
           </p>
         </div>
       )}
@@ -128,6 +145,7 @@ export default function UserProfile({ onBack, onSaved, onNavigate, isFirstTime }
             <label className="input-label">Peso Corporal (kg)</label>
             <input
               type="number"
+              inputMode="decimal"
               className="form-input text-center"
               placeholder="75"
               value={pesoCorporal}
@@ -138,6 +156,7 @@ export default function UserProfile({ onBack, onSaved, onNavigate, isFirstTime }
             <label className="input-label">Altura (cm)</label>
             <input
               type="number"
+              inputMode="numeric"
               className="form-input text-center"
               placeholder="175"
               value={altura}
@@ -155,11 +174,11 @@ export default function UserProfile({ onBack, onSaved, onNavigate, isFirstTime }
               onChange={(e) => setObjetivo(e.target.value as any)}
             >
               <option value="" className="bg-surface">Selecionar objetivo...</option>
-              <option value="bulking" className="bg-surface">Bulking — Ganho de Massa</option>
-              <option value="cutting" className="bg-surface">Cutting — Definição Muscular</option>
+              <option value="bulking" className="bg-surface">Bulking – Ganho de Massa</option>
+              <option value="cutting" className="bg-surface">Cutting – Definição Muscular</option>
               <option value="manutencao" className="bg-surface">Manutenção</option>
             </select>
-            <User size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand pointer-events-none" />
+            <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-brand pointer-events-none" />
           </div>
         </div>
 
@@ -170,19 +189,20 @@ export default function UserProfile({ onBack, onSaved, onNavigate, isFirstTime }
         <button
           onClick={handleSave}
           disabled={saving || !nome.trim()}
-          className="btn-primary w-full disabled:opacity-50 min-h-[48px]"
+          className={`btn-primary w-full disabled:opacity-50 min-h-[48px] transition-colors ${saved ? 'bg-brand/80' : ''}`}
         >
           {saving ? (
-            <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin motion-reduce:animate-none"></div>
+          ) : saved ? (
+            <span className="forge-pop inline-flex items-center gap-2"><Save size={18} /> Salvo!</span>
           ) : (
-            <Save size={18} />
+            <><Save size={18} /> Salvar Perfil</>
           )}
-          {saved ? 'Salvo!' : saving ? 'Salvando...' : 'Salvar Perfil'}
         </button>
       </section>
 
       <div className="p-4 bg-surface-hover rounded-xl border border-outline">
-        <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Tags de Objetivo</h4>
+        <h4 className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-2">Tags de Objetivo</h4>
         <p className="text-xs text-gray-400 leading-relaxed">
           O objetivo selecionado será automaticamente associado a todas as séries registradas, permitindo filtrar e analisar seu desempenho por fase de treino (cutting, bulking ou manutenção).
         </p>

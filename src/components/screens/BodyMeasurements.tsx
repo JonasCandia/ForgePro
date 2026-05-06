@@ -77,7 +77,7 @@ export default function BodyMeasurements({ onBack }: BodyMeasurementsProps) {
   return (
     <div className="space-y-6 pt-4 pb-24">
       <header className="flex items-center gap-4 mb-2">
-        <button onClick={onBack} className="p-2 -ml-2 text-gray-400 hover:text-white transition-colors">
+        <button onClick={onBack} className="p-3 -ml-3 text-gray-400 hover:text-white transition-colors">
           <ArrowLeft size={20} />
         </button>
         <div>
@@ -89,14 +89,14 @@ export default function BodyMeasurements({ onBack }: BodyMeasurementsProps) {
       {/* Latest snapshot */}
       {latestMeasurement && (
         <section className="card p-4 space-y-3">
-          <h3 className="text-[10px] text-gray-500 uppercase tracking-widest font-black">
-            Último Registro — {format(new Date(latestMeasurement.data + 'T12:00:00'), "dd 'de' MMM yyyy", { locale: ptBR })}
+          <h3 className="text-[11px] text-gray-500 uppercase tracking-widest font-black">
+            Último Registro: {format(new Date(latestMeasurement.data + 'T12:00:00'), "dd 'de' MMM yyyy", { locale: ptBR })}
           </h3>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-4">
             {FIELDS.map(f => latestMeasurement[f.key] != null && (
               <div key={f.key} className="text-center">
-                <p className="text-[9px] text-gray-600 uppercase tracking-wider font-black">{f.label}</p>
-                <p className="font-display text-lg font-black text-brand">
+                <p className="text-[11px] text-gray-600 uppercase tracking-wider font-black">{f.label}</p>
+                <p className="font-mono text-lg font-black text-brand">
                   {latestMeasurement[f.key]}
                   <span className="text-xs text-gray-500 ml-0.5">{f.unit}</span>
                 </p>
@@ -112,7 +112,7 @@ export default function BodyMeasurements({ onBack }: BodyMeasurementsProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <TrendingUp size={14} className="text-brand" />
-              <h3 className="text-[10px] text-gray-500 uppercase tracking-widest font-black">Evolução</h3>
+              <h3 className="text-[11px] text-gray-500 uppercase tracking-widest font-black">Evolução</h3>
             </div>
             <select
               className="bg-surface-hover border border-input-border rounded px-2 py-1 text-[10px] font-bold uppercase text-white"
@@ -150,7 +150,7 @@ export default function BodyMeasurements({ onBack }: BodyMeasurementsProps) {
       <section className="card p-4 space-y-4">
         <div className="flex items-center gap-2 border-b border-outline pb-4">
           <Ruler size={14} className="text-brand" />
-          <h3 className="text-[10px] text-gray-500 uppercase tracking-widest font-black">Novo Registro</h3>
+          <h3 className="text-[11px] text-gray-500 uppercase tracking-widest font-black">Novo Registro</h3>
         </div>
 
         <div>
@@ -163,12 +163,13 @@ export default function BodyMeasurements({ onBack }: BodyMeasurementsProps) {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-4">
           {FIELDS.map(f => (
             <div key={f.key}>
               <label className="input-label">{f.label} ({f.unit})</label>
               <input
                 type="number"
+                inputMode="decimal"
                 step="0.1"
                 min="0"
                 className="form-input"
@@ -200,12 +201,14 @@ export default function BodyMeasurements({ onBack }: BodyMeasurementsProps) {
 
       {/* History list */}
       {isLoading ? (
-        <div className="flex items-center justify-center h-24">
-          <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+        <div className="space-y-2">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="card p-4 h-14 animate-pulse motion-reduce:animate-none" />
+          ))}
         </div>
       ) : measurements.length > 0 && (
         <section className="space-y-3">
-          <h3 className="text-[10px] text-gray-500 uppercase tracking-widest font-black">Histórico</h3>
+          <h3 className="text-[11px] text-gray-500 uppercase tracking-widest font-black">Histórico</h3>
           {[...measurements].reverse().map(m => (
             <div key={m.id} className="card p-4 flex items-center justify-between gap-4">
               <p className="text-xs font-bold text-gray-400 flex-shrink-0">
@@ -213,7 +216,7 @@ export default function BodyMeasurements({ onBack }: BodyMeasurementsProps) {
               </p>
               <div className="flex flex-wrap gap-x-4 gap-y-1 justify-end">
                 {FIELDS.map(f => m[f.key] != null && (
-                  <span key={f.key} className="text-[10px] text-gray-500">
+                  <span key={f.key} className="text-xs text-gray-500">
                     <span className="text-white font-bold">{m[f.key]}</span>{f.unit} {f.label}
                   </span>
                 ))}

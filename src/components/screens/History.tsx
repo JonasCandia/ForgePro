@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Trash2, Search, Calendar, ChevronDown, Flame } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, getYear, subYears, startOfYear, endOfYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -6,6 +6,12 @@ import { ResponsiveCalendar } from '@nivo/calendar';
 import { workoutService } from '../../lib/workoutService';
 import { WorkoutExerciseSummary, WorkoutSession } from '../../types';
 import { useWorkouts, useInvalidateWorkouts } from '../../hooks/useWorkouts';
+
+function toDate(raw: unknown): Date {
+  if (raw instanceof Date) return raw;
+  if (raw && typeof (raw as any).toDate === 'function') return (raw as any).toDate();
+  return new Date(raw as string);
+}
 
 interface HistoryProps {
   onBack?: () => void;
@@ -22,11 +28,11 @@ export default function History({ onBack }: HistoryProps) {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [calendarYear, setCalendarYear] = useState(getYear(new Date()));
 
-  // ── Heatmap data ────────────────────────────────────────────────────────────
+  // -- Heatmap data ------------------------------------------------------------
   const heatmapData = useMemo(() => {
     const map = new Map<string, number>();
     workouts.forEach(w => {
-      const d = w.data instanceof Date ? w.data : (w.data as any)?.toDate?.() ?? new Date(w.data as any);
+      const d = toDate(w.data);
       if (getYear(d) !== calendarYear) return;
       const key = format(d, 'yyyy-MM-dd');
       map.set(key, (map.get(key) ?? 0) + 1);
@@ -40,7 +46,7 @@ export default function History({ onBack }: HistoryProps) {
   const availableYears = useMemo(() => {
     const years = new Set<number>();
     workouts.forEach(w => {
-      const d = w.data instanceof Date ? w.data : (w.data as any)?.toDate?.() ?? new Date(w.data as any);
+      const d = toDate(w.data);
       years.add(getYear(d));
     });
     years.add(getYear(new Date()));
@@ -55,7 +61,7 @@ export default function History({ onBack }: HistoryProps) {
 
   const filtered = useMemo(() => {
     return workouts.filter(w => {
-      const date = w.data instanceof Date ? w.data : (w.data as any)?.toDate?.() ?? new Date(w.data as any);
+      const date = toDate(w.data);
       if (startDate) {
         try { if (!isWithinInterval(date, { start: startOfDay(parseISO(startDate)), end: endDate ? endOfDay(parseISO(endDate)) : endOfDay(new Date()) })) return false; }
         catch { return false; }
@@ -75,7 +81,7 @@ export default function History({ onBack }: HistoryProps) {
   const grouped = useMemo(() => {
     const map = new Map<string, WorkoutSession[]>();
     filtered.forEach(w => {
-      const date = w.data instanceof Date ? w.data : (w.data as any)?.toDate?.() ?? new Date(w.data as any);
+      const date = toDate(w.data);
       const key = format(date, 'yyyy-MM-dd');
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(w);
@@ -95,8 +101,22 @@ export default function History({ onBack }: HistoryProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+      <div className="space-y-6 pt-4 pb-24">
+        <div className="space-y-1">
+          <div className="h-3 w-16 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+          <div className="h-7 w-32 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+        </div>
+        <div className="card p-4 h-52 animate-pulse motion-reduce:animate-none" />
+        <div className="space-y-2">
+          <div className="h-11 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="h-16 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+            <div className="h-16 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+          </div>
+        </div>
+        {[0, 1, 2].map(i => (
+          <div key={i} className="card p-4 h-28 animate-pulse motion-reduce:animate-none" />
+        ))}
       </div>
     );
   }
@@ -108,17 +128,17 @@ export default function History({ onBack }: HistoryProps) {
         <h1 className="font-display text-2xl font-black uppercase tracking-tight">Histórico</h1>
       </div>
 
-      {/* ── Heatmap anual ─────────────────────────────────────────────────── */}
+      {/* -- Heatmap anual --------------------------------------------------- */}
       <section className="card p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Flame size={14} className="text-brand" />
-            <h3 className="text-[10px] text-gray-500 uppercase tracking-widest font-black">
+            <h3 className="text-[11px] text-gray-500 uppercase tracking-widest font-black">
               Consistência Anual
             </h3>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black text-gray-500 uppercase tracking-wider">
+            <span className="text-[11px] font-black text-gray-500 uppercase tracking-wider">
               {totalWorkoutsYear} treino{totalWorkoutsYear !== 1 ? 's' : ''}
             </span>
             <select
@@ -133,7 +153,7 @@ export default function History({ onBack }: HistoryProps) {
           </div>
         </div>
 
-        {/* Nivo Calendar — needs a fixed height container */}
+        {/* Nivo Calendar – needs a fixed height container */}
         <div style={{ height: 160 }} className="w-full overflow-hidden">
           <ResponsiveCalendar
             data={heatmapData}
@@ -161,8 +181,8 @@ export default function History({ onBack }: HistoryProps) {
                 }}
               >
                 {format(parseISO(day), "dd 'de' MMM", { locale: ptBR })}
-                {' — '}
-                {value} treino{(value as number) !== 1 ? 's' : ''}
+                {': '}
+                {value} treino{(value as unknown as number) !== 1 ? 's' : ''}
               </div>
             )}
             theme={{
@@ -174,15 +194,15 @@ export default function History({ onBack }: HistoryProps) {
 
         {/* Legend */}
         <div className="flex items-center justify-end gap-2">
-          <span className="text-[9px] text-gray-600 font-bold uppercase tracking-wider">Menos</span>
+          <span className="text-[11px] text-gray-600 font-bold uppercase tracking-wider">Menos</span>
           {['#1a1a1a', '#2d4a00', '#5a9200', '#99d000', '#CCFF00'].map(c => (
             <div key={c} className="w-3 h-3 rounded-sm" style={{ backgroundColor: c }} />
           ))}
-          <span className="text-[9px] text-gray-600 font-bold uppercase tracking-wider">Mais</span>
+          <span className="text-[11px] text-gray-600 font-bold uppercase tracking-wider">Mais</span>
         </div>
       </section>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
           <input
@@ -236,8 +256,17 @@ export default function History({ onBack }: HistoryProps) {
       </div>
 
       {grouped.length === 0 ? (
-        <div className="card p-8 text-center text-gray-500">
-          <p className="text-sm">Nenhum treino encontrado.</p>
+        <div className="card p-8 text-center space-y-2">
+          <p className="text-sm font-bold text-gray-400">
+            {search || startDate || filterGroup || filterObjetivo
+              ? 'Nenhum treino corresponde aos filtros.'
+              : 'Sem treinos ainda.'}
+          </p>
+          {!search && !startDate && !filterGroup && !filterObjetivo && (
+            <p className="text-xs text-gray-600">
+              Cada sessão aqui é permanente. Registre a primeira agora.
+            </p>
+          )}
         </div>
       ) : (
         grouped.map(([dateKey, dayWorkouts]) => {
@@ -257,7 +286,7 @@ export default function History({ onBack }: HistoryProps) {
                       <p className="font-bold text-sm">{workout.nomeTreino ?? 'Treino'}</p>
                       <div className="flex gap-2 mt-0.5">
                         {workout.objetivo && (
-                          <span className="text-[10px] font-black uppercase tracking-wider text-gray-500 bg-surface-hover px-2 py-0.5 rounded">
+                          <span className="text-[11px] font-black uppercase tracking-wider text-gray-500 bg-surface-hover px-2 py-0.5 rounded">
                             {workout.objetivo}
                           </span>
                         )}
@@ -272,7 +301,7 @@ export default function History({ onBack }: HistoryProps) {
                       className="p-2 text-gray-600 hover:text-red-400 transition-colors disabled:opacity-40"
                     >
                       {deleting === workout.id
-                        ? <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                        ? <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin motion-reduce:animate-none" />
                         : <Trash2 size={16} />
                       }
                     </button>
@@ -295,9 +324,9 @@ export default function History({ onBack }: HistoryProps) {
                                 <p className="font-medium">{s.exercicioNome}</p>
                                 {s.grupoMuscular && <p className="text-gray-600">{s.grupoMuscular}</p>}
                               </td>
-                              <td className="p-3 text-center text-gray-300">{s.seriesRealizadas}</td>
-                              <td className="p-3 text-center text-gray-300">{s.repeticoesReais}</td>
-                              <td className="p-3 text-center font-bold text-brand">{s.pesoMax}kg</td>
+                              <td className="p-3 text-center font-mono text-gray-300">{s.seriesRealizadas}</td>
+                              <td className="p-3 text-center font-mono text-gray-300">{s.repeticoesReais}</td>
+                              <td className="p-3 text-center font-mono font-bold text-brand">{s.pesoMax}kg</td>
                             </tr>
                           ))}
                         </tbody>

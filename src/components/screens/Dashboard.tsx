@@ -1,5 +1,6 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Dumbbell, TrendingUp, Calendar, Trophy, Play, Ruler, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import type { Screen } from '../../App';
 import {
   format, startOfMonth, endOfMonth, isWithinInterval, differenceInDays,
   eachDayOfInterval, getDay, startOfWeek, endOfWeek, isSameMonth, addMonths, subMonths,
@@ -9,7 +10,7 @@ import { useWorkouts } from '../../hooks/useWorkouts';
 import { useMeasurements } from '../../hooks/useMeasurements';
 import { usePlanos } from '../../hooks/usePlanos';
 
-// Portuguese weekday name → JS getDay() index (0=Sun)
+// Portuguese weekday name ? JS getDay() index (0=Sun)
 const DIA_SEMANA_MAP: Record<string, number> = {
   'domingo': 0, 'segunda': 1, 'segunda-feira': 1, 'terca': 2, 'terça': 2,
   'terca-feira': 2, 'terça-feira': 2, 'quarta': 3, 'quarta-feira': 3,
@@ -22,7 +23,7 @@ function normalizeDia(dia: string): number | null {
   return DIA_SEMANA_MAP[key] ?? null;
 }
 
-// ─── WorkoutCalendar ─────────────────────────────────────────────────────────
+// --- WorkoutCalendar ---------------------------------------------------------
 
 import type { WorkoutSession } from '../../types';
 import type { Plano } from '../../types';
@@ -45,13 +46,19 @@ function plannedWeekdays(planos: Plano[]): Set<number> {
   return s;
 }
 
+function toDate(raw: unknown): Date {
+  if (raw instanceof Date) return raw;
+  if (raw && typeof (raw as any).toDate === 'function') return (raw as any).toDate();
+  return new Date(raw as string);
+}
+
 // Build set of ISO date strings (YYYY-MM-DD) for realised workouts
 function realisedDates(workouts: WorkoutSession[]): Set<string> {
   const s = new Set<string>();
   workouts.forEach(w => {
     const raw = w.data;
     if (!raw) return;
-    const d = raw instanceof Date ? raw : (raw as any)?.toDate?.() ?? new Date(raw as any);
+    const d = toDate(raw);
     s.add(format(d, 'yyyy-MM-dd'));
   });
   return s;
@@ -84,13 +91,13 @@ function WorkoutCalendar({ workouts, planos, month, onPrevMonth, onNextMonth }: 
           </h3>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={onPrevMonth} className="p-1 text-gray-500 hover:text-white transition-colors rounded">
+          <button onClick={onPrevMonth} className="p-2.5 text-gray-500 hover:text-white transition-colors rounded">
             <ChevronLeft size={14} />
           </button>
           <span className="text-[10px] font-black uppercase tracking-wider text-white w-24 text-center">
             {format(month, 'MMM yyyy', { locale: ptBR })}
           </span>
-          <button onClick={onNextMonth} className="p-1 text-gray-500 hover:text-white transition-colors rounded">
+          <button onClick={onNextMonth} className="p-2.5 text-gray-500 hover:text-white transition-colors rounded">
             <ChevronRight size={14} />
           </button>
         </div>
@@ -99,7 +106,7 @@ function WorkoutCalendar({ workouts, planos, month, onPrevMonth, onNextMonth }: 
       {/* Weekday labels */}
       <div className="grid grid-cols-7 gap-1">
         {WEEKDAY_LABELS.map((l, i) => (
-          <div key={i} className="text-center text-[9px] font-black uppercase tracking-widest text-gray-600 py-1">
+          <div key={i} className="text-center text-[10px] font-black uppercase tracking-widest text-gray-600 py-1">
             {l}
           </div>
         ))}
@@ -161,15 +168,15 @@ function LegendItem({ color, border, label, textColor = 'text-gray-500' }: {
   return (
     <div className="flex items-center gap-1.5">
       <div className={`w-3 h-3 rounded-full flex-shrink-0 ${color ?? ''} ${border ? `border ${border}` : ''}`} />
-      <span className={`text-[9px] font-bold uppercase tracking-wider ${textColor}`}>{label}</span>
+      <span className={`text-[11px] font-bold uppercase tracking-wider ${textColor}`}>{label}</span>
     </div>
   );
 }
 
-// ─── Dashboard ───────────────────────────────────────────────────────────────
+// --- Dashboard ---------------------------------------------------------------
 
 interface DashboardProps {
-  onNavigate: (screen: string) => void;
+  onNavigate: (screen: Screen) => void;
 }
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
@@ -190,7 +197,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const monthEnd = endOfMonth(now);
 
   const workoutsThisMonth = workouts.filter(w => {
-    const date = w.data instanceof Date ? w.data : (w.data as any)?.toDate?.() ?? new Date(w.data as any);
+    const date = toDate(w.data);
     return isWithinInterval(date, { start: monthStart, end: monthEnd });
   }).length;
 
@@ -201,8 +208,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
   const recentWorkouts = [...workouts]
     .sort((a, b) => {
-      const da = a.data instanceof Date ? a.data : (a.data as any)?.toDate?.() ?? new Date(a.data as any);
-      const db = b.data instanceof Date ? b.data : (b.data as any)?.toDate?.() ?? new Date(b.data as any);
+      const da = toDate(a.data);
+      const db = toDate(b.data);
       return db.getTime() - da.getTime();
     })
     .slice(0, 3);
@@ -217,53 +224,65 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-32">
-          <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <div className="card p-4 h-[88px] animate-pulse motion-reduce:animate-none" />
+            <div className="grid grid-cols-3 gap-2">
+              {[0, 1, 2].map(i => (
+                <div key={i} className="bg-surface border border-outline rounded-lg p-3 h-20 animate-pulse motion-reduce:animate-none" />
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="h-11 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+            <div className="h-11 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
+          </div>
+          <div className="card p-4 h-64 animate-pulse motion-reduce:animate-none" />
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="card p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar size={14} className="text-brand" />
-                <span className="text-[10px] text-gray-500 uppercase tracking-wider font-black">Treinos no Mês</span>
+          {/* Stats – primary metric up top, 3 supporting below */}
+          <div className="space-y-3">
+            <div className="card p-5 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar size={12} className="text-brand" />
+                  <span className="text-[11px] text-gray-500 uppercase tracking-wider font-black">Treinos no Mês</span>
+                </div>
+                <p className="font-mono text-4xl font-black text-brand leading-none">{workoutsThisMonth}</p>
               </div>
-              <p className="font-display text-3xl font-black text-brand">{workoutsThisMonth}</p>
             </div>
-            <div className="card p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Trophy size={14} className="text-brand" />
-                <span className="text-[10px] text-gray-500 uppercase tracking-wider font-black">Carga Máxima</span>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-surface border border-outline rounded-lg p-4">
+                <Dumbbell size={12} className="text-gray-600 mb-2" />
+                <p className="font-mono text-xl font-black leading-none mb-0.5">{workouts.length}</p>
+                <p className="text-[11px] text-gray-500 uppercase tracking-wider font-bold">Total</p>
               </div>
-              <p className="font-display text-3xl font-black text-brand">
-                {maxWeight > 0 ? maxWeight : '—'}
-                {maxWeight > 0 && <span className="text-sm text-gray-500 ml-1">kg</span>}
-              </p>
-            </div>
-            <div className="card p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Dumbbell size={14} className="text-brand" />
-                <span className="text-[10px] text-gray-500 uppercase tracking-wider font-black">Total de Treinos</span>
+              <div className="bg-surface border border-outline rounded-lg p-4">
+                <TrendingUp size={12} className="text-gray-600 mb-2" />
+                <p className="font-mono text-xl font-black leading-none mb-0.5">
+                  {new Set(workouts.flatMap(w => (w.exerciciosSummary ?? []).map(s => s.exercicioId))).size}
+                </p>
+                <p className="text-[11px] text-gray-500 uppercase tracking-wider font-bold">Exerc.</p>
               </div>
-              <p className="font-display text-3xl font-black">{workouts.length}</p>
-            </div>
-            <div className="card p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUp size={14} className="text-brand" />
-                <span className="text-[10px] text-gray-500 uppercase tracking-wider font-black">Exercícios</span>
+              <div className="bg-surface border border-outline rounded-lg p-4">
+                <Trophy size={12} className="text-gray-600 mb-2" />
+                <p className="font-mono text-xl font-black leading-none mb-0.5">
+                  {maxWeight > 0 ? `${maxWeight}` : '–'}
+                </p>
+                <p className="text-[11px] text-gray-500 uppercase tracking-wider font-bold">
+                  {maxWeight > 0 ? 'kg máx' : 'kg máx'}
+                </p>
               </div>
-              <p className="font-display text-3xl font-black">
-                {new Set(workouts.flatMap(w => (w.exerciciosSummary ?? []).map(s => s.exercicioId))).size}
-              </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => onNavigate('log')} className="btn-primary justify-center">
+          <div className="space-y-3">
+            <button onClick={() => onNavigate('log')} className="btn-primary w-full justify-center">
               <Dumbbell size={16} />
               Registrar Treino
             </button>
-            <button onClick={() => onNavigate('execute')} className="btn-secondary justify-center">
+            <button onClick={() => onNavigate('execute')} className="btn-secondary w-full justify-center">
               <Play size={16} />
               Executar Plano
             </button>
@@ -279,9 +298,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-black uppercase tracking-wider text-brand">Registrar Medidas Corporais</p>
-                <p className="text-[10px] text-gray-500 mt-0.5">
+                <p className="text-xs text-gray-500 mt-0.5">
                   {daysSinceLastMeasurement === null
-                    ? 'Nenhum registro ainda — comece agora!'
+                    ? 'Nenhum registro ainda: comece agora!'
                     : `Último registro há ${daysSinceLastMeasurement} dias`}
                 </p>
               </div>
@@ -300,16 +319,16 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
           {recentWorkouts.length > 0 && (
             <div className="space-y-3">
-              <h3 className="text-[10px] text-gray-500 uppercase tracking-widest font-black">Treinos Recentes</h3>
+              <h3 className="text-[11px] text-gray-500 uppercase tracking-widest font-black">Treinos Recentes</h3>
               {recentWorkouts.map(w => {
-                const date = w.data instanceof Date ? w.data : (w.data as any)?.toDate?.() ?? new Date(w.data as any);
+                const date = toDate(w.data);
                 return (
                   <div key={w.id} className="card p-4 flex items-center justify-between">
                     <div>
                       <p className="font-bold text-sm">{w.nomeTreino ?? 'Treino'}</p>
                       <p className="text-xs text-gray-500">
                         {format(date, "dd 'de' MMM", { locale: ptBR })}
-                        {w.exerciciosSummary && ` · ${w.exerciciosSummary.length} exercícios`}
+                        {w.exerciciosSummary && ` – ${w.exerciciosSummary.length} exercícios`}
                       </p>
                     </div>
                     {w.objetivo && (
@@ -326,7 +345,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           {workouts.length === 0 && (
             <div className="card p-8 text-center text-gray-500 space-y-3">
               <Dumbbell size={32} className="mx-auto text-gray-700" />
-              <p className="text-sm">Nenhum treino registrado ainda.</p>
+              <div>
+                <p className="text-sm font-bold text-gray-300">Sem histórico ainda.</p>
+                <p className="text-xs text-gray-600 mt-1">O primeiro registro inicia a curva.</p>
+              </div>
               <button onClick={() => onNavigate('log')} className="btn-primary mx-auto">
                 Registrar Primeiro Treino
               </button>
