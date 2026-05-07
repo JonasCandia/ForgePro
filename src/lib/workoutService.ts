@@ -148,8 +148,11 @@ export const workoutService = {
     const uid = auth.currentUser.uid;
     try {
       const ref = doc(collection(db, USERS_COL, uid, WORKOUTS_COL));
+      const cleanData = Object.fromEntries(
+        Object.entries(data).filter(([, v]) => v !== undefined)
+      );
       await setDoc(ref, {
-        ...data,
+        ...cleanData,
         userId: uid,
         data: new Date().toISOString(),
         status: 'em_andamento',
@@ -186,7 +189,10 @@ export const workoutService = {
     if (!auth.currentUser) throw new Error('User must be logged in');
     const uid = auth.currentUser.uid;
     const seriesId = genId();
-    const series: WorkoutSeries = { id: seriesId, workoutId, userId: uid, ...seriesData };
+    const rawSeries = { id: seriesId, workoutId, userId: uid, ...seriesData };
+    const series = Object.fromEntries(
+      Object.entries(rawSeries).filter(([, v]) => v !== undefined)
+    ) as WorkoutSeries;
     try {
       await updateDoc(doc(db, USERS_COL, uid, WORKOUTS_COL, workoutId), {
         series: arrayUnion(series),
@@ -217,10 +223,13 @@ export const workoutService = {
   ): Promise<void> {
     if (!auth.currentUser) return;
     const uid = auth.currentUser.uid;
+    const cleanSummary = exerciciosSummary.map(s =>
+      Object.fromEntries(Object.entries(s).filter(([, v]) => v !== undefined))
+    );
     try {
       await updateDoc(doc(db, USERS_COL, uid, WORKOUTS_COL, workoutId), {
         status: 'finalizado',
-        exerciciosSummary,
+        exerciciosSummary: cleanSummary,
         finalizadoEm: serverTimestamp(),
       });
     } catch (error) {
@@ -272,11 +281,11 @@ export const workoutService = {
             serieNum: idx + 1,
             repeticoesReais: s.repeticoes,
             pesoReal: e.modalidade === 'peso_corporal' ? 0 : s.pesoKg,
-            distanciaMetros: s.distanciaMetros || undefined,
-            tempoSegundos: s.tempoSegundos || undefined,
-            paceMinKm,
+            ...(s.distanciaMetros ? { distanciaMetros: s.distanciaMetros } : {}),
+            ...(s.tempoSegundos ? { tempoSegundos: s.tempoSegundos } : {}),
+            ...(paceMinKm !== undefined ? { paceMinKm } : {}),
             falhou: false,
-            objetivo: objetivo || undefined,
+            ...(objetivo ? { objetivo } : {}),
             data: now,
           });
         });
@@ -286,7 +295,7 @@ export const workoutService = {
         data: now,
         nomeTreino: data.nomeTreino || 'Treino Manual',
         status: 'finalizado',
-        objetivo: objetivo || null,
+        ...(objetivo ? { objetivo } : {}),
         series: seriesArr,
         exerciciosSummary: data.entries.map((e): WorkoutExerciseSummary => {
           const mod = e.modalidade ?? 'forca_dinamica';
@@ -322,11 +331,12 @@ export const workoutService = {
     try {
       const q = query(
         collection(db, USERS_COL, uid, WORKOUTS_COL),
-        where('status', '==', 'finalizado'),
-        orderBy('data', 'desc')
+        where('status', '==', 'finalizado')
       );
       const snap = await getDocs(q);
-      const workouts = snap.docs.map(d => ({ id: d.id, ...d.data() } as WorkoutSession));
+      const workouts = snap.docs
+        .map(d => ({ id: d.id, ...d.data() } as WorkoutSession))
+        .sort((a, b) => (b.data > a.data ? 1 : b.data < a.data ? -1 : 0));
       cacheWorkouts(uid, workouts).catch(() => {});
       return workouts;
     } catch (error) {

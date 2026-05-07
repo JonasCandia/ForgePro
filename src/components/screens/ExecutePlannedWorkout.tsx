@@ -184,11 +184,10 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
         repeticoesReais,
         pesoReal: mod === 'peso_corporal' ? 0 : pesoReal,
         falhou: input.falhou,
-        tempoSegundos: tempoSegundos || undefined,
-        distanciaMetros: distanciaMetros || undefined,
-        paceMinKm,
+        ...(tempoSegundos ? { tempoSegundos } : {}),
+        ...(distanciaMetros ? { distanciaMetros } : {}),
+        ...(paceMinKm !== undefined ? { paceMinKm } : {}),
         tempoDescanso: defaultRestTime,
-        objetivo: ''
       });
       const newRecord: SerieRecord = { seriesId, serieNum, pesoReal, repeticoesReais, tempoSegundos, distanciaMetros, falhou: input.falhou };
       setCompletedSeries(prev => ({ ...prev, [exIdx]: [...(prev[exIdx] ?? []), newRecord] }));
@@ -219,8 +218,8 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
           pesoMax: maxEntry?.pesoReal ?? 0,
           repsAtMax: maxEntry?.repeticoesReais ?? 0,
           volumeTotal,
-          tempoTotalSegundos: tempoTotal || undefined,
-          distanciaTotalMetros: distanciaTotal || undefined,
+          ...(tempoTotal ? { tempoTotalSegundos: tempoTotal } : {}),
+          ...(distanciaTotal ? { distanciaTotalMetros: distanciaTotal } : {}),
         };
       });
       await workoutService.finalizeWorkout(workoutId, summary);
