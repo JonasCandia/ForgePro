@@ -157,10 +157,6 @@ export default function ViewPlan({ onNavigateImport }: ViewPlanProps) {
   // ─── render principal ────────────────────────────────────────────────────
   return (
     <div className="space-y-6 pt-4 pb-24">
-      <header>
-        <h2 className="text-brand text-xs font-bold uppercase tracking-widest mb-1">Programação</h2>
-        <h1 className="font-display text-2xl font-black uppercase tracking-tight">Meu Plano</h1>
-      </header>
 
       {/* Pills de semana */}
       <div className="flex flex-wrap gap-2">

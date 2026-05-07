@@ -87,10 +87,6 @@ export default function Records() {
   return (
     <div className="space-y-6 pt-4 pb-24">
       <header className="flex justify-between items-end mb-6">
-        <div>
-          <h2 className="text-brand text-xs font-bold uppercase tracking-widest mb-1">Melhores Marcas</h2>
-          <h1 className="font-display text-2xl font-black uppercase tracking-tight">Recordes Pessoais</h1>
-        </div>
         <div className="text-[10px] bg-surface px-3 py-1.5 rounded text-gray-400 border border-outline font-bold uppercase tracking-wider">
           {filtered.length} Exercícios
         </div>

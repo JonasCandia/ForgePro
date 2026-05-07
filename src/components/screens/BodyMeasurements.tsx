@@ -76,16 +76,6 @@ export default function BodyMeasurements({ onBack }: BodyMeasurementsProps) {
 
   return (
     <div className="space-y-6 pt-4 pb-24">
-      <header className="flex items-center gap-4 mb-2">
-        <button onClick={onBack} className="p-3 -ml-3 text-gray-400 hover:text-white transition-colors">
-          <ArrowLeft size={20} />
-        </button>
-        <div>
-          <h2 className="text-brand text-xs font-bold uppercase tracking-widest mb-1">Monitoramento</h2>
-          <h1 className="font-display text-2xl font-black uppercase tracking-tight">Medidas Corporais</h1>
-        </div>
-      </header>
-
       {/* Latest snapshot */}
       {latestMeasurement && (
         <section className="card p-4 space-y-3">

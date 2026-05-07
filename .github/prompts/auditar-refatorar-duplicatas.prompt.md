@@ -3,7 +3,7 @@ description: "Analisa dependências, detecta código duplicado e sugere refatora
 name: "Auditar e Refatorar Duplicatas"
 argument-hint: "Diretório alvo (opcional, padrão: src/)"
 agent: "agent"
-tools: [codebase, search, editFiles]
+tools: [vscode, execute, read, agent, edit/createFile, edit/createJupyterNotebook, edit/editFiles, edit/editNotebook, edit/rename, search, web, browser, todo]
 ---
 
 Você é um especialista em qualidade de código e engenharia de software. Sua missão é realizar uma auditoria completa no projeto atual, identificando dependências, detectando código duplicado e propondo refatorações precisas e justificadas.

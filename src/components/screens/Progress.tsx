@@ -115,11 +115,6 @@ export default function Progress() {
 
   return (
     <div className="space-y-6 pt-4 pb-24">
-      <div>
-        <h2 className="text-brand text-xs font-bold uppercase tracking-widest mb-1">Analytics</h2>
-        <h1 className="font-display text-2xl font-black uppercase tracking-tight">Progresso</h1>
-      </div>
-
       {/* Tab bar */}
       <div className="flex gap-1 p-1 bg-surface-hover rounded-xl border border-outline">
         {([

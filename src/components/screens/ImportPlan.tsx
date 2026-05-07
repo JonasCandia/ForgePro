@@ -66,16 +66,6 @@ export default function ImportPlan({ onBack }: ImportPlanProps) {
 
   return (
     <div className="space-y-6 pt-4 pb-24">
-      <header className="flex items-center gap-4 mb-2">
-        <button onClick={onBack} className="p-3 -ml-3 text-gray-400 hover:text-white transition-colors">
-          <ArrowLeft size={20} />
-        </button>
-        <div>
-          <h2 className="text-brand text-xs font-bold uppercase tracking-widest mb-1">Configurações</h2>
-          <h1 className="font-display text-2xl font-black uppercase tracking-tight">Importar Plano</h1>
-        </div>
-      </header>
-
       <button
         onClick={handleExport}
         disabled={exporting}

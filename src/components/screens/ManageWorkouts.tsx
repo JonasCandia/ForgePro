@@ -146,21 +146,6 @@ export default function ManageWorkouts({ onBack }: ManageWorkoutsProps) {
 
   return (
     <div className="space-y-6 pt-4 pb-24">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={onBack}
-          className="p-2 text-gray-500 hover:text-gray-200 transition-colors -ml-2"
-          aria-label="Voltar"
-        >
-          <ArrowLeft size={20} />
-        </button>
-        <div className="flex-1">
-          <h2 className="text-brand text-xs font-bold uppercase tracking-widest mb-0.5">Histórico</h2>
-          <h1 className="font-display text-2xl font-black uppercase tracking-tight">Gerenciar Treinos</h1>
-        </div>
-      </div>
-
       {/* Action bar */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">

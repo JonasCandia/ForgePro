@@ -28,7 +28,7 @@ type NavScreen = (typeof NAV_SCREENS)[number];
 function AppInner() {
   const [currentScreen, setCurrentScreen] = useState<Screen>(() => {
     const stored = sessionStorage.getItem('currentScreen') as Screen | null;
-    if (stored && stored !== 'execute' && stored !== 'import') return stored;
+    if (stored && stored !== 'execute' && stored !== 'import' && stored !== 'profile') return stored;
     return 'home';
   });
   const setupChecked = useRef(false);
@@ -78,16 +78,13 @@ function AppInner() {
     sessionStorage.setItem('currentScreen', currentScreen);
   }, [currentScreen]);
 
-  // Redirect to profile setup only on fresh login when profile doesn't exist
+  // Mark setup as checked once auth and profile are resolved
   useEffect(() => {
     if (setupChecked.current) return;
     if (!authLoading && user && !profileLoading) {
       setupChecked.current = true;
-      if (isNewLogin && !profileError && profile === null) {
-        setCurrentScreen('profile');
-      }
     }
-  }, [authLoading, user, isNewLogin, profileLoading, profileError, profile]);
+  }, [authLoading, user, profileLoading]);
 
   const loading = authLoading || (!!user && profileLoading);
 
@@ -171,7 +168,7 @@ function AppInner() {
               onClick={() => setCurrentScreen(screen)}
               className={`h-full border-b-2 flex items-center px-2 transition-colors ${currentScreen === screen ? 'text-brand border-brand' : 'text-gray-500 border-transparent hover:text-gray-300'} disabled:opacity-30`}
             >
-              {screen === 'home' ? 'Painel' : screen === 'plan' ? 'Plano' : screen === 'history' ? 'Histórico' : screen === 'progress' ? 'Progresso' : screen === 'records' ? 'Recordes' : screen === 'measurements' ? 'Medidas' : screen === 'taf' ? 'TAF' : 'Importar'}
+              {screen === 'home' ? 'Início' : screen === 'plan' ? 'Plano' : screen === 'history' ? 'Histórico' : screen === 'progress' ? 'Progresso' : screen === 'records' ? 'Recordes' : screen === 'measurements' ? 'Medidas' : screen === 'taf' ? 'TAF' : 'Importar'}
             </button>
           ))}
         </div>

@@ -216,13 +216,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
   return (
     <div className="space-y-6 pt-4 pb-24">
-      <div>
-        <h2 className="text-brand text-xs font-bold uppercase tracking-widest mb-1">
-          {format(now, "MMMM yyyy", { locale: ptBR })}
-        </h2>
-        <h1 className="font-display text-2xl font-black uppercase tracking-tight">Dashboard</h1>
-      </div>
-
       {loading ? (
         <div className="space-y-6">
           <div className="space-y-2">

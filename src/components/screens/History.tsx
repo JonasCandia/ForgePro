@@ -164,10 +164,6 @@ export default function History({ onNavigate }: HistoryProps) {
   return (
     <div className="space-y-6 pt-4 pb-24">
       <div className="flex items-end justify-between">
-        <div>
-          <h2 className="text-brand text-xs font-bold uppercase tracking-widest mb-1">Registro</h2>
-          <h1 className="font-display text-2xl font-black uppercase tracking-tight">Histórico</h1>
-        </div>
         <div className="flex items-center gap-2">
           {selectMode ? (
             <>
