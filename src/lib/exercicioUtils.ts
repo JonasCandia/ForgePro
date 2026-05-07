@@ -1,11 +1,16 @@
 /**
  * exercicioUtils.ts — Utilitários para modalidades de exercício
  */
-import type { ModalidadeExercicio, Exercício, WorkoutSeries } from '../types';
+import type { ModalidadeExercicio, Exercício, WorkoutSeries, WorkoutExerciseSummary } from '../types';
 
 /** Retorna a modalidade do exercício, defaultando para forca_dinamica */
 export function getModalidade(ex: Pick<Exercício, 'modalidade'>): ModalidadeExercicio {
   return ex.modalidade ?? 'forca_dinamica';
+}
+
+/** Retorna true para modalidades que não usam carga (peso) */
+export function isCardioModalidade(mod: ModalidadeExercicio): boolean {
+  return mod === 'corrida' || mod === 'cardio_livre' || mod === 'isometria';
 }
 
 /** Converte segundos para string "MM:SS" ou "H:MM:SS" */
@@ -131,3 +136,70 @@ export const LABEL_MODALIDADE: Record<ModalidadeExercicio, string> = {
   isometria: 'Isometria',
   cardio_livre: 'Cardio',
 };
+
+// ─── Summary builders ─────────────────────────────────────────────────────────
+
+export interface RawSerieInput {
+  peso: number;
+  reps: number;
+  tempoSegundos?: number;
+  distanciaMetros?: number;
+}
+
+/**
+ * Constrói um WorkoutExerciseSummary a partir de séries brutas de um único exercício.
+ */
+export function buildExercicioSummary(
+  base: {
+    exercicioId: string;
+    exercicioNome: string;
+    grupoMuscular: string;
+    modalidade: ModalidadeExercicio;
+  },
+  series: RawSerieInput[]
+): WorkoutExerciseSummary {
+  const isCardio = isCardioModalidade(base.modalidade);
+  const maxEntry = series.reduce(
+    (best, s) => s.peso > best.peso ? s : best,
+    series[0] ?? { peso: 0, reps: 0 }
+  );
+  const tempoTotal = series.reduce((sum, s) => sum + (s.tempoSegundos ?? 0), 0);
+  const distanciaTotal = series.reduce((sum, s) => sum + (s.distanciaMetros ?? 0), 0);
+  return {
+    exercicioId: base.exercicioId,
+    exercicioNome: base.exercicioNome,
+    grupoMuscular: base.grupoMuscular,
+    modalidade: base.modalidade,
+    seriesRealizadas: series.length,
+    repeticoesReais: series.reduce((sum, s) => sum + s.reps, 0),
+    pesoMax: isCardio ? 0 : (maxEntry?.peso ?? 0),
+    repsAtMax: isCardio ? 0 : (maxEntry?.reps ?? 0),
+    volumeTotal: isCardio ? 0 : series.reduce((sum, s) => sum + s.peso * s.reps, 0),
+    ...(tempoTotal ? { tempoTotalSegundos: tempoTotal } : {}),
+    ...(distanciaTotal ? { distanciaTotalMetros: distanciaTotal } : {}),
+  };
+}
+
+/**
+ * Agrupa WorkoutSeries[] por exercício e constrói o array de WorkoutExerciseSummary.
+ * Usado em updateWorkout para recalcular o summary após edição de séries.
+ */
+export function buildSummaryFromSeries(series: WorkoutSeries[]): WorkoutExerciseSummary[] {
+  const map = new Map<string, { base: Parameters<typeof buildExercicioSummary>[0]; items: RawSerieInput[] }>();
+  for (const s of series) {
+    const mod = s.modalidade ?? 'forca_dinamica';
+    if (!map.has(s.exercicioId)) {
+      map.set(s.exercicioId, {
+        base: { exercicioId: s.exercicioId, exercicioNome: s.exercicioNome, grupoMuscular: s.grupoMuscular, modalidade: mod },
+        items: [],
+      });
+    }
+    map.get(s.exercicioId)!.items.push({
+      peso: s.pesoReal,
+      reps: s.repeticoesReais,
+      tempoSegundos: s.tempoSegundos,
+      distanciaMetros: s.distanciaMetros,
+    });
+  }
+  return [...map.values()].map(({ base, items }) => buildExercicioSummary(base, items));
+}

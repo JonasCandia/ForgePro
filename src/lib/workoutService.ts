@@ -14,7 +14,7 @@ import {
   arrayUnion,
 } from 'firebase/firestore';
 import { db, auth } from './firebase';
-import { handleFirestoreError, OperationType } from './firestoreUtils';
+import { handleFirestoreError, OperationType, stripUndefined } from './firestoreUtils';
 import {
   Exercício,
   Plano,
@@ -35,6 +35,7 @@ import {
   deleteLocalWorkout,
 } from './localDb';
 import { isOnline, offlineSaveMeasurement, offlineSaveManualWorkout } from './syncService';
+import { buildExercicioSummary, buildSummaryFromSeries } from './exercicioUtils';
 
 const EXERCICIOS_COL = 'exercicios';
 const PLANOS_COL = 'planos';
@@ -68,9 +69,7 @@ export const workoutService = {
       const ref = doc(db, USERS_COL, auth.currentUser.uid);
       const existing = await getDoc(ref);
       // Firestore rejects `undefined` values — strip them out
-      const clean = Object.fromEntries(
-        Object.entries(data).filter(([, v]) => v !== undefined)
-      );
+      const clean = stripUndefined(data);
       await setDoc(
         ref,
         {
@@ -149,9 +148,7 @@ export const workoutService = {
     const uid = auth.currentUser.uid;
     try {
       const ref = doc(collection(db, USERS_COL, uid, WORKOUTS_COL));
-      const cleanData = Object.fromEntries(
-        Object.entries(data).filter(([, v]) => v !== undefined)
-      );
+      const cleanData = stripUndefined(data);
       await setDoc(ref, {
         ...cleanData,
         userId: uid,
@@ -191,9 +188,7 @@ export const workoutService = {
     const uid = auth.currentUser.uid;
     const seriesId = genId();
     const rawSeries = { id: seriesId, workoutId, userId: uid, ...seriesData };
-    const series = Object.fromEntries(
-      Object.entries(rawSeries).filter(([, v]) => v !== undefined)
-    ) as WorkoutSeries;
+    const series = stripUndefined(rawSeries) as WorkoutSeries;
     try {
       await updateDoc(doc(db, USERS_COL, uid, WORKOUTS_COL, workoutId), {
         series: arrayUnion(series),
@@ -224,9 +219,7 @@ export const workoutService = {
   ): Promise<void> {
     if (!auth.currentUser) return;
     const uid = auth.currentUser.uid;
-    const cleanSummary = exerciciosSummary.map(s =>
-      Object.fromEntries(Object.entries(s).filter(([, v]) => v !== undefined))
-    );
+    const cleanSummary = exerciciosSummary.map(s => stripUndefined(s));
     try {
       await updateDoc(doc(db, USERS_COL, uid, WORKOUTS_COL, workoutId), {
         status: 'finalizado',
@@ -298,27 +291,22 @@ export const workoutService = {
         status: 'finalizado',
         ...(objetivo ? { objetivo } : {}),
         series: seriesArr,
-        exerciciosSummary: data.entries.map((e): WorkoutExerciseSummary => {
-          const mod = e.modalidade ?? 'forca_dinamica';
-          const isCardio = mod === 'corrida' || mod === 'cardio_livre' || mod === 'isometria';
-          const maxEntry = e.seriesDetalhadas.reduce(
-            (best, s) => s.pesoKg > best.pesoKg ? s : best,
-            e.seriesDetalhadas[0] ?? { pesoKg: 0, repeticoes: 0 }
-          );
-          return {
-            exercicioId: e.exercicioId,
-            exercicioNome: e.exercicioNome,
-            grupoMuscular: e.grupoMuscular || '',
-            modalidade: mod,
-            seriesRealizadas: e.seriesDetalhadas.length,
-            repeticoesReais: e.seriesDetalhadas.reduce((sum, s) => sum + s.repeticoes, 0),
-            pesoMax: isCardio ? 0 : (maxEntry?.pesoKg ?? 0),
-            repsAtMax: isCardio ? 0 : (maxEntry?.repeticoes ?? 0),
-            volumeTotal: isCardio ? 0 : e.seriesDetalhadas.reduce((sum, s) => sum + s.pesoKg * s.repeticoes, 0),
-            tempoTotalSegundos: e.seriesDetalhadas.reduce((sum, s) => sum + (s.tempoSegundos ?? 0), 0) || undefined,
-            distanciaTotalMetros: e.seriesDetalhadas.reduce((sum, s) => sum + (s.distanciaMetros ?? 0), 0) || undefined,
-          };
-        }),
+        exerciciosSummary: data.entries.map((e): WorkoutExerciseSummary =>
+          buildExercicioSummary(
+            {
+              exercicioId: e.exercicioId,
+              exercicioNome: e.exercicioNome,
+              grupoMuscular: e.grupoMuscular || '',
+              modalidade: e.modalidade ?? 'forca_dinamica',
+            },
+            e.seriesDetalhadas.map(s => ({
+              peso: s.pesoKg,
+              reps: s.repeticoes,
+              tempoSegundos: s.tempoSegundos,
+              distanciaMetros: s.distanciaMetros,
+            }))
+          )
+        ),
         createdAt: serverTimestamp(),
       });
     } catch (error) {
@@ -388,40 +376,7 @@ export const workoutService = {
     if (updates.series !== undefined) {
       payload.series = updates.series;
       // Recalculate exerciciosSummary from updated series
-      const summaryMap = new Map<string, WorkoutExerciseSummary>();
-      for (const s of updates.series) {
-        const existing = summaryMap.get(s.exercicioId);
-        const mod = s.modalidade ?? 'forca_dinamica';
-        const isCardio = mod === 'corrida' || mod === 'cardio_livre' || mod === 'isometria';
-        if (!existing) {
-          summaryMap.set(s.exercicioId, {
-            exercicioId: s.exercicioId,
-            exercicioNome: s.exercicioNome,
-            grupoMuscular: s.grupoMuscular,
-            modalidade: mod,
-            seriesRealizadas: 1,
-            repeticoesReais: s.repeticoesReais,
-            pesoMax: isCardio ? 0 : s.pesoReal,
-            repsAtMax: isCardio ? 0 : s.repeticoesReais,
-            volumeTotal: isCardio ? 0 : s.pesoReal * s.repeticoesReais,
-            tempoTotalSegundos: s.tempoSegundos,
-            distanciaTotalMetros: s.distanciaMetros,
-          });
-        } else {
-          existing.seriesRealizadas += 1;
-          existing.repeticoesReais += s.repeticoesReais;
-          existing.volumeTotal += isCardio ? 0 : s.pesoReal * s.repeticoesReais;
-          if (!isCardio && s.pesoReal > existing.pesoMax) {
-            existing.pesoMax = s.pesoReal;
-            existing.repsAtMax = s.repeticoesReais;
-          }
-          if (s.tempoSegundos) existing.tempoTotalSegundos = (existing.tempoTotalSegundos ?? 0) + s.tempoSegundos;
-          if (s.distanciaMetros) existing.distanciaTotalMetros = (existing.distanciaTotalMetros ?? 0) + s.distanciaMetros;
-        }
-      }
-      payload.exerciciosSummary = [...summaryMap.values()].map(s =>
-        Object.fromEntries(Object.entries(s).filter(([, v]) => v !== undefined))
-      );
+      payload.exerciciosSummary = buildSummaryFromSeries(updates.series).map(s => stripUndefined(s));
     }
 
     try {

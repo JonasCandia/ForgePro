@@ -33,3 +33,10 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   console.error('Firestore Error: ', errorJson);
   throw new Error(errorJson);
 }
+
+/** Remove entradas com valor `undefined` — Firestore rejeita campos undefined */
+export function stripUndefined<T extends object>(obj: T): { [K in keyof T]: Exclude<T[K], undefined> } {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined)
+  ) as { [K in keyof T]: Exclude<T[K], undefined> };
+}

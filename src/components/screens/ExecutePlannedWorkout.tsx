@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Play, CheckCircle, Trophy, ChevronDown, ChevronUp } from 'lucide-react';
 import { workoutService } from '../../lib/workoutService';
 import type { Plano, WorkoutSeries, ModalidadeExercicio } from '../../types';
-import { getModalidade, LABEL_MODALIDADE, formatarTempo, calcularPace, formatarDistancia } from '../../lib/exercicioUtils';
+import { getModalidade, buildExercicioSummary, LABEL_MODALIDADE, formatarTempo, calcularPace, formatarDistancia } from '../../lib/exercicioUtils';
 
 interface SerieRecord {
   seriesId: string;
@@ -246,25 +246,20 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
     try {
       const summary = selectedPlano.exercicios.map((ex, idx) => {
         const series = completedSeries[idx] ?? [];
-        const mod = getModalidade(ex);
-        const isCardio = mod === 'corrida' || mod === 'cardio_livre' || mod === 'isometria';
-        const maxEntry = series.reduce((best, s) => s.pesoReal > best.pesoReal ? s : best, series[0] ?? { pesoReal: 0, repeticoesReais: 0 });
-        const volumeTotal = isCardio ? 0 : series.reduce((sum, s) => sum + s.pesoReal * s.repeticoesReais, 0);
-        const tempoTotal = series.reduce((sum, s) => sum + (s.tempoSegundos ?? 0), 0);
-        const distanciaTotal = series.reduce((sum, s) => sum + (s.distanciaMetros ?? 0), 0);
-        return {
-          exercicioId: ex.exercicioId,
-          exercicioNome: ex.exercicioNome ?? ex.exercicioId,
-          grupoMuscular: '',
-          modalidade: mod,
-          seriesRealizadas: series.length,
-          repeticoesReais: series.reduce((sum, s) => sum + s.repeticoesReais, 0),
-          pesoMax: maxEntry?.pesoReal ?? 0,
-          repsAtMax: maxEntry?.repeticoesReais ?? 0,
-          volumeTotal,
-          ...(tempoTotal ? { tempoTotalSegundos: tempoTotal } : {}),
-          ...(distanciaTotal ? { distanciaTotalMetros: distanciaTotal } : {}),
-        };
+        return buildExercicioSummary(
+          {
+            exercicioId: ex.exercicioId,
+            exercicioNome: ex.exercicioNome ?? ex.exercicioId,
+            grupoMuscular: '',
+            modalidade: getModalidade(ex),
+          },
+          series.map(s => ({
+            peso: s.pesoReal,
+            reps: s.repeticoesReais,
+            tempoSegundos: s.tempoSegundos,
+            distanciaMetros: s.distanciaMetros,
+          }))
+        );
       });
       await workoutService.finalizeWorkout(workoutId, summary);
       stopTimer();
