@@ -52,7 +52,6 @@ export default function UserProfile({ onBack, onSaved, onNavigate, isFirstTime }
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
       invalidateProfile();
-      if (onSaved) onSaved();
     } catch (err) {
       setError('Falha ao salvar. Tente novamente.');
     } finally {

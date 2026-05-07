@@ -10,6 +10,7 @@ export function useProfile() {
     queryKey: [PROFILE_QUERY_KEY, user?.uid],
     queryFn: () => workoutService.getUserProfile(),
     enabled: !!user,
+    retry: 1,
   });
 }
 

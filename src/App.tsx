@@ -22,12 +22,18 @@ import { useOnlineSync } from './hooks/useOnlineSync';
 export type Screen = 'home' | 'log' | 'history' | 'progress' | 'import' | 'execute' | 'profile' | 'records' | 'measurements' | 'taf' | 'plan';
 
 function AppInner() {
-  const [currentScreen, setCurrentScreen] = useState<Screen>('home');
+  const [currentScreen, setCurrentScreen] = useState<Screen>(() => {
+    const stored = sessionStorage.getItem('currentScreen') as Screen | null;
+    if (stored && stored !== 'execute' && stored !== 'import') return stored;
+    return 'home';
+  });
+  const setupChecked = useRef(false);
+  const [isNewLogin, setIsNewLogin] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { user, setUser } = useAppStore();
   const [authLoading, setAuthLoading] = useState(true);
-  const { data: profile, isLoading: profileLoading } = useProfile();
+  const { data: profile, isLoading: profileLoading, isError: profileError } = useProfile();
   const { theme, toggleTheme } = useTheme();
   const { isOnline } = useOnlineSync();
 
@@ -43,22 +49,41 @@ function AppInner() {
     return () => document.removeEventListener('mousedown', handler);
   }, [dropdownOpen]);
 
-  // Resolve initial auth state
+  // Resolve initial auth state; detect fresh login vs refresh via sessionStorage uid
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
+      const prevUid = sessionStorage.getItem('lastAuthUid');
       setUser(u);
-      if (u) workoutService.seedExercises();
+      if (u) {
+        workoutService.seedExercises();
+        if (u.uid !== prevUid) {
+          sessionStorage.setItem('lastAuthUid', u.uid);
+          setIsNewLogin(true);
+        }
+      } else {
+        sessionStorage.removeItem('lastAuthUid');
+        setIsNewLogin(false);
+      }
       setAuthLoading(false);
     });
     return () => unsubscribe();
   }, [setUser]);
 
-  // Redirect to profile setup on first login
+  // Persist active screen across page reloads
   useEffect(() => {
-    if (!authLoading && user && !profileLoading && profile === null) {
-      setCurrentScreen('profile');
+    sessionStorage.setItem('currentScreen', currentScreen);
+  }, [currentScreen]);
+
+  // Redirect to profile setup only on fresh login when profile doesn't exist
+  useEffect(() => {
+    if (setupChecked.current) return;
+    if (!authLoading && user && !profileLoading) {
+      setupChecked.current = true;
+      if (isNewLogin && !profileError && profile === null) {
+        setCurrentScreen('profile');
+      }
     }
-  }, [authLoading, user, profileLoading, profile]);
+  }, [authLoading, user, isNewLogin, profileLoading, profileError, profile]);
 
   const loading = authLoading || (!!user && profileLoading);
 
@@ -133,14 +158,14 @@ function AppInner() {
         
         {/* Desktop Nav */}
         <div className="hidden md:flex gap-8 text-[11px] font-bold uppercase tracking-widest h-full">
-          {(['home', 'plan', 'log', 'history', 'progress', 'records', 'measurements', 'taf', 'import'] as const).map((screen) => (
+          {(['home', 'plan', 'history', 'progress', 'records', 'measurements', 'taf', 'import'] as const).map((screen) => (
             <button 
               key={screen}
               disabled={!user}
               onClick={() => setCurrentScreen(screen)}
               className={`h-full border-b-2 flex items-center px-2 transition-colors ${currentScreen === screen ? 'text-brand border-brand' : 'text-gray-500 border-transparent hover:text-gray-300'} disabled:opacity-30`}
             >
-              {screen === 'home' ? 'Painél' : screen === 'plan' ? 'Plano' : screen === 'log' ? 'Registrar' : screen === 'history' ? 'Histórico' : screen === 'progress' ? 'Progresso' : screen === 'records' ? 'Recordes' : screen === 'measurements' ? 'Medidas' : screen === 'taf' ? 'TAF' : 'Importar'}
+              {screen === 'home' ? 'Painel' : screen === 'plan' ? 'Plano' : screen === 'history' ? 'Histórico' : screen === 'progress' ? 'Progresso' : screen === 'records' ? 'Recordes' : screen === 'measurements' ? 'Medidas' : screen === 'taf' ? 'TAF' : 'Importar'}
             </button>
           ))}
         </div>
@@ -231,7 +256,7 @@ function AppInner() {
           <button
             onClick={() => setCurrentScreen('log')}
             aria-label="Novo treino"
-            className={`md:hidden fixed bottom-[5.5rem] right-4 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 active:scale-95 ${
+            className={`fixed bottom-[5.5rem] right-4 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 active:scale-95 ${
               currentScreen === 'log'
                 ? 'bg-brand text-black scale-110 shadow-brand/50'
                 : 'bg-brand text-black hover:brightness-110 shadow-brand/30'
@@ -241,10 +266,10 @@ function AppInner() {
           </button>
 
           <nav className="md:hidden fixed bottom-0 left-0 w-full bg-surface border-t border-outline z-40 pb-[env(safe-area-inset-bottom,1.5rem)]">
-            <div className="flex justify-around items-center py-2">
+            <div className="flex justify-center items-center gap-1 py-2">
               <NavItem active={currentScreen === 'home'} icon={<Home size={22} />} label="Início" onClick={() => setCurrentScreen('home')} />
               <NavItem active={currentScreen === 'history'} icon={<HistoryIcon size={22} />} label="Histórico" onClick={() => setCurrentScreen('history')} />
-              <div className="w-14" />{/* espaço reservado para o FAB */}
+              <NavItem active={currentScreen === 'plan'} icon={<ClipboardList size={22} />} label="Planos" onClick={() => setCurrentScreen('plan')} />
               <NavItem active={currentScreen === 'progress'} icon={<TrendingUp size={22} />} label="Progresso" onClick={() => setCurrentScreen('progress')} />
               <NavItem active={currentScreen === 'taf'} icon={<Target size={22} />} label="TAF" onClick={() => setCurrentScreen('taf')} />
               <NavItem active={currentScreen === 'records'} icon={<Trophy size={22} />} label="Recordes" onClick={() => setCurrentScreen('records')} />

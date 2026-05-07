@@ -57,7 +57,7 @@ export const workoutService = {
       return snap.exists() ? (snap.data() as Profile) : null;
     } catch (error) {
       console.warn('Failed to get user profile:', error);
-      return null;
+      throw error;
     }
   },
 
@@ -66,10 +66,14 @@ export const workoutService = {
     try {
       const ref = doc(db, USERS_COL, auth.currentUser.uid);
       const existing = await getDoc(ref);
+      // Firestore rejects `undefined` values — strip them out
+      const clean = Object.fromEntries(
+        Object.entries(data).filter(([, v]) => v !== undefined)
+      );
       await setDoc(
         ref,
         {
-          ...data,
+          ...clean,
           uid: auth.currentUser.uid,
           updatedAt: serverTimestamp(),
           ...(existing.exists() ? {} : { createdAt: serverTimestamp() }),
