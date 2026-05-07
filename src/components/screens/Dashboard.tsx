@@ -252,7 +252,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 <p className="font-mono text-4xl font-black text-brand leading-none">{workoutsThisMonth}</p>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-3 stagger-items">
               <div className="bg-surface border border-outline rounded-lg p-4">
                 <Dumbbell size={12} className="text-gray-600 mb-2" />
                 <p className="font-mono text-xl font-black leading-none mb-0.5">{workouts.length}</p>
@@ -320,6 +320,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           {recentWorkouts.length > 0 && (
             <div className="space-y-3">
               <h3 className="text-[11px] text-gray-500 uppercase tracking-widest font-black">Treinos Recentes</h3>
+              <div className="stagger-items space-y-3">
               {recentWorkouts.map(w => {
                 const date = toDate(w.data);
                 return (
@@ -339,6 +340,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                   </div>
                 );
               })}
+              </div>
             </div>
           )}
 

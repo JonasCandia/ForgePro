@@ -21,6 +21,9 @@ import { useOnlineSync } from './hooks/useOnlineSync';
 
 export type Screen = 'home' | 'log' | 'history' | 'progress' | 'import' | 'execute' | 'profile' | 'records' | 'measurements' | 'taf' | 'plan';
 
+const NAV_SCREENS = ['home', 'history', 'plan', 'progress', 'taf', 'records'] as const;
+type NavScreen = (typeof NAV_SCREENS)[number];
+
 function AppInner() {
   const [currentScreen, setCurrentScreen] = useState<Screen>(() => {
     const stored = sessionStorage.getItem('currentScreen') as Screen | null;
@@ -245,38 +248,66 @@ function AppInner() {
       )}
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-6 pt-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        {renderScreen()}
+      <main className="max-w-4xl mx-auto px-6 pt-6 pb-24">
+        <div key={currentScreen} className="screen-enter">
+          {renderScreen()}
+        </div>
       </main>
 
       {/* Mobile Bottom Navigation */}
-      {user && (
-        <>
-          {/* FAB — Novo Treino */}
-          <button
-            onClick={() => setCurrentScreen('log')}
-            aria-label="Novo treino"
-            className={`fixed bottom-[5.5rem] right-4 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 active:scale-95 ${
-              currentScreen === 'log'
-                ? 'bg-brand text-black scale-110 shadow-brand/50'
-                : 'bg-brand text-black hover:brightness-110 shadow-brand/30'
-            }`}
-          >
-            <PlusCircle size={24} />
-          </button>
-
-          <nav className="md:hidden fixed bottom-0 left-0 w-full bg-surface border-t border-outline z-40 pb-[env(safe-area-inset-bottom,1.5rem)]">
-            <div className="flex justify-center items-center gap-1 py-2">
-              <NavItem active={currentScreen === 'home'} icon={<Home size={22} />} label="Início" onClick={() => setCurrentScreen('home')} />
-              <NavItem active={currentScreen === 'history'} icon={<HistoryIcon size={22} />} label="Histórico" onClick={() => setCurrentScreen('history')} />
-              <NavItem active={currentScreen === 'plan'} icon={<ClipboardList size={22} />} label="Planos" onClick={() => setCurrentScreen('plan')} />
-              <NavItem active={currentScreen === 'progress'} icon={<TrendingUp size={22} />} label="Progresso" onClick={() => setCurrentScreen('progress')} />
-              <NavItem active={currentScreen === 'taf'} icon={<Target size={22} />} label="TAF" onClick={() => setCurrentScreen('taf')} />
-              <NavItem active={currentScreen === 'records'} icon={<Trophy size={22} />} label="Recordes" onClick={() => setCurrentScreen('records')} />
+      {user && (() => {
+        const activeNavIndex = NAV_SCREENS.indexOf(currentScreen as NavScreen);
+        const tabW = 100 / NAV_SCREENS.length;
+        return (
+          <>
+            {/* FAB — Novo Treino */}
+            <div className="fixed bottom-[5.5rem] right-4 z-50">
+              {currentScreen !== 'log' && (
+                <span
+                  className="fab-ring absolute inset-0 rounded-full bg-brand pointer-events-none"
+                  aria-hidden="true"
+                />
+              )}
+              <button
+                onClick={() => setCurrentScreen('log')}
+                aria-label="Novo treino"
+                className={`relative w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 active:scale-90 ${
+                  currentScreen === 'log'
+                    ? 'bg-brand text-black scale-110 shadow-brand/40'
+                    : 'bg-brand text-black hover:brightness-110 shadow-brand/25'
+                }`}
+              >
+                <PlusCircle size={24} />
+              </button>
             </div>
-          </nav>
-        </>
-      )}
+
+            <nav className="md:hidden fixed bottom-0 left-0 w-full bg-surface z-40 pb-[env(safe-area-inset-bottom,1.5rem)]">
+              {/* Sliding HUD indicator */}
+              <div className="relative h-[2px] bg-outline overflow-hidden">
+                <div
+                  className="absolute top-0 h-full bg-brand"
+                  style={{
+                    width: `${tabW}%`,
+                    transform: activeNavIndex >= 0
+                      ? `translateX(${activeNavIndex * 100}%)`
+                      : 'translateX(-100%)',
+                    transition: 'transform 280ms cubic-bezier(0.16, 1, 0.3, 1)',
+                    boxShadow: '0 0 8px 1px oklch(88% 0.28 125 / 0.7)',
+                  }}
+                />
+              </div>
+              <div className="flex items-stretch border-t border-outline">
+                <NavItem active={currentScreen === 'home'}     icon={<Home size={20} />}         label="Início"    onClick={() => setCurrentScreen('home')} />
+                <NavItem active={currentScreen === 'history'}  icon={<HistoryIcon size={20} />}  label="Histórico" onClick={() => setCurrentScreen('history')} />
+                <NavItem active={currentScreen === 'plan'}     icon={<ClipboardList size={20} />} label="Plano"    onClick={() => setCurrentScreen('plan')} />
+                <NavItem active={currentScreen === 'progress'} icon={<TrendingUp size={20} />}   label="Progresso" onClick={() => setCurrentScreen('progress')} />
+                <NavItem active={currentScreen === 'taf'}      icon={<Target size={20} />}       label="TAF"       onClick={() => setCurrentScreen('taf')} />
+                <NavItem active={currentScreen === 'records'}  icon={<Trophy size={20} />}       label="Recordes"  onClick={() => setCurrentScreen('records')} />
+              </div>
+            </nav>
+          </>
+        );
+      })()}
     </div>
   );
 }
@@ -301,12 +332,24 @@ function NavItem({ active, icon, label, onClick }: NavItemProps) {
     <button
       onClick={onClick}
       aria-label={label}
-      className={`flex flex-col items-center justify-center gap-1 min-h-[44px] min-w-[44px] px-3 transition-all duration-300 ${active ? 'text-brand' : 'text-gray-500 hover:text-gray-300'}`}
+      className={`flex flex-col items-center justify-center flex-1 min-h-[52px] gap-1 py-2 transition-colors duration-200 active:scale-90 ${
+        active ? 'text-brand' : 'text-gray-500 hover:text-gray-400'
+      }`}
     >
-      <div className={`flex items-center justify-center transition-transform duration-300 ${active ? 'scale-110' : ''}`}>
+      <div
+        className={`flex items-center justify-center transition-transform duration-250 ${
+          active ? 'scale-110 nav-icon-active' : ''
+        }`}
+      >
         {icon}
       </div>
-      {active && <div className="w-1 h-1 rounded-full bg-brand" />}
+      <span
+        className={`text-[9px] font-black uppercase tracking-widest leading-none ${
+          active ? 'nav-label-active' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        {label}
+      </span>
     </button>
   );
 }

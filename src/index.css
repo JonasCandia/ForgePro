@@ -52,3 +52,86 @@
   animation: forge-pop 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* === Motion tokens === */
+:root {
+  --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* === Screen entry: every navigation triggers this via React key === */
+@keyframes screen-enter {
+  from { opacity: 0; transform: translateY(7px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+.screen-enter {
+  animation: screen-enter 220ms var(--ease-out-expo) both;
+}
+
+/* === Staggered list items: apply .stagger-items to the parent === */
+@keyframes item-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+.stagger-items > * {
+  animation: item-in 200ms var(--ease-out-quint) both;
+}
+.stagger-items > *:nth-child(1) { animation-delay:  40ms; }
+.stagger-items > *:nth-child(2) { animation-delay:  90ms; }
+.stagger-items > *:nth-child(3) { animation-delay: 140ms; }
+.stagger-items > *:nth-child(4) { animation-delay: 190ms; }
+.stagger-items > *:nth-child(5) { animation-delay: 240ms; }
+.stagger-items > *:nth-child(6) { animation-delay: 290ms; }
+
+/* === Input focus: brand glow === */
+.form-input:focus {
+  box-shadow: 0 0 0 2px oklch(88% 0.28 125 / 0.18), 0 0 14px 0 oklch(88% 0.28 125 / 0.07);
+}
+
+/* === Reduced motion: collapse custom animations === */
+@media (prefers-reduced-motion: reduce) {
+  .screen-enter,
+  .forge-pop {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .stagger-items > * {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* === Mobile nav: HUD-style active icon glow === */
+.nav-icon-active {
+  filter: drop-shadow(0 0 6px oklch(88% 0.28 125 / 0.9));
+}
+
+/* === Mobile nav: active label slide-up === */
+@keyframes label-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+.nav-label-active {
+  animation: label-in 180ms var(--ease-out-quint) both;
+}
+
+/* === FAB: radiating pulse ring when idle === */
+@keyframes fab-ring {
+  0%   { transform: scale(1);   opacity: 0.45; }
+  100% { transform: scale(1.75); opacity: 0;   }
+}
+
+.fab-ring {
+  animation: fab-ring 2s var(--ease-out-expo) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-icon-active   { filter: none; }
+  .nav-label-active  { animation: none; opacity: 1; transform: none; }
+  .fab-ring          { animation: none; opacity: 0; }
+}
+
