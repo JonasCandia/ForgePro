@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Trash2, Search, Calendar, ChevronDown, Flame, Download, CheckSquare, Square, ChevronUp, Settings2 } from 'lucide-react';
+import { Trash2, Search, Calendar, ChevronDown, Flame, Download, CheckSquare, Square, ChevronUp, Settings2, SlidersHorizontal } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, getYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ResponsiveCalendar } from '@nivo/calendar';
@@ -34,6 +34,8 @@ export default function History({ onNavigate }: HistoryProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [showFilters, setShowFilters] = useState(false);
+  const activeFilterCount = [startDate, endDate, filterGroup, filterObjetivo].filter(Boolean).length;
 
   // -- Heatmap data ------------------------------------------------------------
   const heatmapData = useMemo(() => {
@@ -164,7 +166,7 @@ export default function History({ onNavigate }: HistoryProps) {
   return (
     <div className="space-y-6 pt-4 pb-24">
       <div className="flex items-end justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {selectMode ? (
             <>
               <button
@@ -294,57 +296,78 @@ export default function History({ onNavigate }: HistoryProps) {
         </div>
       </section>
 
-      <div className="space-y-4">
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-          <input
-            type="text"
-            placeholder="Buscar exercício ou treino..."
-            className="form-input pl-9"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+      <div className="space-y-3">
+        <div className="flex gap-2 items-center">
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input
+              type="text"
+              placeholder="Buscar exercício ou treino..."
+              className="form-input pl-9"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <button
+            onClick={() => setShowFilters(v => !v)}
+            className={`shrink-0 flex items-center gap-1.5 px-3 min-h-[44px] rounded border text-xs font-bold uppercase tracking-wider transition-colors ${
+              showFilters || activeFilterCount > 0
+                ? 'border-brand text-brand bg-brand/10'
+                : 'border-outline text-gray-500 bg-surface-hover'
+            }`}
+            aria-expanded={showFilters}
+            aria-label="Filtros avançados"
+          >
+            <SlidersHorizontal size={14} />
+            {activeFilterCount > 0 && (
+              <span className="text-[10px] font-black bg-brand text-black rounded-full w-4 h-4 flex items-center justify-center leading-none">{activeFilterCount}</span>
+            )}
+          </button>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="input-label">De</label>
-            <div className="relative">
-              <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-              <input type="date" className="form-input pl-9" value={startDate} onChange={e => setStartDate(e.target.value)} />
+        {showFilters && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="input-label">De</label>
+                <div className="relative">
+                  <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <input type="date" className="form-input pl-9" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <label className="input-label">Até</label>
+                <div className="relative">
+                  <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <input type="date" className="form-input pl-9" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="input-label">Grupo Muscular</label>
+                <div className="relative">
+                  <select className="form-input appearance-none pr-8" value={filterGroup} onChange={e => setFilterGroup(e.target.value)}>
+                    <option value="">Todos</option>
+                    {gruposMusculares.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                </div>
+              </div>
+              <div>
+                <label className="input-label">Objetivo</label>
+                <div className="relative">
+                  <select className="form-input appearance-none pr-8" value={filterObjetivo} onChange={e => setFilterObjetivo(e.target.value)}>
+                    <option value="">Todos</option>
+                    <option value="cutting">Cutting</option>
+                    <option value="bulking">Bulking</option>
+                    <option value="manutencao">Manutenção</option>
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                </div>
+              </div>
             </div>
           </div>
-          <div>
-            <label className="input-label">Até</label>
-            <div className="relative">
-              <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-              <input type="date" className="form-input pl-9" value={endDate} onChange={e => setEndDate(e.target.value)} />
-            </div>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="input-label">Grupo Muscular</label>
-            <div className="relative">
-              <select className="form-input appearance-none pr-8" value={filterGroup} onChange={e => setFilterGroup(e.target.value)}>
-                <option value="">Todos</option>
-                {gruposMusculares.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
-            </div>
-          </div>
-          <div>
-            <label className="input-label">Objetivo</label>
-            <div className="relative">
-              <select className="form-input appearance-none pr-8" value={filterObjetivo} onChange={e => setFilterObjetivo(e.target.value)}>
-                <option value="">Todos</option>
-                <option value="cutting">Cutting</option>
-                <option value="bulking">Bulking</option>
-                <option value="manutencao">Manutenção</option>
-              </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
       {grouped.length === 0 ? (
@@ -404,7 +427,7 @@ export default function History({ onNavigate }: HistoryProps) {
                       {(workout.exerciciosSummary?.length ?? 0) > 0 && (
                         <button
                           onClick={() => toggleExpanded(workout.id!)}
-                          className="p-2 text-gray-600 hover:text-gray-300 transition-colors"
+                          className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-600 hover:text-gray-300 transition-colors"
                           aria-label={expanded.has(workout.id!) ? 'Recolher séries' : 'Expandir séries'}
                         >
                           {expanded.has(workout.id!)
@@ -416,7 +439,7 @@ export default function History({ onNavigate }: HistoryProps) {
                         <button
                           onClick={() => handleDelete(workout.id!)}
                           disabled={deleting === workout.id}
-                          className="p-2 text-gray-600 hover:text-red-400 transition-colors disabled:opacity-40"
+                          className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-600 hover:text-red-400 transition-colors disabled:opacity-40"
                           aria-label="Remover treino"
                         >
                           {deleting === workout.id
@@ -460,25 +483,25 @@ export default function History({ onNavigate }: HistoryProps) {
                         <table className="w-full text-xs">
                           <thead>
                             <tr className="text-gray-600 border-b border-outline">
-                              <th className="text-left px-4 py-2 font-black uppercase tracking-wider">Exercício</th>
-                              <th className="text-center px-3 py-2 font-black uppercase tracking-wider">#</th>
-                              <th className="text-center px-3 py-2 font-black uppercase tracking-wider">Peso</th>
-                              <th className="text-center px-3 py-2 font-black uppercase tracking-wider">Reps</th>
-                              <th className="text-center px-3 py-2 font-black uppercase tracking-wider">Status</th>
+                              <th className="text-left px-2 py-2 font-black uppercase tracking-wider">Exercício</th>
+                              <th className="text-center px-2 py-2 font-black uppercase tracking-wider">#</th>
+                              <th className="text-center px-2 py-2 font-black uppercase tracking-wider">Peso</th>
+                              <th className="text-center px-2 py-2 font-black uppercase tracking-wider">Reps</th>
+                              <th className="text-center px-2 py-2 font-black uppercase tracking-wider">OK</th>
                             </tr>
                           </thead>
                           <tbody>
                             {workout.series!.map((s, i) => (
                               <tr key={s.id ?? i} className="border-b border-outline/30 last:border-0">
-                                <td className="px-4 py-2 font-medium max-w-[120px] truncate">{s.exercicioNome}</td>
-                                <td className="px-3 py-2 text-center font-mono text-gray-500">{s.serieNum}</td>
-                                <td className="px-3 py-2 text-center font-mono text-gray-300">
+                                <td className="px-2 py-2 font-medium max-w-[100px] truncate">{s.exercicioNome}</td>
+                                <td className="px-2 py-2 text-center font-mono text-gray-500">{s.serieNum}</td>
+                                <td className="px-2 py-2 text-center font-mono text-gray-300">
                                   {s.pesoReal > 0 ? `${s.pesoReal}kg` : s.tempoSegundos ? `${s.tempoSegundos}s` : '—'}
                                 </td>
-                                <td className="px-3 py-2 text-center font-mono text-gray-300">
+                                <td className="px-2 py-2 text-center font-mono text-gray-300">
                                   {s.distanciaMetros ? `${s.distanciaMetros}m` : s.repeticoesReais}
                                 </td>
-                                <td className="px-3 py-2 text-center">
+                                <td className="px-2 py-2 text-center">
                                   {s.falhou
                                     ? <span className="text-red-400 font-bold text-[10px] uppercase">Falhou</span>
                                     : <span className="text-brand font-bold text-[10px] uppercase">OK</span>}
