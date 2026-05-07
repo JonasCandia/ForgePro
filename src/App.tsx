@@ -11,6 +11,7 @@ import Records from './components/screens/Records';
 import BodyMeasurements from './components/screens/BodyMeasurements';
 import TAFScore from './components/screens/TAFScore';
 import ViewPlan from './components/screens/ViewPlan';
+import ManageWorkouts from './components/screens/ManageWorkouts';
 import { auth, signIn, signOutUser } from './lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { workoutService } from './lib/workoutService';
@@ -19,7 +20,7 @@ import { useAppStore } from './store/appStore';
 import { useProfile } from './hooks/useProfile';
 import { useOnlineSync } from './hooks/useOnlineSync';
 
-export type Screen = 'home' | 'log' | 'history' | 'progress' | 'import' | 'execute' | 'profile' | 'records' | 'measurements' | 'taf' | 'plan';
+export type Screen = 'home' | 'log' | 'history' | 'progress' | 'import' | 'execute' | 'profile' | 'records' | 'measurements' | 'taf' | 'plan' | 'manage-workouts';
 
 const NAV_SCREENS = ['home', 'history', 'plan', 'progress', 'taf', 'records'] as const;
 type NavScreen = (typeof NAV_SCREENS)[number];
@@ -120,7 +121,9 @@ function AppInner() {
       case 'log':
         return <LogWorkout onBack={() => setCurrentScreen('home')} />;
       case 'history':
-        return <History />;
+        return <History onNavigate={setCurrentScreen} />;
+      case 'manage-workouts':
+        return <ManageWorkouts onBack={() => setCurrentScreen('history')} />;
       case 'progress':
         return <Progress />;
       case 'import':

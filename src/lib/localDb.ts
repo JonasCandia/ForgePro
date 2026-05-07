@@ -100,6 +100,13 @@ export async function getCachedSeries(workoutId: string): Promise<WorkoutSeries[
   return localDb.series.where('workoutId').equals(workoutId).toArray();
 }
 
+export async function deleteLocalWorkout(workoutId: string): Promise<void> {
+  await Promise.all([
+    localDb.workouts.delete(workoutId),
+    localDb.series.where('workoutId').equals(workoutId).delete(),
+  ]);
+}
+
 // ─── SyncQueue helpers ────────────────────────────────────────────────────────
 
 export async function enqueueSync(item: Omit<SyncQueueItem, 'id'>): Promise<void> {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Play, CheckCircle, Timer, RotateCcw, Trophy, ChevronDown, ChevronUp, Activity, Dumbbell } from 'lucide-react';
+import { ArrowLeft, Play, CheckCircle, Trophy, ChevronDown, ChevronUp } from 'lucide-react';
 import { workoutService } from '../../lib/workoutService';
 import type { Plano, WorkoutSeries, ModalidadeExercicio } from '../../types';
 import { getModalidade, LABEL_MODALIDADE, formatarTempo, calcularPace, formatarDistancia } from '../../lib/exercicioUtils';
@@ -46,6 +46,10 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [saving, setSaving] = useState(false);
   const [finished, setFinished] = useState(false);
+  const [showRestOverlay, setShowRestOverlay] = useState(false);
+  const [overlayExIdx, setOverlayExIdx] = useState<number | null>(null);
+  const prevTimerRef = useRef<number>(0);
+  const [restMinimized, setRestMinimized] = useState(false);
 
   useEffect(() => { loadPlanos(); }, []);
 
@@ -111,13 +115,50 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [timerActive]);
 
-  function startTimer() { setTimerSeconds(defaultRestTime); setTimerActive(true); }
-  function stopTimer() { setTimerActive(false); setTimerSeconds(0); }
-  function formatTimer(s: number) {
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${m}:${sec.toString().padStart(2, '0')}`;
+  useEffect(() => {
+    if (timerSeconds === 10 && prevTimerRef.current > 10 && timerActive) {
+      if ('vibrate' in navigator) navigator.vibrate(100);
+    }
+    if (timerSeconds === 0 && prevTimerRef.current > 0) {
+      localStorage.removeItem('forge_rest_end');
+      if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+      const t = setTimeout(() => { setShowRestOverlay(false); setRestMinimized(false); }, 500);
+      prevTimerRef.current = 0;
+      return () => clearTimeout(t);
+    }
+    prevTimerRef.current = timerSeconds;
+  }, [timerSeconds, timerActive]);
+
+  function startTimer() {
+    localStorage.setItem('forge_rest_end', String(Date.now() + defaultRestTime * 1000));
+    setTimerSeconds(defaultRestTime);
+    setTimerActive(true);
   }
+  function stopTimer() {
+    localStorage.removeItem('forge_rest_end');
+    setTimerActive(false);
+    setTimerSeconds(0);
+    setShowRestOverlay(false);
+    setRestMinimized(false);
+  }
+
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState !== 'visible') return;
+      const endTsStr = localStorage.getItem('forge_rest_end');
+      if (!endTsStr) return;
+      const remaining = Math.max(0, Math.ceil((parseInt(endTsStr, 10) - Date.now()) / 1000));
+      setTimerSeconds(remaining);
+      if (remaining === 0) {
+        localStorage.removeItem('forge_rest_end');
+        setTimerActive(false);
+        setShowRestOverlay(false);
+        setRestMinimized(false);
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
 
   const semanas = planos.map(p => p.semana).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b);
   const diasForSemana = planos
@@ -192,6 +233,9 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
       const newRecord: SerieRecord = { seriesId, serieNum, pesoReal, repeticoesReais, tempoSegundos, distanciaMetros, falhou: input.falhou };
       setCompletedSeries(prev => ({ ...prev, [exIdx]: [...(prev[exIdx] ?? []), newRecord] }));
       setCurrentInputs(prev => ({ ...prev, [exIdx]: { ...prev[exIdx], falhou: false } }));
+      setOverlayExIdx(exIdx);
+      setRestMinimized(false);
+      setShowRestOverlay(true);
       startTimer();
     } catch (e) { console.error(e); }
   }
@@ -334,23 +378,35 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
     );
   }
 
+  const totalPlanned = selectedPlano?.exercicios.reduce((sum, ex) => sum + (ex.seriesPlanejadas ?? 3), 0) ?? 0;
+  const totalDone = Object.values(completedSeries).reduce((sum, arr) => sum + arr.length, 0);
+  const overlayExercise = overlayExIdx !== null ? selectedPlano?.exercicios[overlayExIdx] : null;
+  const overlayDoneCount = overlayExIdx !== null ? (completedSeries[overlayExIdx] ?? []).length : 0;
+  const overlayPlanned = overlayExercise?.seriesPlanejadas ?? 3;
+  const isOverlayExComplete = overlayDoneCount >= overlayPlanned;
+
   return (
     <div className="space-y-4 pt-4 pb-24">
-      <header className="flex items-center gap-4 mb-2">
-        <button onClick={onBack} className="p-3 -ml-3 text-gray-400 hover:text-white transition-colors">
-          <ArrowLeft size={20} />
-        </button>
-        <div className="flex-1">
-          <h2 className="text-brand text-xs font-bold uppercase tracking-widest mb-1">Em Execução</h2>
-          <h1 className="font-display text-xl font-black uppercase tracking-tight">{selectedPlano?.diaDaSemana}</h1>
-        </div>
-        {timerActive && (
-          <div className="flex items-center gap-2 bg-brand/20 border border-brand/40 px-3 py-1.5 rounded-lg">
-            <Timer size={14} className="text-brand animate-pulse motion-reduce:animate-none" />
-            <span className="font-mono font-bold text-brand text-sm">{formatTimer(timerSeconds)}</span>
-            <button onClick={stopTimer} className="text-gray-400 hover:text-white ml-1"><RotateCcw size={12} /></button>
+      <header className="mb-2 space-y-3">
+        <div className="flex items-center gap-4">
+          <button onClick={onBack} className="p-3 -ml-3 text-gray-400 hover:text-white transition-colors">
+            <ArrowLeft size={20} />
+          </button>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-brand text-xs font-bold uppercase tracking-widest mb-1">Em Execução</h2>
+            <h1 className="font-display text-xl font-black uppercase tracking-tight truncate">{selectedPlano?.diaDaSemana}</h1>
           </div>
-        )}
+          <span className="font-mono text-xs text-gray-500 shrink-0">{totalDone}/{totalPlanned}</span>
+        </div>
+        <div className="h-0.5 bg-surface-hover rounded-full overflow-hidden">
+          <div
+            className="h-full bg-brand rounded-full transition-[width] duration-500 ease-out"
+            style={{
+              width: totalPlanned > 0 ? `${(totalDone / totalPlanned) * 100}%` : '0%',
+              boxShadow: totalDone > 0 ? '0 0 8px #CCFF00' : 'none',
+            }}
+          />
+        </div>
       </header>
 
       {selectedPlano?.exercicios.map((ex, exIdx) => {
@@ -368,10 +424,10 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                 </div>
                 <div>
                   <p className="font-bold text-sm">{ex.exercicioNome ?? ex.exercicioId}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 mb-1">
                     {ex.seriesPlanejadas}×{ex.repeticoesPlanejadas} @ {ex.pesoPlanejado ?? '–'}kg
-                    {done.length > 0 && <span className="ml-2 text-brand font-bold">{done.length}/{planned}</span>}
                   </p>
+                  <SeriesPips done={done.length} planned={planned} />
                 </div>
               </div>
               {isActive ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
@@ -421,6 +477,28 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
         {saving ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin motion-reduce:animate-none" /> : <Trophy size={16} />}
         {saving ? 'Salvando...' : 'Finalizar Treino'}
       </button>
+
+      {restMinimized && timerActive && overlayExercise && (
+        <RestMiniBar
+          timerSeconds={timerSeconds}
+          defaultRestTime={defaultRestTime}
+          exerciseName={overlayExercise.exercicioNome ?? overlayExercise.exercicioId}
+          onExpand={() => { setRestMinimized(false); setShowRestOverlay(true); }}
+        />
+      )}
+
+      {showRestOverlay && overlayExercise && (
+        <RestTimerOverlay
+          timerSeconds={timerSeconds}
+          defaultRestTime={defaultRestTime}
+          exerciseName={overlayExercise.exercicioNome ?? overlayExercise.exercicioId}
+          nextSerieNum={overlayDoneCount + 1}
+          totalSeries={overlayPlanned}
+          isExerciseComplete={isOverlayExComplete}
+          onSkip={stopTimer}
+          onMinimize={() => { setShowRestOverlay(false); setRestMinimized(true); }}
+        />
+      )}
     </div>
   );
 }
@@ -521,6 +599,243 @@ interface ExercicioSeriesTableProps {
   done: SerieRecord[];
   modalidade: ModalidadeExercicio;
 }
+
+// ─── SeriesPips ───────────────────────────────────────────────────────────────
+
+function SeriesPips({ done, planned }: { done: number; planned: number }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {Array.from({ length: planned }, (_, i) => (
+        <span
+          key={i}
+          className={`inline-block rounded-full w-2 h-2 transition-colors duration-300 ${
+            i < done ? 'bg-brand' : 'border border-gray-600'
+          }`}
+          style={i < done ? { boxShadow: '0 0 5px #CCFF00' } : undefined}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── RestTimerOverlay ─────────────────────────────────────────────────────────
+
+interface RestTimerOverlayProps {
+  timerSeconds: number;
+  defaultRestTime: number;
+  exerciseName: string;
+  nextSerieNum: number;
+  totalSeries: number;
+  isExerciseComplete: boolean;
+  onSkip: () => void;
+  onMinimize: () => void;
+}
+
+function RestTimerOverlay({
+  timerSeconds,
+  defaultRestTime,
+  exerciseName,
+  nextSerieNum,
+  totalSeries,
+  isExerciseComplete,
+  onSkip,
+  onMinimize,
+}: RestTimerOverlayProps) {
+  const RADIUS = 68;
+  const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+  const progress = defaultRestTime > 0 ? timerSeconds / defaultRestTime : 0;
+
+  const strokeColor =
+    progress > 0.6 ? '#CCFF00' :
+    progress > 0.3 ? '#F59E0B' :
+    '#EF4444';
+
+  const glowClass =
+    progress > 0.6 ? 'arc-glow-lime' :
+    progress > 0.3 ? 'arc-glow-amber' :
+    'arc-glow-red';
+
+  const offset = CIRCUMFERENCE * (1 - progress);
+  const m = Math.floor(timerSeconds / 60);
+  const s = timerSeconds % 60;
+  const display = `${m}:${s.toString().padStart(2, '0')}`;
+
+  const ticks = Array.from({ length: 12 }, (_, i) => {
+    const angle = (i / 12) * 360;
+    const rad = (angle - 90) * (Math.PI / 180);
+    const inner = 58;
+    const outer = 63;
+    return {
+      x1: 84 + inner * Math.cos(rad),
+      y1: 84 + inner * Math.sin(rad),
+      x2: 84 + outer * Math.cos(rad),
+      y2: 84 + outer * Math.sin(rad),
+    };
+  });
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end"
+      role="dialog"
+      aria-label="Descanso entre séries"
+    >
+      <button
+        className="absolute inset-0 bg-black/80"
+        onClick={onMinimize}
+        aria-label="Minimizar descanso"
+        tabIndex={-1}
+      />
+      <div
+        className="rest-overlay-enter relative w-full rounded-t-2xl overflow-hidden flex flex-col items-center gap-5 pb-12"
+        style={{
+          background: '#0D0D0D',
+          backgroundImage: 'radial-gradient(circle, #1c1c1c 1px, transparent 1px)',
+          backgroundSize: '20px 20px',
+        }}
+      >
+        {/* top accent */}
+        <div className="h-0.5 w-full bg-brand" style={{ boxShadow: '0 0 12px #CCFF00' }} />
+
+        <div className="flex flex-col items-center gap-5 px-6 pt-6">
+          <p className="font-mono text-[9px] font-black uppercase tracking-[0.4em] text-gray-600">
+            // DESCANSO
+          </p>
+
+          <div className="relative flex items-center justify-center">
+            <svg
+              width="168"
+              height="168"
+              viewBox="0 0 168 168"
+              aria-hidden="true"
+              className={glowClass}
+            >
+              {/* track ring */}
+              <circle cx="84" cy="84" r={RADIUS} fill="none" stroke="#1A1A1A" strokeWidth="6" />
+              {/* tick marks */}
+              {ticks.map((t, i) => (
+                <line
+                  key={i}
+                  x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
+                  stroke="#2A2A2A"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              ))}
+              {/* progress arc */}
+              <circle
+                cx="84" cy="84" r={RADIUS}
+                fill="none"
+                stroke={strokeColor}
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeDasharray={CIRCUMFERENCE}
+                strokeDashoffset={offset}
+                transform="rotate(-90 84 84)"
+                style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.6s ease' }}
+                className="motion-reduce:transition-none"
+              />
+            </svg>
+            <span
+              className="absolute font-mono font-black text-5xl tabular-nums"
+              style={{
+                color: strokeColor,
+                transition: 'color 0.6s ease',
+                textShadow: `0 0 20px ${strokeColor}99`,
+              }}
+            >
+              {display}
+            </span>
+          </div>
+
+          <div className="text-center space-y-1">
+            <p className="text-[10px] uppercase tracking-widest text-gray-600 font-black">
+              {isExerciseComplete ? 'Exercício concluído' : 'Próxima série'}
+            </p>
+            <p className="font-display font-black text-base uppercase tracking-tight text-gray-200 max-w-[260px] truncate">
+              {exerciseName}
+            </p>
+            {!isExerciseComplete && (
+              <p className="text-xs font-mono text-gray-500">
+                Série {nextSerieNum} de {totalSeries}
+              </p>
+            )}
+          </div>
+
+          <div className="flex gap-3 w-full max-w-xs">
+            <button
+              onClick={onMinimize}
+              className="flex-1 rounded-xl border border-outline bg-surface py-3 text-xs font-black uppercase tracking-widest text-gray-400 active:bg-surface-hover transition-colors"
+            >
+              Minimizar
+            </button>
+            <button
+              onClick={onSkip}
+              className="flex-1 rounded-xl border border-red-900/60 bg-red-950/30 py-3 text-xs font-black uppercase tracking-widest text-red-400 active:bg-red-900/40 transition-colors"
+            >
+              Pular
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── RestMiniBar ─────────────────────────────────────────────────────────────
+
+interface RestMiniBarProps {
+  timerSeconds: number;
+  defaultRestTime: number;
+  exerciseName: string;
+  onExpand: () => void;
+}
+
+function RestMiniBar({ timerSeconds, defaultRestTime, exerciseName, onExpand }: RestMiniBarProps) {
+  const progress = defaultRestTime > 0 ? timerSeconds / defaultRestTime : 0;
+  const barColor =
+    progress > 0.6 ? '#CCFF00' :
+    progress > 0.3 ? '#F59E0B' :
+    '#EF4444';
+  const m = Math.floor(timerSeconds / 60);
+  const s = timerSeconds % 60;
+  const display = `${m}:${s.toString().padStart(2, '0')}`;
+
+  return (
+    <button
+      onClick={onExpand}
+      className="fixed bottom-20 left-4 right-4 z-40 rounded-xl border border-outline bg-surface overflow-hidden text-left active:bg-surface-hover transition-colors"
+      aria-label="Expandir timer de descanso"
+    >
+      {/* progress bar */}
+      <div className="h-0.5 bg-surface-hover">
+        <div
+          className="h-full transition-[width] duration-1000 ease-linear"
+          style={{
+            width: `${progress * 100}%`,
+            background: barColor,
+            boxShadow: `0 0 6px ${barColor}`,
+          }}
+        />
+      </div>
+      <div className="flex items-center justify-between px-4 py-2.5">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span
+            className="font-mono font-black text-lg tabular-nums"
+            style={{ color: barColor }}
+          >
+            {display}
+          </span>
+          <span className="text-xs text-gray-500 truncate">{exerciseName}</span>
+        </div>
+        <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 shrink-0 ml-2">
+          ↑ Expandir
+        </span>
+      </div>
+    </button>
+  );
+}
+
+// ─── ExercicioSeriesTable ─────────────────────────────────────────────────────
 
 function ExercicioSeriesTable({ done, modalidade }: ExercicioSeriesTableProps) {
   if (modalidade === 'corrida') {

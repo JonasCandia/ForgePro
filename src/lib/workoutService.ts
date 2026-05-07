@@ -32,6 +32,7 @@ import {
   cacheExercises, getCachedExercises,
   cacheMeasurements, getCachedMeasurements,
   cacheTAFScores, getCachedTAFScores,
+  deleteLocalWorkout,
 } from './localDb';
 import { isOnline, offlineSaveMeasurement, offlineSaveManualWorkout } from './syncService';
 
@@ -352,8 +353,93 @@ export const workoutService = {
     const uid = auth.currentUser.uid;
     try {
       await deleteDoc(doc(db, USERS_COL, uid, WORKOUTS_COL, workoutId));
+      await deleteLocalWorkout(workoutId);
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `${USERS_COL}/${uid}/${WORKOUTS_COL}/${workoutId}`);
+    }
+  },
+
+  async deleteManyWorkouts(workoutIds: string[]): Promise<void> {
+    if (!auth.currentUser || workoutIds.length === 0) return;
+    const uid = auth.currentUser.uid;
+    try {
+      const batch = writeBatch(db);
+      for (const id of workoutIds) {
+        batch.delete(doc(db, USERS_COL, uid, WORKOUTS_COL, id));
+      }
+      await batch.commit();
+      await Promise.all(workoutIds.map(id => deleteLocalWorkout(id)));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `${USERS_COL}/${uid}/${WORKOUTS_COL}`);
+    }
+  },
+
+  async updateWorkout(
+    workoutId: string,
+    updates: { nomeTreino?: string; objetivo?: string; series?: WorkoutSeries[] }
+  ): Promise<void> {
+    if (!auth.currentUser) throw new Error('User must be logged in');
+    const uid = auth.currentUser.uid;
+
+    const payload: Record<string, unknown> = {};
+    if (updates.nomeTreino !== undefined) payload.nomeTreino = updates.nomeTreino;
+    if (updates.objetivo !== undefined) payload.objetivo = updates.objetivo;
+
+    if (updates.series !== undefined) {
+      payload.series = updates.series;
+      // Recalculate exerciciosSummary from updated series
+      const summaryMap = new Map<string, WorkoutExerciseSummary>();
+      for (const s of updates.series) {
+        const existing = summaryMap.get(s.exercicioId);
+        const mod = s.modalidade ?? 'forca_dinamica';
+        const isCardio = mod === 'corrida' || mod === 'cardio_livre' || mod === 'isometria';
+        if (!existing) {
+          summaryMap.set(s.exercicioId, {
+            exercicioId: s.exercicioId,
+            exercicioNome: s.exercicioNome,
+            grupoMuscular: s.grupoMuscular,
+            modalidade: mod,
+            seriesRealizadas: 1,
+            repeticoesReais: s.repeticoesReais,
+            pesoMax: isCardio ? 0 : s.pesoReal,
+            repsAtMax: isCardio ? 0 : s.repeticoesReais,
+            volumeTotal: isCardio ? 0 : s.pesoReal * s.repeticoesReais,
+            tempoTotalSegundos: s.tempoSegundos,
+            distanciaTotalMetros: s.distanciaMetros,
+          });
+        } else {
+          existing.seriesRealizadas += 1;
+          existing.repeticoesReais += s.repeticoesReais;
+          existing.volumeTotal += isCardio ? 0 : s.pesoReal * s.repeticoesReais;
+          if (!isCardio && s.pesoReal > existing.pesoMax) {
+            existing.pesoMax = s.pesoReal;
+            existing.repsAtMax = s.repeticoesReais;
+          }
+          if (s.tempoSegundos) existing.tempoTotalSegundos = (existing.tempoTotalSegundos ?? 0) + s.tempoSegundos;
+          if (s.distanciaMetros) existing.distanciaTotalMetros = (existing.distanciaTotalMetros ?? 0) + s.distanciaMetros;
+        }
+      }
+      payload.exerciciosSummary = [...summaryMap.values()].map(s =>
+        Object.fromEntries(Object.entries(s).filter(([, v]) => v !== undefined))
+      );
+    }
+
+    try {
+      await updateDoc(doc(db, USERS_COL, uid, WORKOUTS_COL, workoutId), payload);
+      // Update IndexedDB cache
+      const existing = await localDb.workouts.get(workoutId);
+      if (existing) {
+        await localDb.workouts.update(workoutId, {
+          ...existing,
+          ...(updates.nomeTreino !== undefined ? { nomeTreino: updates.nomeTreino } : {}),
+          ...(updates.objetivo !== undefined ? { objetivo: updates.objetivo } : {}),
+          ...(payload.series !== undefined ? { series: updates.series } : {}),
+          ...(payload.exerciciosSummary !== undefined ? { exerciciosSummary: payload.exerciciosSummary as WorkoutExerciseSummary[] } : {}),
+        });
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `${USERS_COL}/${uid}/${WORKOUTS_COL}/${workoutId}`);
+      throw error;
     }
   },
 

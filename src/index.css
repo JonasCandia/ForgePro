@@ -119,6 +119,45 @@
   animation: label-in 180ms var(--ease-out-quint) both;
 }
 
+/* === Rest timer overlay: slide up from bottom === */
+@keyframes rest-overlay-in {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.rest-overlay-enter {
+  animation: rest-overlay-in 350ms var(--ease-out-quint) both;
+}
+
+/* === Arc ring glow — gaming timer === */
+@keyframes arc-glow-lime {
+  0%, 100% { filter: drop-shadow(0 0 4px #CCFF00); }
+  50%       { filter: drop-shadow(0 0 18px #CCFF00); }
+}
+@keyframes arc-glow-amber {
+  0%, 100% { filter: drop-shadow(0 0 4px #F59E0B); }
+  50%       { filter: drop-shadow(0 0 16px #F59E0B); }
+}
+@keyframes arc-glow-red {
+  0%, 100% { filter: drop-shadow(0 0 4px #EF4444); }
+  50%       { filter: drop-shadow(0 0 20px #EF4444); }
+}
+
+.arc-glow-lime  { animation: arc-glow-lime  1.8s ease-in-out infinite; }
+.arc-glow-amber { animation: arc-glow-amber 1.3s ease-in-out infinite; }
+.arc-glow-red   { animation: arc-glow-red   0.7s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rest-overlay-enter,
+  .arc-glow-lime,
+  .arc-glow-amber,
+  .arc-glow-red {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
 /* === FAB: radiating pulse ring when idle === */
 @keyframes fab-ring {
   0%   { transform: scale(1);   opacity: 0.45; }
