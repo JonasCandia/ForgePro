@@ -48,6 +48,8 @@ export interface ExercicioNoPlano {
   observacoesPlano: string;
   /** Modalidade herdada do catálogo no momento da importação */
   modalidade?: ModalidadeExercicio;
+  /** Vínculo com a prova TAF — permite rastreamento automático no score oficial */
+  modalidadeTAF?: 'barra_fixa' | 'remador_abdominal' | 'corrida_12min';
   /** Tempo planejado por série em segundos (isometria/corrida/cardio_livre) */
   tempoPlanejadoSegundos?: number;
   /** Distância planejada por série em metros (corrida) */

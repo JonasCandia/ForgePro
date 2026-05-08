@@ -123,16 +123,86 @@ export const TAF_METAS_MUITO_BOM = {
 
 
 export const MOCK_EXERCICIOS: Exercício[] = [
-  { id: '1', nome: 'Supino Reto', grupoMuscular: 'Peitoral' },
-  { id: '2', nome: 'Agachamento Livre', grupoMuscular: 'Quadríceps' },
-  { id: '3', nome: 'Levantamento Terra', grupoMuscular: 'Costas/Pernas' },
-  { id: '4', nome: 'Desenvolvimento Militar', grupoMuscular: 'Ombros' },
-  { id: '5', nome: 'Remada Curvada', grupoMuscular: 'Costas' },
-  { id: '6', nome: 'Rosca Direta', grupoMuscular: 'Bíceps' },
-  { id: '7', nome: 'Tríceps Corda', grupoMuscular: 'Tríceps' },
-  { id: '8', nome: 'Crucifixo Inclinado', grupoMuscular: 'Peitoral' },
-  { id: '9', nome: 'Stiff', grupoMuscular: 'Posteriores' },
-  { id: '10', nome: 'Elevação Lateral', grupoMuscular: 'Ombros' },
+  // ── Catálogo base ─────────────────────────────────────────────────────────
+  { id: '1',  nome: 'Supino Reto',              grupoMuscular: 'Peitoral' },
+  { id: '2',  nome: 'Agachamento Livre',         grupoMuscular: 'Quadríceps' },
+  { id: '3',  nome: 'Levantamento Terra',        grupoMuscular: 'Costas/Pernas' },
+  { id: '4',  nome: 'Desenvolvimento Militar',   grupoMuscular: 'Ombros' },
+  { id: '5',  nome: 'Remada Curvada',            grupoMuscular: 'Costas' },
+  { id: '6',  nome: 'Rosca Direta',              grupoMuscular: 'Bíceps' },
+  { id: '7',  nome: 'Tríceps Corda',             grupoMuscular: 'Tríceps' },
+  { id: '8',  nome: 'Crucifixo Inclinado',       grupoMuscular: 'Peitoral' },
+  { id: '9',  nome: 'Stiff',                     grupoMuscular: 'Posteriores' },
+  { id: '10', nome: 'Elevação Lateral',          grupoMuscular: 'Ombros' },
+
+  // ── TAF — Exercícios oficiais ──────────────────────────────────────────────
+  {
+    id: 'custom_b01',
+    nome: 'Barra Fixa',
+    grupoMuscular: 'Dorsais/Braços',
+    modalidade: 'peso_corporal',
+    modalidadeTAF: 'barra_fixa',
+    regrasOficiais: 'Queixo acima da barra; extensão total dos braços no retorno; sem balanço do corpo.',
+  },
+  {
+    id: 'custom_ab01',
+    nome: 'Abdominal Remador',
+    grupoMuscular: 'Abdominal',
+    modalidade: 'peso_corporal',
+    modalidadeTAF: 'remador_abdominal',
+    regrasOficiais: 'Mãos atrás da cabeça; cotovelos tocam os joelhos; braços passam lateralmente pelas pernas; retorno completo ao solo.',
+  },
+
+  // ── Peito ──────────────────────────────────────────────────────────────────
+  { id: 'custom_supino_barra',     nome: 'Supino Barra',            grupoMuscular: 'Peitoral',            modalidade: 'forca_dinamica' },
+  { id: 'custom_supino_halt',      nome: 'Supino com Halteres',     grupoMuscular: 'Peitoral',            modalidade: 'forca_dinamica' },
+
+  // ── Costas ─────────────────────────────────────────────────────────────────
+  { id: 'custom_polia_alta',       nome: 'Puxada Polia Alta Pronada',  grupoMuscular: 'Dorsais',          modalidade: 'forca_dinamica' },
+  { id: 'custom_remada_curv',      nome: 'Remada Curvada Barra',       grupoMuscular: 'Costas',           modalidade: 'forca_dinamica' },
+
+  // ── Pernas ─────────────────────────────────────────────────────────────────
+  { id: 'custom_agach_front',      nome: 'Agachamento Frontal',        grupoMuscular: 'Quadríceps/Glúteos', modalidade: 'forca_dinamica' },
+  { id: 'custom_agach_hack',       nome: 'Agachamento Hack',           grupoMuscular: 'Quadríceps/Glúteos', modalidade: 'forca_dinamica' },
+  { id: 'custom_agach_bulgaro',    nome: 'Agachamento Búlgaro',        grupoMuscular: 'Quadríceps/Glúteos', modalidade: 'peso_corporal' },
+  { id: 'custom_terra_rom_halt',   nome: 'Terra Romeno com Halteres',  grupoMuscular: 'Posterior/Glúteos',  modalidade: 'forca_dinamica' },
+  { id: 'custom_terra_rom_barra',  nome: 'Terra Romeno com Barra',     grupoMuscular: 'Posterior/Glúteos',  modalidade: 'forca_dinamica' },
+  // IDs canônicos usados no plano TAF (custom_ponte01 / custom_nordic01)
+  { id: 'custom_ponte01',          nome: 'Ponte de Glúteo com Mini Band', grupoMuscular: 'Glúteos',        modalidade: 'peso_corporal' },
+  { id: 'custom_nordic01',         nome: 'Nordic Hamstring Curl (Excêntrico)', grupoMuscular: 'Posterior de Coxa', modalidade: 'peso_corporal' },
+
+  // ── Core ───────────────────────────────────────────────────────────────────
+  { id: 'custom_c01',              nome: 'Prancha Isométrica',         grupoMuscular: 'Core',               modalidade: 'isometria' },
+  { id: 'custom_c02',              nome: 'Prancha com Peso',           grupoMuscular: 'Core',               modalidade: 'isometria' },
+  { id: 'custom_prancha_perna',    nome: 'Prancha com Elevação de Perna', grupoMuscular: 'Core/Glúteos',   modalidade: 'peso_corporal' },
+
+  // ── Estabilização / Prevenção ──────────────────────────────────────────────
+  { id: 'custom_equil01',          nome: 'Equilíbrio Unipodal (Olhos Fechados)', grupoMuscular: 'Estabilização', modalidade: 'isometria' },
+
+  // ── Ombros / Rotadores Escapulares ────────────────────────────────────────
+  { id: 'custom_desenv_halt',      nome: 'Desenvolvimento com Halteres', grupoMuscular: 'Ombros',          modalidade: 'forca_dinamica' },
+  { id: 'custom_face_pull',        nome: 'Face Pull',                  grupoMuscular: 'Rotadores Escapulares', modalidade: 'forca_dinamica' },
+  { id: 'custom_band_pull',        nome: 'Band Pull Apart',            grupoMuscular: 'Rotadores Escapulares', modalidade: 'peso_corporal' },
+
+  // ── Bíceps ────────────────────────────────────────────────────────────────
+  { id: 'custom_rosca_martelo',    nome: 'Rosca Martelo',              grupoMuscular: 'Bíceps',             modalidade: 'forca_dinamica' },
+  { id: 'custom_rosca_inclinada',  nome: 'Rosca Inclinada',            grupoMuscular: 'Bíceps',             modalidade: 'forca_dinamica' },
+
+  // ── Panturrilha ───────────────────────────────────────────────────────────
+  { id: 'custom_panturrilha',      nome: 'Elevação de Calcanhares',    grupoMuscular: 'Panturrilha',         modalidade: 'peso_corporal' },
+  { id: 'custom_panturrilha_halt', nome: 'Elevação de Calcanhares com Halteres', grupoMuscular: 'Panturrilha', modalidade: 'forca_dinamica' },
+
+  // ── Mobilidade de Quadril ─────────────────────────────────────────────────
+  { id: 'custom_hip_9090',         nome: 'Hip 90/90 (Mobilidade)',     grupoMuscular: 'Mobilidade/Quadril',  modalidade: 'isometria' },
+  { id: 'custom_pigeon_pose',      nome: 'Pigeon Pose (Alongamento)',  grupoMuscular: 'Mobilidade/Quadril',  modalidade: 'isometria' },
+
+  // ── Cardio / Corrida ───────────────────────────────────────────────────────
+  { id: 'custom_aq',               nome: 'Aquecimento',               grupoMuscular: 'Full Body',           modalidade: 'cardio_livre' },
+  { id: 'custom_along',            nome: 'Alongamento',               grupoMuscular: 'Flexibilidade',       modalidade: 'cardio_livre' },
+  { id: 'custom_r01',              nome: 'Corrida Intervalada',       grupoMuscular: 'Cardio',              modalidade: 'corrida' },
+  { id: 'custom_r02',              nome: 'Corrida Contínua',          grupoMuscular: 'Cardio',              modalidade: 'cardio_livre' },
+  { id: 'custom_r03',              nome: 'Corrida de Velocidade',     grupoMuscular: 'Cardio',              modalidade: 'corrida' },
+  { id: 'custom_r04',              nome: 'Corrida Ritmo TAF',         grupoMuscular: 'Cardio',              modalidade: 'corrida' },
 ];
 
 export const JSON_EXEMPLO = {

@@ -453,16 +453,29 @@ export const workoutService = {
             semana: semanaData.semana,
             diaDaSemana: diaData.dia,
             nomeTreino: diaData.nomeTreino,
+            // tipoSessao e bloco opcionais — fornecidos pelo JSON quando presentes
+            ...(diaData.tipoSessao && { tipoSessao: diaData.tipoSessao }),
+            ...(semanaData.bloco != null && { bloco: semanaData.bloco }),
             exercicios: diaData.exercicios.map((ex: any) => {
               const exId = String(ex.id);
               const catalogEx = exMap.get(exId);
+              // Preferir o nome explícito do JSON; fallback para catálogo (evita nomes errados por ID)
+              const resolvedNome = ex.nome || catalogEx?.nome || 'Exercício Desconhecido';
+              // Garantir que repeticoesPlanejadas seja sempre number (evita quebra de cálculos)
+              const repeticoesPlanejadas =
+                typeof ex.repeticoes === 'number' ? ex.repeticoes : 0;
               return {
                 exercicioId: exId,
-                exercicioNome: catalogEx?.nome || ex.nome || 'Exercício Desconhecido',
+                exercicioNome: resolvedNome,
                 seriesPlanejadas: ex.series,
-                repeticoesPlanejadas: ex.repeticoes,
-                pesoPlanejado: ex.peso,
+                repeticoesPlanejadas,
+                pesoPlanejado: ex.peso ?? 0,
                 observacoesPlano: ex.obs || '',
+                // Campos de modalidade — permitem UI adaptativa por tipo de série
+                ...(ex.modalidade && { modalidade: ex.modalidade }),
+                ...(ex.modalidadeTAF && { modalidadeTAF: ex.modalidadeTAF }),
+                ...(typeof ex.tempoPlanejadoSegundos === 'number' && { tempoPlanejadoSegundos: ex.tempoPlanejadoSegundos }),
+                ...(typeof ex.distanciaPlanejadaMetros === 'number' && { distanciaPlanejadaMetros: ex.distanciaPlanejadaMetros }),
               };
             }),
           });
