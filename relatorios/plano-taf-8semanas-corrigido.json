@@ -1,0 +1,2113 @@
+{
+  "plano": [
+    {
+      "semana": 1,
+      "bloco": 1,
+      "dias": [
+        {
+          "dia": "Segunda",
+          "nomeTreino": "Forca e Resistencia Muscular — Base",
+          "tipoSessao": "forca",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento + Mobilidade",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": "10 min: mobilidade de ombros, escapulas e quadril"
+            },
+            {
+              "id": "custom_b01",
+              "nome": "Barra Fixa",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "barra_fixa",
+              "series": 5,
+              "repeticoes": 0,
+              "peso": 0,
+              "obs": "Maximo reps por serie. Se <5 reps: 5xmax; se 5-8 reps: 5x5. Queixo acima da barra, extensao total."
+            },
+            {
+              "id": "custom_polia_alta",
+              "nome": "Puxada Polia Alta Pronada",
+              "modalidade": "forca_dinamica",
+              "series": 2,
+              "repeticoes": 13,
+              "peso": 50,
+              "obs": "Complemento a barra — fortalecimento de base de puxada"
+            },
+            {
+              "id": "custom_agach_front",
+              "nome": "Agachamento Frontal",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 10,
+              "peso": 40,
+              "obs": "Profundidade completa; sem dor no joelho"
+            },
+            {
+              "id": "custom_supino_halt",
+              "nome": "Supino com Halteres",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 10,
+              "peso": 20,
+              "obs": "Peso por halter; amplitude maxima"
+            },
+            {
+              "id": "custom_terra_rom_halt",
+              "nome": "Terra Romeno com Halteres",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 12,
+              "peso": 30,
+              "obs": "Costas retas; alongamento dos isquios na descida"
+            },
+            {
+              "id": "custom_c01",
+              "nome": "Prancha Isometrica",
+              "modalidade": "isometria",
+              "series": 3,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 45,
+              "peso": 0,
+              "obs": "Corpo rigido; quadril neutro"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": "10 min: foco em posteriores de coxa e peitoral"
+            }
+          ]
+        },
+        {
+          "dia": "Terca",
+          "nomeTreino": "Corrida Intervalada",
+          "tipoSessao": "intervalado",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": "10 min trote leve + aceleracoes progressivas"
+            },
+            {
+              "id": "custom_r01",
+              "nome": "Corrida Intervalada 400m",
+              "modalidade": "corrida",
+              "series": 4,
+              "repeticoes": 1,
+              "distanciaPlanejadaMetros": 400,
+              "peso": 0,
+              "obs": "4x400m; ritmo forte 85-90% FCmax; descanso 90s entre series; anotar tempo de cada 400m"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": "10 min: foco em panturrilha, isquios e quadriceps"
+            }
+          ]
+        },
+        {
+          "dia": "Quinta",
+          "nomeTreino": "Especifico TAF — Circuito (3 Voltas)",
+          "tipoSessao": "circuito_taf",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento + Ativacao Escapular",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 300,
+              "peso": 0,
+              "obs": "5 min bike ou corda naval + band pull-aparts"
+            },
+            {
+              "id": "custom_b01",
+              "nome": "Barra Fixa — Circuito TAF",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "barra_fixa",
+              "series": 3,
+              "repeticoes": 0,
+              "tempoPlanejadoSegundos": 60,
+              "peso": 0,
+              "obs": "3 voltas; 1 min max reps por volta; descanso ativo 3 min; anotar reps por volta"
+            },
+            {
+              "id": "custom_ab01",
+              "nome": "Abdominal Remador — Circuito TAF",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "remador_abdominal",
+              "series": 3,
+              "repeticoes": 0,
+              "tempoPlanejadoSegundos": 60,
+              "peso": 0,
+              "obs": "3 voltas; 1 min max reps; cotovelos tocam joelhos; retorno completo ao solo"
+            },
+            {
+              "id": "custom_r01",
+              "nome": "Corrida 400m — Circuito TAF",
+              "modalidade": "corrida",
+              "series": 3,
+              "repeticoes": 1,
+              "distanciaPlanejadaMetros": 400,
+              "peso": 0,
+              "obs": "3 voltas; ritmo forte; anotar tempo de cada 400m"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 420,
+              "peso": 0,
+              "obs": "7 min: foco em posterior de coxa e peitoral"
+            }
+          ]
+        },
+        {
+          "dia": "Sabado",
+          "nomeTreino": "Prevencao de Lesao + Corrida de Base",
+          "tipoSessao": "prevencao_lesao",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": "10 min trote confortavel"
+            },
+            {
+              "id": "custom_r02",
+              "nome": "Corrida Continua de Base",
+              "modalidade": "corrida",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 1200,
+              "peso": 0,
+              "obs": "20 min ritmo Zona 2 (60-70% FCmax)"
+            },
+            {
+              "id": "custom_ponte01",
+              "nome": "Ponte de Gluteo com Mini Band",
+              "modalidade": "peso_corporal",
+              "series": 2,
+              "repeticoes": 20,
+              "peso": 0,
+              "obs": "Mini band acima dos joelhos; apertar gluteos no topo; pausa 1s"
+            },
+            {
+              "id": "custom_nordic01",
+              "nome": "Nordic Hamstring Curl Excentrico",
+              "modalidade": "peso_corporal",
+              "series": 2,
+              "repeticoes": 7,
+              "peso": 0,
+              "obs": "Descida excentrica controlada 3-4 seg; parcial se necessario"
+            },
+            {
+              "id": "custom_prancha_perna",
+              "nome": "Prancha com Elevacao Alternada de Perna",
+              "modalidade": "peso_corporal",
+              "series": 2,
+              "repeticoes": 10,
+              "peso": 0,
+              "obs": "10 elevacoes por perna; quadril estavel e paralelo ao solo"
+            },
+            {
+              "id": "custom_equil01",
+              "nome": "Equilibrio Unipodal (Olhos Fechados)",
+              "modalidade": "isometria",
+              "series": 2,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 30,
+              "peso": 0,
+              "obs": "30 seg por perna; superficie firme"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": "10 min: quadril, isquios e panturrilha"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "semana": 2,
+      "bloco": 1,
+      "dias": [
+        {
+          "dia": "Segunda",
+          "nomeTreino": "Forca e Resistencia Muscular — Progressao 1",
+          "tipoSessao": "forca",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento + Mobilidade",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": "10 min"
+            },
+            {
+              "id": "custom_b01",
+              "nome": "Barra Fixa",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "barra_fixa",
+              "series": 5,
+              "repeticoes": 0,
+              "peso": 0,
+              "obs": "Max reps por serie; registrar total acumulado"
+            },
+            {
+              "id": "custom_polia_alta",
+              "nome": "Puxada Polia Alta Pronada",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 10,
+              "peso": 52,
+              "obs": "Volume aumentado: 3 series"
+            },
+            {
+              "id": "custom_agach_front",
+              "nome": "Agachamento Frontal",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 10,
+              "peso": 42,
+              "obs": ""
+            },
+            {
+              "id": "custom_supino_halt",
+              "nome": "Supino com Halteres",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 10,
+              "peso": 22,
+              "obs": ""
+            },
+            {
+              "id": "custom_terra_rom_halt",
+              "nome": "Terra Romeno com Halteres",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 12,
+              "peso": 32,
+              "obs": ""
+            },
+            {
+              "id": "custom_c01",
+              "nome": "Prancha Isometrica",
+              "modalidade": "isometria",
+              "series": 3,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 50,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        },
+        {
+          "dia": "Terca",
+          "nomeTreino": "Corrida Intervalada",
+          "tipoSessao": "intervalado",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_r01",
+              "nome": "Corrida Intervalada 400m",
+              "modalidade": "corrida",
+              "series": 5,
+              "repeticoes": 1,
+              "distanciaPlanejadaMetros": 400,
+              "peso": 0,
+              "obs": "5x400m; descanso 90s; anotar tempo de cada 400m"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        },
+        {
+          "dia": "Quinta",
+          "nomeTreino": "Especifico TAF — Circuito (3 Voltas)",
+          "tipoSessao": "circuito_taf",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento + Ativacao Escapular",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 300,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_b01",
+              "nome": "Barra Fixa — Circuito TAF",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "barra_fixa",
+              "series": 3,
+              "repeticoes": 0,
+              "tempoPlanejadoSegundos": 60,
+              "peso": 0,
+              "obs": "3 voltas; 1 min max reps; descanso ativo 3 min"
+            },
+            {
+              "id": "custom_ab01",
+              "nome": "Abdominal Remador — Circuito TAF",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "remador_abdominal",
+              "series": 3,
+              "repeticoes": 0,
+              "tempoPlanejadoSegundos": 60,
+              "peso": 0,
+              "obs": "3 voltas; 1 min max reps"
+            },
+            {
+              "id": "custom_r01",
+              "nome": "Corrida 400m — Circuito TAF",
+              "modalidade": "corrida",
+              "series": 3,
+              "repeticoes": 1,
+              "distanciaPlanejadaMetros": 400,
+              "peso": 0,
+              "obs": "3 voltas; anotar tempo"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 420,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        },
+        {
+          "dia": "Sabado",
+          "nomeTreino": "Prevencao de Lesao + Corrida de Base",
+          "tipoSessao": "prevencao_lesao",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_r02",
+              "nome": "Corrida Continua de Base",
+              "modalidade": "corrida",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 1200,
+              "peso": 0,
+              "obs": "20 min Zona 2"
+            },
+            {
+              "id": "custom_ponte01",
+              "nome": "Ponte de Gluteo com Mini Band",
+              "modalidade": "peso_corporal",
+              "series": 2,
+              "repeticoes": 20,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_nordic01",
+              "nome": "Nordic Hamstring Curl Excentrico",
+              "modalidade": "peso_corporal",
+              "series": 2,
+              "repeticoes": 7,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_prancha_perna",
+              "nome": "Prancha com Elevacao Alternada de Perna",
+              "modalidade": "peso_corporal",
+              "series": 2,
+              "repeticoes": 10,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_equil01",
+              "nome": "Equilibrio Unipodal (Olhos Fechados)",
+              "modalidade": "isometria",
+              "series": 2,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 30,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "semana": 3,
+      "bloco": 1,
+      "dias": [
+        {
+          "dia": "Segunda",
+          "nomeTreino": "Forca e Resistencia Muscular — Progressao 2",
+          "tipoSessao": "forca",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento + Mobilidade",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": "10 min"
+            },
+            {
+              "id": "custom_b01",
+              "nome": "Barra Fixa",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "barra_fixa",
+              "series": 5,
+              "repeticoes": 0,
+              "peso": 0,
+              "obs": "Max reps; aumento de volume — 4 series se conseguir mais de 8 reps por serie"
+            },
+            {
+              "id": "custom_polia_alta",
+              "nome": "Puxada Polia Alta Pronada",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 12,
+              "peso": 54,
+              "obs": ""
+            },
+            {
+              "id": "custom_agach_front",
+              "nome": "Agachamento Frontal",
+              "modalidade": "forca_dinamica",
+              "series": 4,
+              "repeticoes": 10,
+              "peso": 45,
+              "obs": "Volume aumentado: 4 series"
+            },
+            {
+              "id": "custom_supino_halt",
+              "nome": "Supino com Halteres",
+              "modalidade": "forca_dinamica",
+              "series": 4,
+              "repeticoes": 10,
+              "peso": 24,
+              "obs": ""
+            },
+            {
+              "id": "custom_terra_rom_halt",
+              "nome": "Terra Romeno com Halteres",
+              "modalidade": "forca_dinamica",
+              "series": 4,
+              "repeticoes": 10,
+              "peso": 35,
+              "obs": ""
+            },
+            {
+              "id": "custom_c01",
+              "nome": "Prancha Isometrica",
+              "modalidade": "isometria",
+              "series": 4,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 55,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        },
+        {
+          "dia": "Terca",
+          "nomeTreino": "Corrida Intervalada",
+          "tipoSessao": "intervalado",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_r01",
+              "nome": "Corrida Intervalada 400m",
+              "modalidade": "corrida",
+              "series": 6,
+              "repeticoes": 1,
+              "distanciaPlanejadaMetros": 400,
+              "peso": 0,
+              "obs": "6x400m; descanso 90s; anotar tempo de cada 400m; ritmo forte"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        },
+        {
+          "dia": "Quinta",
+          "nomeTreino": "Especifico TAF — Circuito (3 Voltas)",
+          "tipoSessao": "circuito_taf",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento + Ativacao Escapular",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 300,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_b01",
+              "nome": "Barra Fixa — Circuito TAF",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "barra_fixa",
+              "series": 3,
+              "repeticoes": 0,
+              "tempoPlanejadoSegundos": 60,
+              "peso": 0,
+              "obs": "3 voltas; 1 min max reps; descanso ativo 3 min"
+            },
+            {
+              "id": "custom_ab01",
+              "nome": "Abdominal Remador — Circuito TAF",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "remador_abdominal",
+              "series": 3,
+              "repeticoes": 0,
+              "tempoPlanejadoSegundos": 60,
+              "peso": 0,
+              "obs": "3 voltas; 1 min max reps"
+            },
+            {
+              "id": "custom_r01",
+              "nome": "Corrida 400m — Circuito TAF",
+              "modalidade": "corrida",
+              "series": 3,
+              "repeticoes": 1,
+              "distanciaPlanejadaMetros": 400,
+              "peso": 0,
+              "obs": "3 voltas; anotar tempo"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 420,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        },
+        {
+          "dia": "Sabado",
+          "nomeTreino": "Prevencao de Lesao + Corrida de Base",
+          "tipoSessao": "prevencao_lesao",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_r02",
+              "nome": "Corrida Continua de Base",
+              "modalidade": "corrida",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 1500,
+              "peso": 0,
+              "obs": "25 min Zona 2 — volume aumentado"
+            },
+            {
+              "id": "custom_ponte01",
+              "nome": "Ponte de Gluteo com Mini Band",
+              "modalidade": "peso_corporal",
+              "series": 3,
+              "repeticoes": 20,
+              "peso": 0,
+              "obs": "3 series"
+            },
+            {
+              "id": "custom_nordic01",
+              "nome": "Nordic Hamstring Curl Excentrico",
+              "modalidade": "peso_corporal",
+              "series": 3,
+              "repeticoes": 7,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_prancha_perna",
+              "nome": "Prancha com Elevacao Alternada de Perna",
+              "modalidade": "peso_corporal",
+              "series": 3,
+              "repeticoes": 10,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_equil01",
+              "nome": "Equilibrio Unipodal (Olhos Fechados)",
+              "modalidade": "isometria",
+              "series": 3,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 30,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "semana": 4,
+      "bloco": 1,
+      "dias": [
+        {
+          "dia": "Segunda",
+          "nomeTreino": "Forca — Consolidacao Bloco 1",
+          "tipoSessao": "forca",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento + Mobilidade",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": "10 min"
+            },
+            {
+              "id": "custom_b01",
+              "nome": "Barra Fixa",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "barra_fixa",
+              "series": 4,
+              "repeticoes": 0,
+              "peso": 0,
+              "obs": "4 series — consolidacao; manter qualidade tecnica"
+            },
+            {
+              "id": "custom_polia_alta",
+              "nome": "Puxada Polia Alta Pronada",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 10,
+              "peso": 52,
+              "obs": ""
+            },
+            {
+              "id": "custom_agach_front",
+              "nome": "Agachamento Frontal",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 10,
+              "peso": 47,
+              "obs": "Carga maxima do bloco 1"
+            },
+            {
+              "id": "custom_supino_halt",
+              "nome": "Supino com Halteres",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 10,
+              "peso": 24,
+              "obs": ""
+            },
+            {
+              "id": "custom_terra_rom_halt",
+              "nome": "Terra Romeno com Halteres",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 10,
+              "peso": 37,
+              "obs": ""
+            },
+            {
+              "id": "custom_c01",
+              "nome": "Prancha Isometrica",
+              "modalidade": "isometria",
+              "series": 3,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 60,
+              "peso": 0,
+              "obs": "60s — maximo do bloco 1"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        },
+        {
+          "dia": "Terca",
+          "nomeTreino": "Corrida Intervalada",
+          "tipoSessao": "intervalado",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_r01",
+              "nome": "Corrida Intervalada 400m",
+              "modalidade": "corrida",
+              "series": 4,
+              "repeticoes": 1,
+              "distanciaPlanejadaMetros": 400,
+              "peso": 0,
+              "obs": "4x400m consolidacao — ritmo consistente; descanso 90s"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        },
+        {
+          "dia": "Quinta",
+          "nomeTreino": "Especifico TAF — Circuito (3 Voltas)",
+          "tipoSessao": "circuito_taf",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento + Ativacao Escapular",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 300,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_b01",
+              "nome": "Barra Fixa — Circuito TAF",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "barra_fixa",
+              "series": 3,
+              "repeticoes": 0,
+              "tempoPlanejadoSegundos": 60,
+              "peso": 0,
+              "obs": "3 voltas; 1 min max reps"
+            },
+            {
+              "id": "custom_ab01",
+              "nome": "Abdominal Remador — Circuito TAF",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "remador_abdominal",
+              "series": 3,
+              "repeticoes": 0,
+              "tempoPlanejadoSegundos": 60,
+              "peso": 0,
+              "obs": "3 voltas; 1 min max reps"
+            },
+            {
+              "id": "custom_r01",
+              "nome": "Corrida 400m — Circuito TAF",
+              "modalidade": "corrida",
+              "series": 3,
+              "repeticoes": 1,
+              "distanciaPlanejadaMetros": 400,
+              "peso": 0,
+              "obs": "3 voltas; anotar tempo"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 420,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        },
+        {
+          "dia": "Sabado",
+          "nomeTreino": "Prevencao de Lesao + Corrida de Base",
+          "tipoSessao": "prevencao_lesao",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_r02",
+              "nome": "Corrida Continua de Base",
+              "modalidade": "corrida",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 1500,
+              "peso": 0,
+              "obs": "25 min Zona 2"
+            },
+            {
+              "id": "custom_ponte01",
+              "nome": "Ponte de Gluteo com Mini Band",
+              "modalidade": "peso_corporal",
+              "series": 2,
+              "repeticoes": 20,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_nordic01",
+              "nome": "Nordic Hamstring Curl Excentrico",
+              "modalidade": "peso_corporal",
+              "series": 2,
+              "repeticoes": 8,
+              "peso": 0,
+              "obs": "8 reps — progressao"
+            },
+            {
+              "id": "custom_prancha_perna",
+              "nome": "Prancha com Elevacao Alternada de Perna",
+              "modalidade": "peso_corporal",
+              "series": 2,
+              "repeticoes": 12,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_equil01",
+              "nome": "Equilibrio Unipodal (Olhos Fechados)",
+              "modalidade": "isometria",
+              "series": 2,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 30,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "semana": 5,
+      "bloco": 2,
+      "dias": [
+        {
+          "dia": "Segunda",
+          "nomeTreino": "Forca Intensiva — Bloco 2 (Inicio)",
+          "tipoSessao": "forca",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento + Mobilidade",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": "10 min"
+            },
+            {
+              "id": "custom_b01",
+              "nome": "Barra Fixa com Lastro",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "barra_fixa",
+              "series": 5,
+              "repeticoes": 6,
+              "peso": 5,
+              "obs": "5kg de lastro (cinto); 5 series de 6 reps controladas; amplitude total"
+            },
+            {
+              "id": "custom_remada_curv",
+              "nome": "Remada Curvada Barra",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 10,
+              "peso": 60,
+              "obs": "Substitui polia — angulo 45 graus; cotovelos junto ao tronco"
+            },
+            {
+              "id": "custom_agach_front",
+              "nome": "Agachamento Frontal",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 8,
+              "peso": 50,
+              "obs": "Reducao de volume; aumento de carga — Bloco 2"
+            },
+            {
+              "id": "custom_supino_barra",
+              "nome": "Supino com Barra",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 8,
+              "peso": 60,
+              "obs": "Substitui halteres — maior carga absoluta"
+            },
+            {
+              "id": "custom_terra_rom_barra",
+              "nome": "Terra Romeno com Barra",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 8,
+              "peso": 60,
+              "obs": "Substitui halteres — maior carga absoluta"
+            },
+            {
+              "id": "custom_c02",
+              "nome": "Prancha com Peso",
+              "modalidade": "isometria",
+              "series": 3,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 45,
+              "peso": 10,
+              "obs": "10kg sobre as costas; corpo rigido"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        },
+        {
+          "dia": "Terca",
+          "nomeTreino": "Corrida Intervalada 600m",
+          "tipoSessao": "intervalado",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_r01",
+              "nome": "Corrida Intervalada 600m",
+              "modalidade": "corrida",
+              "series": 4,
+              "repeticoes": 1,
+              "distanciaPlanejadaMetros": 600,
+              "peso": 0,
+              "obs": "4x600m; ritmo forte; descanso 2 min; anotar tempo de cada 600m"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        },
+        {
+          "dia": "Quinta",
+          "nomeTreino": "Especifico TAF — Circuito (3 Voltas)",
+          "tipoSessao": "circuito_taf",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento + Ativacao Escapular",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 300,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_b01",
+              "nome": "Barra Fixa — Circuito TAF",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "barra_fixa",
+              "series": 3,
+              "repeticoes": 0,
+              "tempoPlanejadoSegundos": 60,
+              "peso": 0,
+              "obs": "3 voltas; 1 min max reps; descanso ativo 3 min"
+            },
+            {
+              "id": "custom_ab01",
+              "nome": "Abdominal Remador — Circuito TAF",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "remador_abdominal",
+              "series": 3,
+              "repeticoes": 0,
+              "tempoPlanejadoSegundos": 60,
+              "peso": 0,
+              "obs": "3 voltas; 1 min max reps"
+            },
+            {
+              "id": "custom_r04",
+              "nome": "Corrida Ritmo TAF — Circuito",
+              "modalidade": "corrida",
+              "series": 3,
+              "repeticoes": 1,
+              "distanciaPlanejadaMetros": 400,
+              "peso": 0,
+              "obs": "3 voltas; ritmo proximo ao pace alvo TAF; anotar tempo"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 420,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        },
+        {
+          "dia": "Sabado",
+          "nomeTreino": "Prevencao de Lesao + Corrida de Base",
+          "tipoSessao": "prevencao_lesao",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_r02",
+              "nome": "Corrida Continua de Base",
+              "modalidade": "corrida",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 1800,
+              "peso": 0,
+              "obs": "30 min Zona 2 — aumento de volume aerobio"
+            },
+            {
+              "id": "custom_ponte01",
+              "nome": "Ponte de Gluteo com Mini Band",
+              "modalidade": "peso_corporal",
+              "series": 3,
+              "repeticoes": 20,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_nordic01",
+              "nome": "Nordic Hamstring Curl Excentrico",
+              "modalidade": "peso_corporal",
+              "series": 3,
+              "repeticoes": 8,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_agach_bulgaro",
+              "nome": "Agachamento Bulgaro (Unilateral)",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 10,
+              "peso": 15,
+              "obs": "10 reps por perna; peso por halter; estabilidade unilateral"
+            },
+            {
+              "id": "custom_prancha_perna",
+              "nome": "Prancha com Elevacao Alternada de Perna",
+              "modalidade": "peso_corporal",
+              "series": 3,
+              "repeticoes": 12,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_equil01",
+              "nome": "Equilibrio Unipodal (Olhos Fechados)",
+              "modalidade": "isometria",
+              "series": 3,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 30,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "semana": 6,
+      "bloco": 2,
+      "dias": [
+        {
+          "dia": "Segunda",
+          "nomeTreino": "Forca Intensiva — Bloco 2 Progressao 1",
+          "tipoSessao": "forca",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento + Mobilidade",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_b01",
+              "nome": "Barra Fixa com Lastro",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "barra_fixa",
+              "series": 5,
+              "repeticoes": 6,
+              "peso": 7,
+              "obs": "7.5kg de lastro; 5x6 controladas"
+            },
+            {
+              "id": "custom_remada_curv",
+              "nome": "Remada Curvada Barra",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 10,
+              "peso": 62,
+              "obs": ""
+            },
+            {
+              "id": "custom_agach_front",
+              "nome": "Agachamento Frontal",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 8,
+              "peso": 52,
+              "obs": ""
+            },
+            {
+              "id": "custom_supino_barra",
+              "nome": "Supino com Barra",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 8,
+              "peso": 65,
+              "obs": ""
+            },
+            {
+              "id": "custom_terra_rom_barra",
+              "nome": "Terra Romeno com Barra",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 8,
+              "peso": 65,
+              "obs": ""
+            },
+            {
+              "id": "custom_c02",
+              "nome": "Prancha com Peso",
+              "modalidade": "isometria",
+              "series": 3,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 50,
+              "peso": 12,
+              "obs": ""
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        },
+        {
+          "dia": "Terca",
+          "nomeTreino": "Corrida Intervalada 600m",
+          "tipoSessao": "intervalado",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_r01",
+              "nome": "Corrida Intervalada 600m",
+              "modalidade": "corrida",
+              "series": 5,
+              "repeticoes": 1,
+              "distanciaPlanejadaMetros": 600,
+              "peso": 0,
+              "obs": "5x600m; descanso 2 min; anotar tempo de cada 600m"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        },
+        {
+          "dia": "Quinta",
+          "nomeTreino": "Especifico TAF — Circuito (3 Voltas)",
+          "tipoSessao": "circuito_taf",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento + Ativacao Escapular",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 300,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_b01",
+              "nome": "Barra Fixa — Circuito TAF",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "barra_fixa",
+              "series": 3,
+              "repeticoes": 0,
+              "tempoPlanejadoSegundos": 60,
+              "peso": 0,
+              "obs": "3 voltas; 1 min max reps; descanso ativo 3 min"
+            },
+            {
+              "id": "custom_ab01",
+              "nome": "Abdominal Remador — Circuito TAF",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "remador_abdominal",
+              "series": 3,
+              "repeticoes": 0,
+              "tempoPlanejadoSegundos": 60,
+              "peso": 0,
+              "obs": "3 voltas; 1 min max reps"
+            },
+            {
+              "id": "custom_r04",
+              "nome": "Corrida Ritmo TAF — Circuito",
+              "modalidade": "corrida",
+              "series": 3,
+              "repeticoes": 1,
+              "distanciaPlanejadaMetros": 400,
+              "peso": 0,
+              "obs": "3 voltas; pace proximo ao alvo TAF; anotar tempo"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 420,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        },
+        {
+          "dia": "Sabado",
+          "nomeTreino": "Prevencao de Lesao + Corrida de Base",
+          "tipoSessao": "prevencao_lesao",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_r02",
+              "nome": "Corrida Continua de Base",
+              "modalidade": "corrida",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 1800,
+              "peso": 0,
+              "obs": "30 min Zona 2"
+            },
+            {
+              "id": "custom_ponte01",
+              "nome": "Ponte de Gluteo com Mini Band",
+              "modalidade": "peso_corporal",
+              "series": 3,
+              "repeticoes": 20,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_nordic01",
+              "nome": "Nordic Hamstring Curl Excentrico",
+              "modalidade": "peso_corporal",
+              "series": 3,
+              "repeticoes": 8,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_agach_bulgaro",
+              "nome": "Agachamento Bulgaro (Unilateral)",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 10,
+              "peso": 17,
+              "obs": "10 reps por perna; 17.5kg por halter"
+            },
+            {
+              "id": "custom_prancha_perna",
+              "nome": "Prancha com Elevacao Alternada de Perna",
+              "modalidade": "peso_corporal",
+              "series": 3,
+              "repeticoes": 12,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_equil01",
+              "nome": "Equilibrio Unipodal (Olhos Fechados)",
+              "modalidade": "isometria",
+              "series": 3,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 30,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "semana": 7,
+      "bloco": 2,
+      "dias": [
+        {
+          "dia": "Segunda",
+          "nomeTreino": "Forca Intensiva — Pico Bloco 2",
+          "tipoSessao": "forca",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento + Mobilidade",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": "10 min — ativacao extra de escapulas e quadril"
+            },
+            {
+              "id": "custom_b01",
+              "nome": "Barra Fixa com Lastro",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "barra_fixa",
+              "series": 5,
+              "repeticoes": 8,
+              "peso": 10,
+              "obs": "10kg de lastro; 5x8 — semana de pico; anotar total"
+            },
+            {
+              "id": "custom_remada_curv",
+              "nome": "Remada Curvada Barra",
+              "modalidade": "forca_dinamica",
+              "series": 4,
+              "repeticoes": 10,
+              "peso": 65,
+              "obs": "4 series — volume maximo"
+            },
+            {
+              "id": "custom_agach_front",
+              "nome": "Agachamento Frontal",
+              "modalidade": "forca_dinamica",
+              "series": 4,
+              "repeticoes": 8,
+              "peso": 55,
+              "obs": "Carga maxima do ciclo"
+            },
+            {
+              "id": "custom_supino_barra",
+              "nome": "Supino com Barra",
+              "modalidade": "forca_dinamica",
+              "series": 4,
+              "repeticoes": 8,
+              "peso": 70,
+              "obs": ""
+            },
+            {
+              "id": "custom_terra_rom_barra",
+              "nome": "Terra Romeno com Barra",
+              "modalidade": "forca_dinamica",
+              "series": 4,
+              "repeticoes": 8,
+              "peso": 70,
+              "obs": ""
+            },
+            {
+              "id": "custom_c02",
+              "nome": "Prancha com Peso",
+              "modalidade": "isometria",
+              "series": 4,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 55,
+              "peso": 15,
+              "obs": "15kg — carga maxima; 4 series"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        },
+        {
+          "dia": "Terca",
+          "nomeTreino": "Corrida Intervalada 600m — Pico",
+          "tipoSessao": "intervalado",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_r01",
+              "nome": "Corrida Intervalada 600m",
+              "modalidade": "corrida",
+              "series": 6,
+              "repeticoes": 1,
+              "distanciaPlanejadaMetros": 600,
+              "peso": 0,
+              "obs": "6x600m — volume maximo; descanso 2 min; anotar todos os tempos"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        },
+        {
+          "dia": "Quinta",
+          "nomeTreino": "Especifico TAF — Circuito (3 Voltas)",
+          "tipoSessao": "circuito_taf",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento + Ativacao Escapular",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 300,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_b01",
+              "nome": "Barra Fixa — Circuito TAF",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "barra_fixa",
+              "series": 3,
+              "repeticoes": 0,
+              "tempoPlanejadoSegundos": 60,
+              "peso": 0,
+              "obs": "3 voltas; 1 min max reps; foco em bater meta"
+            },
+            {
+              "id": "custom_ab01",
+              "nome": "Abdominal Remador — Circuito TAF",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "remador_abdominal",
+              "series": 3,
+              "repeticoes": 0,
+              "tempoPlanejadoSegundos": 60,
+              "peso": 0,
+              "obs": "3 voltas; 1 min max reps"
+            },
+            {
+              "id": "custom_r04",
+              "nome": "Corrida Ritmo TAF — Circuito",
+              "modalidade": "corrida",
+              "series": 3,
+              "repeticoes": 1,
+              "distanciaPlanejadaMetros": 400,
+              "peso": 0,
+              "obs": "3 voltas; ritmo alvo TAF; anotar tempo"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 420,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        },
+        {
+          "dia": "Sabado",
+          "nomeTreino": "Prevencao de Lesao + Corrida Longa",
+          "tipoSessao": "prevencao_lesao",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_r02",
+              "nome": "Corrida Continua Longa",
+              "modalidade": "corrida",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 2100,
+              "peso": 0,
+              "obs": "35 min Zona 2 — maior volume aerobio do ciclo"
+            },
+            {
+              "id": "custom_ponte01",
+              "nome": "Ponte de Gluteo com Mini Band",
+              "modalidade": "peso_corporal",
+              "series": 3,
+              "repeticoes": 25,
+              "peso": 0,
+              "obs": "25 reps"
+            },
+            {
+              "id": "custom_nordic01",
+              "nome": "Nordic Hamstring Curl Excentrico",
+              "modalidade": "peso_corporal",
+              "series": 3,
+              "repeticoes": 10,
+              "peso": 0,
+              "obs": "10 reps — volume maximo"
+            },
+            {
+              "id": "custom_agach_bulgaro",
+              "nome": "Agachamento Bulgaro (Unilateral)",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 10,
+              "peso": 20,
+              "obs": "10 reps por perna; 20kg por halter"
+            },
+            {
+              "id": "custom_prancha_perna",
+              "nome": "Prancha com Elevacao Alternada de Perna",
+              "modalidade": "peso_corporal",
+              "series": 3,
+              "repeticoes": 12,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_equil01",
+              "nome": "Equilibrio Unipodal (Olhos Fechados)",
+              "modalidade": "isometria",
+              "series": 3,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 30,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "semana": 8,
+      "bloco": 2,
+      "dias": [
+        {
+          "dia": "Segunda",
+          "nomeTreino": "Forca — Deload Pre-Simulado",
+          "tipoSessao": "forca",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento + Mobilidade",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": "10 min"
+            },
+            {
+              "id": "custom_b01",
+              "nome": "Barra Fixa com Lastro",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "barra_fixa",
+              "series": 4,
+              "repeticoes": 6,
+              "peso": 7,
+              "obs": "Deload: 4 series; foco em tecnica; preservar energia para simulado"
+            },
+            {
+              "id": "custom_remada_curv",
+              "nome": "Remada Curvada Barra",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 8,
+              "peso": 60,
+              "obs": ""
+            },
+            {
+              "id": "custom_agach_front",
+              "nome": "Agachamento Frontal",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 8,
+              "peso": 52,
+              "obs": ""
+            },
+            {
+              "id": "custom_supino_barra",
+              "nome": "Supino com Barra",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 8,
+              "peso": 65,
+              "obs": ""
+            },
+            {
+              "id": "custom_terra_rom_barra",
+              "nome": "Terra Romeno com Barra",
+              "modalidade": "forca_dinamica",
+              "series": 3,
+              "repeticoes": 8,
+              "peso": 65,
+              "obs": ""
+            },
+            {
+              "id": "custom_c02",
+              "nome": "Prancha com Peso",
+              "modalidade": "isometria",
+              "series": 3,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 45,
+              "peso": 12,
+              "obs": "Deload"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        },
+        {
+          "dia": "Terca",
+          "nomeTreino": "Corrida Intervalada — Pace TAF",
+          "tipoSessao": "intervalado",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_r04",
+              "nome": "Corrida 400m — Ritmo TAF",
+              "modalidade": "corrida",
+              "series": 4,
+              "repeticoes": 1,
+              "distanciaPlanejadaMetros": 400,
+              "peso": 0,
+              "obs": "4x400m no pace alvo do simulado de 12 min; descanso 90s; confirmar ritmo sustentavel"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": ""
+            }
+          ]
+        },
+        {
+          "dia": "Quinta",
+          "nomeTreino": "SIMULADO TAF — Condicoes Oficiais",
+          "tipoSessao": "simulado",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento Pre-Simulado",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": "10 min: ativacao leve; nao gastar energia; apenas ativar articulacoes"
+            },
+            {
+              "id": "custom_b01",
+              "nome": "Barra Fixa — SIMULADO",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "barra_fixa",
+              "series": 1,
+              "repeticoes": 0,
+              "tempoPlanejadoSegundos": 60,
+              "peso": 0,
+              "obs": "PROVA OFICIAL: 1 tentativa; 60 seg; max reps; queixo acima da barra; extensao total; sem balanço"
+            },
+            {
+              "id": "custom_ab01",
+              "nome": "Abdominal Remador — SIMULADO",
+              "modalidade": "peso_corporal",
+              "modalidadeTAF": "remador_abdominal",
+              "series": 1,
+              "repeticoes": 0,
+              "tempoPlanejadoSegundos": 60,
+              "peso": 0,
+              "obs": "PROVA OFICIAL: 1 tentativa; 60 seg; max reps; cotovelos tocam joelhos; retorno completo ao solo"
+            },
+            {
+              "id": "custom_r04",
+              "nome": "Corrida 12 Minutos — SIMULADO",
+              "modalidade": "corrida",
+              "series": 1,
+              "repeticoes": 1,
+              "distanciaPlanejadaMetros": 2400,
+              "tempoPlanejadoSegundos": 720,
+              "peso": 0,
+              "obs": "PROVA OFICIAL: 12 min; max distancia; alvo TAF: >= 2400m para Muito Bom"
+            },
+            {
+              "id": "custom_along",
+              "nome": "Recuperacao Pos-Simulado",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 900,
+              "peso": 0,
+              "obs": "15 min: trote leve + alongamento completo"
+            }
+          ]
+        },
+        {
+          "dia": "Sabado",
+          "nomeTreino": "Recuperacao Ativa + Prevencao",
+          "tipoSessao": "prevencao_lesao",
+          "exercicios": [
+            {
+              "id": "custom_aq",
+              "nome": "Aquecimento",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 600,
+              "peso": 0,
+              "obs": "Trote muito leve"
+            },
+            {
+              "id": "custom_r02",
+              "nome": "Corrida Continua Regenerativa",
+              "modalidade": "corrida",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 1500,
+              "peso": 0,
+              "obs": "25 min Zona 1 — recuperacao ativa pos-simulado"
+            },
+            {
+              "id": "custom_ponte01",
+              "nome": "Ponte de Gluteo com Mini Band",
+              "modalidade": "peso_corporal",
+              "series": 2,
+              "repeticoes": 20,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_nordic01",
+              "nome": "Nordic Hamstring Curl Excentrico",
+              "modalidade": "peso_corporal",
+              "series": 2,
+              "repeticoes": 8,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_agach_bulgaro",
+              "nome": "Agachamento Bulgaro (Unilateral)",
+              "modalidade": "forca_dinamica",
+              "series": 2,
+              "repeticoes": 10,
+              "peso": 17,
+              "obs": "Deload: 2 series"
+            },
+            {
+              "id": "custom_prancha_perna",
+              "nome": "Prancha com Elevacao Alternada de Perna",
+              "modalidade": "peso_corporal",
+              "series": 2,
+              "repeticoes": 10,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_equil01",
+              "nome": "Equilibrio Unipodal (Olhos Fechados)",
+              "modalidade": "isometria",
+              "series": 2,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 30,
+              "peso": 0,
+              "obs": ""
+            },
+            {
+              "id": "custom_along",
+              "nome": "Alongamento Final Completo",
+              "modalidade": "cardio_livre",
+              "series": 1,
+              "repeticoes": 1,
+              "tempoPlanejadoSegundos": 900,
+              "peso": 0,
+              "obs": "15 min: todos os grupos musculares"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
