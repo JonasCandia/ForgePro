@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-08T00:00:00.000Z",
+  "title": "Design System: FORGE PRO",
+  "extensions": {
+    "colorMeta": {
+      "voltage":              { "role": "primary",  "displayName": "Voltage",              "canonical": "oklch(93% 0.28 126)",    "tonalRamp": ["oklch(98% 0.14 126)", "oklch(93% 0.28 126)", "oklch(80% 0.28 126)", "oklch(65% 0.25 126)"] },
+      "void":                 { "role": "neutral",  "displayName": "Void",                 "canonical": "oklch(5% 0.003 106)",    "tonalRamp": ["oklch(5% 0.003 106)", "oklch(9% 0.003 106)", "oklch(13% 0.003 106)", "oklch(17% 0.003 106)", "oklch(22% 0.003 106)"] },
+      "forge-surface":        { "role": "neutral",  "displayName": "Forge Surface",        "canonical": "oklch(9% 0.003 106)"  },
+      "forge-surface-raised": { "role": "neutral",  "displayName": "Forge Surface Raised", "canonical": "oklch(13% 0.003 106)" },
+      "forge-outline":        { "role": "neutral",  "displayName": "Forge Outline",        "canonical": "oklch(17% 0.003 106)" },
+      "forge-border":         { "role": "neutral",  "displayName": "Forge Border",         "canonical": "oklch(22% 0.003 106)" },
+      "body-text":            { "role": "neutral",  "displayName": "Body Text",            "canonical": "oklch(85% 0.004 106)" },
+      "muted-text":           { "role": "neutral",  "displayName": "Muted Text",           "canonical": "oklch(52% 0.007 256)" },
+      "subtle-text":          { "role": "neutral",  "displayName": "Subtle Text",          "canonical": "oklch(42% 0.007 256)" },
+      "error":                { "role": "error",    "displayName": "Error Red",            "canonical": "oklch(63% 0.24 29)"   },
+      "warning-bg":           { "role": "warning",  "displayName": "Warning Amber BG",     "canonical": "oklch(35% 0.10 64)"   },
+      "warning-text":         { "role": "warning",  "displayName": "Warning Amber Text",   "canonical": "oklch(91% 0.10 89)"   }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display",    "purpose": "Screen titles, hero callouts, app wordmark. Always uppercase, Lexend 900." },
+      "title":   { "displayName": "Title",      "purpose": "Section headers within screens. Lexend 700 uppercase." },
+      "body":    { "displayName": "Body",       "purpose": "Exercise names, descriptions, observations. Inter 400. Max 65ch." },
+      "label":   { "displayName": "Label",      "purpose": "Form field labels, data categories. Inter 700 uppercase tracking-widest 0.625rem." },
+      "mono":    { "displayName": "Mono / Data","purpose": "Weights (kg), pace (min/km), connection status, TAF scores, timestamps. JetBrains Mono." }
+    },
+    "shadows": [
+      { "name": "card-structural",   "value": "0 25px 50px -12px rgba(0,0,0,0.25)",                                                                                "purpose": "Cards and elevated containers. Structural anchor, not decoration." },
+      { "name": "dropdown-ambient",  "value": "0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)",                                                "purpose": "Dropdowns and overlays. Separates from background without drama." },
+      { "name": "voltage-focus",     "value": "0 0 0 2px oklch(93% 0.28 126 / 0.18), 0 0 14px 0 oklch(93% 0.28 126 / 0.07)",                                      "purpose": "Focused inputs and active nav icons. The only expressive light in the system." },
+      { "name": "fab-voltage",       "value": "0 10px 15px -3px oklch(93% 0.28 126 / 0.25)",                                                                       "purpose": "FAB (new workout button). Connects the button to the system accent." },
+      { "name": "nav-hud-glow",      "value": "0 0 8px 1px oklch(93% 0.28 126 / 0.7)",                                                                             "purpose": "HUD sliding indicator on mobile nav. Persistent glow on active tab position." }
+    ],
+    "motion": [
+      { "name": "ease-out-expo",   "value": "cubic-bezier(0.16, 1, 0.3, 1)",  "purpose": "Default easing for screen transitions, HUD indicator, overlay entrances." },
+      { "name": "ease-out-quint",  "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "List item animations, stagger entrances, micro-interactions." },
+      { "name": "screen-enter",    "value": "220ms ease-out-expo",             "purpose": "Every screen navigation: translateY(7px) → 0 + opacity 0 → 1." },
+      { "name": "stagger-child",   "value": "200ms ease-out-quint",            "purpose": "List items with delay: 40ms, 90ms, 140ms, 190ms, 240ms, 290ms." },
+      { "name": "forge-pop",       "value": "0.38s cubic-bezier(0.22,1,0.36,1) both", "purpose": "scale(0.65) opacity(0) → scale(1.1) → scale(1). Entry pop for key elements." },
+      { "name": "label-in",        "value": "180ms ease-out-quint",            "purpose": "Active nav label slide-up: translateY(3px) → 0." },
+      { "name": "hud-slide",       "value": "280ms ease-out-expo",             "purpose": "HUD indicator translation between nav tabs." }
+    ],
+    "breakpoints": [
+      { "name": "md", "value": "768px", "purpose": "Desktop nav visible; bottom mobile nav hidden." }
+    ],
+    "northStar": "O Caderno de Campo do Guerreiro",
+    "northStarDescription": "Registro de batalha. Cada entrada conta. Peso e repetição como coordenadas de evolução. A interface é um instrumento, não uma vitrine.",
+    "rules": [
+      { "name": "A Regra do Voltage",       "text": "O acento #CCFF00 aparece em ≤10% de qualquer tela. Não faz gradiente, não colore backgrounds decorativos, não aparece em texto de conteúdo. Cada aparição é uma declaração." },
+      { "name": "A Regra Flat-by-Default",  "text": "Superfícies são flat em repouso. Sombras aparecem apenas como resposta a estado ou ancoragem estrutural. Glassmorphism nunca." },
+      { "name": "A Regra do Uppercase",     "text": "Labels de dados, títulos de seção e botões: sempre uppercase via Lexend. Conteúdo (nomes, observações): title-case via Inter. Nunca o mesmo papel com as duas fontes." },
+      { "name": "A Regra do Modo Claro",    "text": "Em light mode, surfaces viram cinza (#f5f5f5/#ffffff/#ebebeb). O Voltage permanece idêntico. Nenhum acento alternativo para modo claro." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação primária. Voltage bg, texto preto, Lexend bold uppercase. Resposta tátil imediata.",
+      "html": "<button class=\"btn-primary\">REGISTRAR TREINO</button>",
+      "css": ".btn-primary { display: flex; align-items: center; justify-content: center; gap: 8px; background: #CCFF00; color: #000; font-family: 'Lexend', sans-serif; font-weight: 700; font-size: 0.875rem; text-transform: uppercase; letter-spacing: -0.025em; padding: 12px 24px; border-radius: 4px; border: none; cursor: pointer; transition: filter 0.15s, transform 0.1s; } .btn-primary:hover { filter: brightness(1.1); } .btn-primary:active { transform: scale(0.98); filter: brightness(0.9); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Ação secundária. Transparente, borda Forge Border, mesmo tipo do primary.",
+      "html": "<button class=\"btn-secondary\">CANCELAR</button>",
+      "css": ".btn-secondary { display: flex; align-items: center; justify-content: center; gap: 8px; background: transparent; color: #D1D5DB; font-family: 'Lexend', sans-serif; font-weight: 700; font-size: 0.875rem; text-transform: uppercase; letter-spacing: -0.025em; padding: 12px 24px; border-radius: 4px; border: 1px solid #333; cursor: pointer; transition: background 0.15s, transform 0.1s; } .btn-secondary:hover { background: rgba(255,255,255,0.05); } .btn-secondary:active { transform: scale(0.98); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Container de dados de treino ou seção do dashboard. Forge Surface, borda Outline, rounded-xl.",
+      "html": "<div class=\"card\"><h3 class=\"section-title\">SÉRIES</h3></div>",
+      "css": ".card { background: #111111; border: 1px solid #222222; border-radius: 12px; padding: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); } .section-title { font-family: 'Lexend', sans-serif; font-weight: 900; font-size: 0.625rem; text-transform: uppercase; letter-spacing: 0.1em; color: #6B7280; margin-bottom: 12px; }"
+    },
+    {
+      "name": "Form Input",
+      "kind": "input",
+      "refersTo": "form-input",
+      "description": "Campo de texto. Forge Surface Raised, Forge Border, focus → Voltage borda + glow.",
+      "html": "<label class=\"input-label\">PESO (KG)</label><input class=\"form-input\" type=\"number\" placeholder=\"80\" />",
+      "css": ".input-label { display: block; font-family: 'Inter', sans-serif; font-size: 0.625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #6B7280; margin-bottom: 6px; } .form-input { width: 100%; background: #1A1A1A; border: 1px solid #333; border-radius: 4px; padding: 12px 16px; font-size: 1rem; color: #fff; transition: border-color 0.15s; outline: none; } .form-input::placeholder { color: #4B5563; } .form-input:focus { border-color: #CCFF00; box-shadow: 0 0 0 2px oklch(93% 0.28 126 / 0.18), 0 0 14px 0 oklch(93% 0.28 126 / 0.07); }"
+    },
+    {
+      "name": "Mobile Nav Item",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Tab da bottom nav mobile. Ativo: Voltage + scale-110 + glow. Inativo: Muted Text.",
+      "html": "<button class=\"nav-item nav-item--active\" aria-label=\"Início\"><svg>...</svg><span>INÍCIO</span></button>",
+      "css": ".nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; min-height: 52px; gap: 4px; padding: 8px 0; color: #6B7280; transition: color 0.2s; cursor: pointer; background: none; border: none; } .nav-item:active { transform: scale(0.9); } .nav-item--active { color: #CCFF00; } .nav-item--active svg { transform: scale(1.1); filter: drop-shadow(0 0 6px oklch(93% 0.28 126 / 0.9)); } .nav-item span { font-family: 'Inter', sans-serif; font-size: 0.5625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }"
+    }
+  ]
+}
