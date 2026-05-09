@@ -1,8 +1,16 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Play, CheckCircle, Trophy, ChevronDown, ChevronUp, Dumbbell, Timer, Zap, Heart, User, Flame, SkipForward, Plus, Clock } from 'lucide-react';
+import { ArrowLeft, Play, CheckCircle, Trophy, ChevronDown, ChevronUp, Dumbbell, Timer, Zap, Heart, User, Flame, SkipForward, Plus, Clock, Repeat, ShieldAlert } from 'lucide-react';
 import { workoutService } from '../../lib/workoutService';
 import type { Plano, WorkoutSeries, ModalidadeExercicio } from '../../types';
 import { getModalidade, buildExercicioSummary, formatarTempo, calcularPace, formatarDistancia } from '../../lib/exercicioUtils';
+import { MOCK_EXERCICIOS } from '../../constants';
+
+// Lookup map: exercicioId → regrasOficiais (only for TAF exercises)
+const REGRAS_MAP = new Map<string, string>(
+  MOCK_EXERCICIOS
+    .filter(ex => ex.regrasOficiais)
+    .map(ex => [ex.id, ex.regrasOficiais!])
+);
 
 // ─── Modalidade visual themes ─────────────────────────────────────────────────
 
@@ -78,6 +86,11 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
 
   // ─── Gamification ─────────────────────────────────────────────────────────
   const [lastCompletedPip, setLastCompletedPip] = useState<Record<number, number>>({});
+  // ─── Serie countdown timer (auto-timer by modality) ───────────────────────
+  const [serieCountdown, setSerieCountdown] = useState<Record<number, { remaining: number; total: number }>>({});
+  const serieCountdownRefs = useRef<Record<number, ReturnType<typeof setInterval>>>({});
+  const serieAutoCompleteGuard = useRef<Set<number>>(new Set());
+  const handleAddSerieRef = useRef<((exIdx: number, tempoOverride?: number) => Promise<void>) | null>(null);
   const [workoutStartTime] = useState(() => Date.now());
 
   useEffect(() => { loadPlanos(); }, []);
@@ -85,6 +98,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
   useEffect(() => {
     return () => {
       Object.values(elapsedIntervalRef.current).forEach(clearInterval);
+      Object.values(serieCountdownRefs.current).forEach(clearInterval);
     };
   }, []);
 
@@ -105,6 +119,34 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
     }
     setExerciseStartedAt(prev => ({ ...prev, [exIdx]: null }));
     setExerciseElapsed(prev => ({ ...prev, [exIdx]: 0 }));
+  }
+
+  function startSerieCountdown(exIdx: number, totalSeconds: number) {
+    if (serieCountdownRefs.current[exIdx]) clearInterval(serieCountdownRefs.current[exIdx]);
+    setSerieCountdown(prev => ({ ...prev, [exIdx]: { remaining: totalSeconds, total: totalSeconds } }));
+    serieCountdownRefs.current[exIdx] = setInterval(() => {
+      setSerieCountdown(prev => {
+        const cur = prev[exIdx];
+        if (!cur || cur.remaining <= 1) {
+          clearInterval(serieCountdownRefs.current[exIdx]);
+          delete serieCountdownRefs.current[exIdx];
+          return { ...prev, [exIdx]: { remaining: 0, total: cur?.total ?? totalSeconds } };
+        }
+        return { ...prev, [exIdx]: { ...cur, remaining: cur.remaining - 1 } };
+      });
+    }, 1000);
+  }
+
+  function stopSerieCountdown(exIdx: number) {
+    if (serieCountdownRefs.current[exIdx]) {
+      clearInterval(serieCountdownRefs.current[exIdx]);
+      delete serieCountdownRefs.current[exIdx];
+    }
+    setSerieCountdown(prev => {
+      const next = { ...prev };
+      delete next[exIdx];
+      return next;
+    });
   }
 
   async function loadPlanos() {
@@ -232,17 +274,37 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
     .filter((d, i, a) => a.indexOf(d) === i);
   const planoForDia = planos.find(p => p.semana === selectedSemana && p.diaDaSemana === selectedDia);
 
+  // ─── Circuit mode derived ─────────────────────────────────────────────────
+  const isCircuitMode =
+    selectedPlano?.tipoSessao === 'circuito_taf' || selectedPlano?.tipoSessao === 'simulado';
+  const numVoltas = React.useMemo(() => {
+    if (!isCircuitMode || !selectedPlano || selectedPlano.exercicios.length === 0) return 0;
+    return Math.max(...selectedPlano.exercicios.map(ex => ex.seriesPlanejadas ?? 3));
+  }, [isCircuitMode, selectedPlano]);
+  const currentVolta = React.useMemo(() => {
+    if (!isCircuitMode || !selectedPlano || numVoltas === 0) return 0;
+    for (let v = 1; v <= numVoltas; v++) {
+      const allDone = selectedPlano.exercicios.every(
+        (_, idx) => (completedSeries[idx]?.length ?? 0) >= v
+      );
+      if (!allDone) return v;
+    }
+    return numVoltas;
+  }, [isCircuitMode, selectedPlano, numVoltas, completedSeries]);
+
   async function handleStartWorkout() {
     if (!planoForDia) return;
     setSaving(true);
     try {
       const profile = await workoutService.getUserProfile();
       const id = await workoutService.createActiveWorkout({
-        nomeTreino: planoForDia.diaDaSemana,
+        nomeTreino: planoForDia.nomeTreino ?? planoForDia.diaDaSemana,
         semana: planoForDia.semana,
         diaDaSemana: planoForDia.diaDaSemana,
         planoId: planoForDia.id,
         objetivo: profile?.objetivo,
+        ...(planoForDia.tipoSessao && { tipoSessao: planoForDia.tipoSessao }),
+        ...(planoForDia.bloco != null && { bloco: planoForDia.bloco }),
       });
       setWorkoutId(id);
       setSelectedPlano(planoForDia);
@@ -263,7 +325,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
     finally { setSaving(false); }
   }
 
-  async function handleAddSerie(exIdx: number) {
+  async function handleAddSerie(exIdx: number, tempoOverride?: number) {
     if (!workoutId || !selectedPlano) return;
     const ex = selectedPlano.exercicios[exIdx];
     const input = currentInputs[exIdx];
@@ -273,7 +335,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
     const mod = getModalidade(ex);
     const pesoReal = parseFloat(input.pesoReal) || 0;
     const repeticoesReais = parseInt(input.repeticoesReais) || 0;
-    const tempoSegundos = parseInt(input.tempoSegundos) || 0;
+    const tempoSegundos = tempoOverride ?? (parseInt(input.tempoSegundos) || 0);
     const distanciaMetros = parseInt(input.distanciaMetros) || 0;
     const paceMinKm = distanciaMetros > 0 && tempoSegundos > 0
       ? (tempoSegundos / 60) / (distanciaMetros / 1000)
@@ -313,12 +375,38 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
       if ('vibrate' in navigator) navigator.vibrate([80, 40, 80]);
 
       stopElapsedTimer(exIdx);
+      stopSerieCountdown(exIdx);
       setActiveExIdx(exIdx);
       setRestingCardIdx(exIdx);
       setRestMinimized(false);
       startTimer();
     } catch (e) { console.error(e); }
   }
+
+  // Keep ref current so auto-complete effect always calls the latest version
+  handleAddSerieRef.current = handleAddSerie;
+
+  // Auto-complete series when countdown reaches 0
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    Object.entries(serieCountdown).forEach(([key, state]) => {
+      const exIdx = parseInt(key);
+      if (state.remaining === 0 && workoutId && selectedPlano && !serieAutoCompleteGuard.current.has(exIdx)) {
+        serieAutoCompleteGuard.current.add(exIdx);
+        const ex = selectedPlano.exercicios[exIdx];
+        if ('vibrate' in navigator) navigator.vibrate([100, 50, 100, 50, 100]);
+        handleAddSerieRef.current!(exIdx, ex.tempoPlanejadoSegundos).finally(() => {
+          setSerieCountdown(prev => {
+            const next = { ...prev };
+            delete next[exIdx];
+            return next;
+          });
+          serieAutoCompleteGuard.current.delete(exIdx);
+        });
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serieCountdown]);
 
   async function handleFinalize() {
     if (!workoutId || !selectedPlano) return;
@@ -514,6 +602,33 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
             }}
           />
         </div>
+        {isCircuitMode && (
+          <div className="flex items-center gap-2.5 bg-violet-500/10 border border-violet-500/30 rounded-xl px-3 py-2.5">
+            <Repeat size={14} className="text-violet-400 shrink-0" />
+            <span className="text-xs font-black uppercase tracking-widest text-violet-300">
+              Volta {Math.min(currentVolta, numVoltas)} de {numVoltas}
+            </span>
+            {selectedPlano?.tipoSessao === 'simulado' && (
+              <span className="ml-2 text-[9px] font-black uppercase tracking-widest text-violet-500 border border-violet-500/30 rounded px-1.5 py-0.5">
+                SIMULADO
+              </span>
+            )}
+            <div className="ml-auto flex gap-1.5 items-center">
+              {Array.from({ length: numVoltas }, (_, i) => (
+                <span
+                  key={i}
+                  className="w-2 h-2 rounded-full transition-all duration-300"
+                  style={{
+                    background: i + 1 < currentVolta ? '#CCFF00'
+                              : i + 1 === currentVolta ? '#A78BFA'
+                              : '#2a2a2a',
+                    boxShadow: i + 1 === currentVolta ? '0 0 6px #A78BFA80' : 'none',
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </header>
 
       {selectedPlano?.exercicios.map((ex, exIdx) => {
@@ -529,6 +644,9 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
         const elapsed = exerciseElapsed[exIdx] ?? 0;
         const isLastEx = exIdx === (selectedPlano.exercicios.length - 1);
         const isLastSerie = done.length + 1 >= planned;
+        const countdown = serieCountdown[exIdx];
+
+        if (isCircuitMode) return null; // circuit mode renders below
 
         return (
           <div
@@ -629,10 +747,18 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                           </p>
                         </div>
 
+                        {/* ── Regras Oficiais TAF ──────────────────────── */}
+                        <RegrasOficiaisCard exercicioId={ex.exercicioId} modalidadeTAF={ex.modalidadeTAF} />
+
                         {/* ── Iniciar série button ──────────────────── */}
                         {!isStarted ? (
                           <button
-                            onClick={() => startElapsedTimer(exIdx)}
+                            onClick={() => {
+                              startElapsedTimer(exIdx);
+                              if ((mod === 'isometria' || mod === 'cardio_livre') && ex.tempoPlanejadoSegundos) {
+                                startSerieCountdown(exIdx, ex.tempoPlanejadoSegundos);
+                              }
+                            }}
                             className="w-full rounded-xl border-2 py-3.5 text-sm font-black uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                             style={{
                               borderColor: theme.accentHex,
@@ -643,6 +769,20 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                             <Play size={15} />
                             Iniciar Série {done.length + 1}
                           </button>
+                        ) : countdown ? (
+                          <SerieCountdownTimer
+                            remaining={countdown.remaining}
+                            total={countdown.total}
+                            elapsed={elapsed}
+                            accentHex={theme.accentHex}
+                            onStopEarly={() => {
+                              stopSerieCountdown(exIdx);
+                              setCurrentInputs(prev => ({
+                                ...prev,
+                                [exIdx]: { ...prev[exIdx], tempoSegundos: String(elapsed) },
+                              }));
+                            }}
+                          />
                         ) : (
                           <>
                             <SerieInputs
@@ -679,6 +819,205 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
         );
       })}
 
+      {/* ── Circuit mode: group exercises by Volta ────────────────────── */}
+      {isCircuitMode && selectedPlano && Array.from({ length: numVoltas }, (_, voltaIdx) => {
+        const voltaNum = voltaIdx + 1;
+        const isPast = voltaNum < currentVolta;
+        const isCurrent = voltaNum === currentVolta;
+
+        return (
+          <div key={voltaNum} className="space-y-2">
+            {/* ── Volta header ───────────────────────────────────────── */}
+            <div className={`flex items-center gap-2.5 px-1 ${isPast ? 'text-brand' : isCurrent ? 'text-violet-400' : 'text-gray-600'}`}>
+              <div
+                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-black shrink-0 ${
+                  isPast ? 'border-brand bg-brand text-black' : isCurrent ? 'border-violet-400' : 'border-gray-700'
+                }`}
+              >
+                {isPast ? <CheckCircle size={11} /> : voltaNum}
+              </div>
+              <span className="text-[11px] font-black uppercase tracking-widest">
+                Volta {voltaNum}
+              </span>
+              {isCurrent && (
+                <span className="text-[9px] font-black uppercase tracking-[0.15em] text-violet-500 border border-violet-500/30 rounded px-1.5 py-0.5">
+                  EM ANDAMENTO
+                </span>
+              )}
+              {isPast && <div className="ml-2 h-px flex-1 bg-brand/20 rounded" />}
+            </div>
+
+            {/* ── Past volta: collapsed summary ───────────────────────── */}
+            {isPast && (
+              <div className="card px-4 py-3 flex flex-wrap gap-x-4 gap-y-2">
+                {selectedPlano.exercicios.map((ex, idx) => {
+                  const record = completedSeries[idx]?.[voltaIdx];
+                  if (!record) return null;
+                  const mod = getModalidade(ex);
+                  const theme = MODALIDADE_THEME[mod];
+                  const value =
+                    mod === 'corrida'
+                      ? record.distanciaMetros ? formatarDistancia(record.distanciaMetros) : '–'
+                      : mod === 'isometria' || mod === 'cardio_livre'
+                      ? record.tempoSegundos ? formatarTempo(record.tempoSegundos) : '–'
+                      : `${record.repeticoesReais}×`;
+                  return (
+                    <div key={idx} className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                      <theme.icon size={9} style={{ color: theme.accentHex }} />
+                      <span className="truncate max-w-[72px]">{ex.exercicioNome ?? ex.exercicioId}</span>
+                      <span className="font-bold" style={{ color: theme.accentHex }}>{value}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* ── Current & future voltas: exercise cards ─────────────── */}
+            {!isPast && selectedPlano.exercicios.map((ex, exIdx) => {
+              const doneAll = completedSeries[exIdx] ?? [];
+              const exDoneForVolta = doneAll.length >= voltaNum;
+              const mod = getModalidade(ex);
+              const theme = MODALIDADE_THEME[mod];
+              const isActive = activeExIdx === exIdx && isCurrent;
+              const isResting = restingCardIdx === exIdx && isCurrent;
+              const isStarted = !!exerciseStartedAt[exIdx];
+              const elapsed = exerciseElapsed[exIdx] ?? 0;
+              const countdown = serieCountdown[exIdx];
+              const input = currentInputs[exIdx] ?? { pesoReal: '', repeticoesReais: '', tempoSegundos: '', distanciaMetros: '', falhou: false };
+              const isLastEx = exIdx === selectedPlano.exercicios.length - 1;
+              const isLastVolta = voltaNum === numVoltas;
+
+              return (
+                <div
+                  key={exIdx}
+                  className={`card overflow-hidden transition-all duration-300 ${
+                    exDoneForVolta
+                      ? 'border-brand/50 bg-brand/5'
+                      : isActive
+                        ? `${theme.borderActive} ${theme.bgActive}`
+                        : !isCurrent
+                          ? 'border-outline opacity-40'
+                          : 'border-outline'
+                  }`}
+                >
+                  <button
+                    className="w-full flex items-center justify-between p-4"
+                    disabled={!isCurrent}
+                    onClick={() => isCurrent && setActiveExIdx(isActive ? null : exIdx)}
+                  >
+                    <div className="flex items-center gap-3 text-left min-w-0">
+                      <div
+                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black border-2 shrink-0 transition-colors ${
+                          exDoneForVolta ? 'bg-brand border-brand text-black' : ''
+                        }`}
+                        style={!exDoneForVolta ? { borderColor: isActive ? theme.accentHex : '#333', color: isActive ? theme.accentHex : '#6B7280' } : undefined}
+                      >
+                        {exDoneForVolta ? <CheckCircle size={14} /> : exIdx + 1}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-sm truncate">{ex.exercicioNome ?? ex.exercicioId}</p>
+                        <p className="text-xs text-gray-500">
+                          {ex.tempoPlanejadoSegundos
+                            ? formatarTempo(ex.tempoPlanejadoSegundos)
+                            : ex.distanciaPlanejadaMetros
+                            ? formatarDistancia(ex.distanciaPlanejadaMetros)
+                            : ex.repeticoesPlanejadas
+                            ? `${ex.repeticoesPlanejadas} reps`
+                            : ''}
+                          {ex.pesoPlanejado ? ` @ ${ex.pesoPlanejado}kg` : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <span className="sm:hidden" style={{ color: theme.accentHex }}>
+                        <theme.icon size={13} />
+                      </span>
+                      {isCurrent && (isActive ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />)}
+                    </div>
+                  </button>
+
+                  {isActive && isCurrent && (
+                    <div className="border-t border-outline">
+                      {isResting ? (
+                        <InlineRestTimer
+                          timerSeconds={timerSeconds}
+                          defaultRestTime={defaultRestTime}
+                          exerciseName={ex.exercicioNome ?? ex.exercicioId}
+                          nextSerieNum={voltaNum + 1}
+                          totalSeries={numVoltas}
+                          isExerciseComplete={exDoneForVolta}
+                          isLastExercise={isLastEx && isLastVolta}
+                          isLastSerie={isLastVolta && !exDoneForVolta}
+                          onSkip={stopTimer}
+                          onAddTime={() => addRestTime(30)}
+                        />
+                      ) : (
+                        <div className="px-4 pb-4 pt-2 space-y-3">
+                          {!exDoneForVolta ? (
+                            !isStarted ? (
+                              <>
+                                {/* ── Regras Oficiais TAF ─────────────── */}
+                                <RegrasOficiaisCard exercicioId={ex.exercicioId} modalidadeTAF={ex.modalidadeTAF} />
+                                <button
+                                  onClick={() => {
+                                    startElapsedTimer(exIdx);
+                                    if ((mod === 'isometria' || mod === 'cardio_livre') && ex.tempoPlanejadoSegundos) {
+                                      startSerieCountdown(exIdx, ex.tempoPlanejadoSegundos);
+                                    }
+                                  }}
+                                  className="w-full rounded-xl border-2 py-3.5 text-sm font-black uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                  style={{ borderColor: theme.accentHex, color: theme.accentHex, background: `${theme.accentHex}12` }}
+                                >
+                                  <Play size={15} />
+                                  Iniciar
+                                </button>
+                              </>
+                            ) : countdown ? (
+                              <SerieCountdownTimer
+                                remaining={countdown.remaining}
+                                total={countdown.total}
+                                elapsed={elapsed}
+                                accentHex={theme.accentHex}
+                                onStopEarly={() => {
+                                  stopSerieCountdown(exIdx);
+                                  setCurrentInputs(prev => ({
+                                    ...prev,
+                                    [exIdx]: { ...prev[exIdx], tempoSegundos: String(elapsed) },
+                                  }));
+                                }}
+                              />
+                            ) : (
+                              <>
+                                <SerieInputs
+                                  modalidade={mod}
+                                  input={input}
+                                  onChange={(field, value) => setCurrentInputs(prev => ({
+                                    ...prev,
+                                    [exIdx]: { ...prev[exIdx], [field]: value },
+                                  }))}
+                                />
+                                <button onClick={() => handleAddSerie(exIdx)} className="btn-primary w-full">
+                                  <CheckCircle size={16} />
+                                  Concluir
+                                </button>
+                              </>
+                            )
+                          ) : (
+                            <div className="py-2 flex items-center gap-2 text-brand text-sm font-bold">
+                              <CheckCircle size={16} />Concluído nesta volta!
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+
       <button onClick={handleFinalize} disabled={saving} className="btn-primary w-full mt-4">
         {saving ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin motion-reduce:animate-none" /> : <Trophy size={16} />}
         {saving ? 'Salvando...' : 'Finalizar Treino'}
@@ -702,6 +1041,51 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
 }
 
 // ─── Sub-componentes ──────────────────────────────────────────────────────────
+
+// ─── RegrasOficiaisCard ───────────────────────────────────────────────────────
+
+function RegrasOficiaisCard({
+  exercicioId,
+  modalidadeTAF,
+}: {
+  exercicioId: string;
+  modalidadeTAF?: string;
+}) {
+  const [expanded, setExpanded] = useState(true);
+  if (!modalidadeTAF) return null;
+  const regras = REGRAS_MAP.get(exercicioId);
+  if (!regras) return null;
+
+  const LABEL: Record<string, string> = {
+    barra_fixa: 'Barra Fixa',
+    remador_abdominal: 'Abdominal Remador',
+    corrida_12min: 'Corrida 12 min',
+  };
+
+  return (
+    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 overflow-hidden">
+      <button
+        onClick={() => setExpanded(prev => !prev)}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left"
+      >
+        <ShieldAlert size={13} className="text-amber-400 shrink-0" />
+        <span className="text-[10px] font-black uppercase tracking-widest text-amber-400 flex-1">
+          Regras Oficiais TAF — {LABEL[modalidadeTAF] ?? modalidadeTAF}
+        </span>
+        {expanded
+          ? <ChevronUp size={13} className="text-amber-500/60 shrink-0" />
+          : <ChevronDown size={13} className="text-amber-500/60 shrink-0" />}
+      </button>
+      {expanded && (
+        <p className="px-3 pb-3 text-xs text-amber-300/80 leading-relaxed border-t border-amber-500/20 pt-2">
+          {regras}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─── SerieInputs ──────────────────────────────────────────────────────────────
 
 interface SerieInputsProps {
   modalidade: ModalidadeExercicio;
@@ -1046,6 +1430,82 @@ function ExercicioSeriesTable({ done, modalidade }: ExercicioSeriesTableProps) {
           <span>{s.pesoReal}kg</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ─── SerieCountdownTimer ──────────────────────────────────────────────────────
+
+interface SerieCountdownTimerProps {
+  remaining: number;
+  total: number;
+  elapsed: number;
+  accentHex: string;
+  onStopEarly: () => void;
+}
+
+function SerieCountdownTimer({ remaining, total, elapsed, accentHex, onStopEarly }: SerieCountdownTimerProps) {
+  const RADIUS = 38;
+  const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+  const progress = total > 0 ? remaining / total : 0;
+  const offset = CIRCUMFERENCE * (1 - progress);
+  const m = Math.floor(remaining / 60);
+  const s = remaining % 60;
+  const display = `${m}:${s.toString().padStart(2, '0')}`;
+
+  const strokeColor =
+    remaining === 0 ? '#22C55E'
+    : progress > 0.5 ? accentHex
+    : progress > 0.2 ? '#F59E0B'
+    : '#EF4444';
+
+  return (
+    <div className="flex flex-col items-center gap-3 py-3">
+      <p className="font-mono text-[9px] font-black uppercase tracking-[0.4em] text-gray-600">
+        // SÉRIE EM ANDAMENTO
+      </p>
+      <div className="relative flex items-center justify-center">
+        <svg width="96" height="96" viewBox="0 0 96 96" aria-hidden="true">
+          <circle cx="48" cy="48" r={RADIUS} fill="none" stroke="#1A1A1A" strokeWidth="4" />
+          <circle
+            cx="48" cy="48" r={RADIUS}
+            fill="none"
+            stroke={strokeColor}
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeDasharray={CIRCUMFERENCE}
+            strokeDashoffset={remaining > 0 ? offset : 0}
+            transform="rotate(-90 48 48)"
+            style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.4s ease' }}
+            className="motion-reduce:transition-none"
+          />
+        </svg>
+        <div className="absolute text-center">
+          {remaining > 0 ? (
+            <span
+              className="font-mono font-black text-2xl tabular-nums"
+              style={{ color: strokeColor, textShadow: `0 0 12px ${strokeColor}60` }}
+            >
+              {display}
+            </span>
+          ) : (
+            <CheckCircle size={28} className="text-green-500" />
+          )}
+        </div>
+      </div>
+      {remaining > 0 && (
+        <p className="text-[10px] font-mono text-gray-600">
+          decorrido: {formatarTempo(elapsed)}
+        </p>
+      )}
+      {remaining > 0 && (
+        <button
+          onClick={onStopEarly}
+          className="rounded-xl border border-outline bg-surface py-2.5 px-6 text-xs font-black uppercase tracking-widest text-gray-400 active:bg-surface-hover transition-colors"
+        >
+          Parar Cedo
+        </button>
+      )}
     </div>
   );
 }

@@ -143,6 +143,8 @@ export const workoutService = {
     diaDaSemana?: string;
     planoId?: string;
     objetivo?: string;
+    tipoSessao?: string;
+    bloco?: number;
   }): Promise<string> {
     if (!auth.currentUser) throw new Error('User must be logged in');
     const uid = auth.currentUser.uid;

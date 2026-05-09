@@ -5,6 +5,7 @@ import { ptBR } from 'date-fns/locale';
 import { ResponsiveCalendar } from '@nivo/calendar';
 import { workoutService } from '../../lib/workoutService';
 import { WorkoutExerciseSummary, WorkoutSession } from '../../types';
+import type { TipoSessaoTAF } from '../../types';
 import { useWorkouts, useInvalidateWorkouts } from '../../hooks/useWorkouts';
 import { exportToCSV } from '../../lib/exportUtils';
 import { formatarResumoExercicio } from '../../lib/exercicioUtils';
@@ -14,6 +15,16 @@ function toDate(raw: unknown): Date {
   if (raw && typeof (raw as any).toDate === 'function') return (raw as any).toDate();
   return new Date(raw as string);
 }
+
+const TIPO_SESSAO_OPCOES: { value: TipoSessaoTAF; label: string; color: string }[] = [
+  { value: 'forca',          label: 'Força',         color: '#F59E0B' },
+  { value: 'intervalado',    label: 'Intervalado',    color: '#60A5FA' },
+  { value: 'circuito_taf',   label: 'Circuito TAF',  color: '#A78BFA' },
+  { value: 'corrida_longa',  label: 'Corrida Longa', color: '#34D399' },
+  { value: 'simulado',       label: 'Simulado',       color: '#CCFF00' },
+  { value: 'prevencao_lesao',label: 'Prevenção',      color: '#F87171' },
+  { value: 'descanso',       label: 'Descanso',       color: '#6B7280' },
+];
 
 interface HistoryProps {
   onNavigate?: (screen: string) => void;
@@ -28,6 +39,7 @@ export default function History({ onNavigate }: HistoryProps) {
   const [endDate, setEndDate] = useState('');
   const [filterGroup, setFilterGroup] = useState('');
   const [filterObjetivo, setFilterObjetivo] = useState('');
+  const [filterTipoSessao, setFilterTipoSessao] = useState<TipoSessaoTAF | ''>('');
   const [deleting, setDeleting] = useState<string | null>(null);
   const [calendarYear, setCalendarYear] = useState(getYear(new Date()));
   const [selectMode, setSelectMode] = useState(false);
@@ -35,7 +47,7 @@ export default function History({ onNavigate }: HistoryProps) {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
-  const activeFilterCount = [startDate, endDate, filterGroup, filterObjetivo].filter(Boolean).length;
+  const activeFilterCount = [startDate, endDate, filterGroup, filterObjetivo, filterTipoSessao].filter(Boolean).length;
 
   // -- Heatmap data ------------------------------------------------------------
   const heatmapData = useMemo(() => {
@@ -77,6 +89,8 @@ export default function History({ onNavigate }: HistoryProps) {
       }
       if (filterGroup && !w.exerciciosSummary?.some(s => s.grupoMuscular === filterGroup)) return false;
       if (filterObjetivo && w.objetivo !== filterObjetivo) return false;
+      if (filterTipoSessao && w.tipoSessao !== filterTipoSessao) return false;
+      if (filterTipoSessao && w.tipoSessao !== filterTipoSessao) return false;
       if (search) {
         const q = search.toLowerCase();
         const matchName = (w.nomeTreino ?? '').toLowerCase().includes(q);
@@ -85,7 +99,7 @@ export default function History({ onNavigate }: HistoryProps) {
       }
       return true;
     });
-  }, [workouts, search, startDate, endDate, filterGroup, filterObjetivo]);
+  }, [workouts, search, startDate, endDate, filterGroup, filterObjetivo, filterTipoSessao]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, WorkoutSession[]>();
@@ -326,6 +340,26 @@ export default function History({ onNavigate }: HistoryProps) {
         </div>
         {showFilters && (
           <div className="space-y-3">
+            {/* ── Tipo de Sessão — chip strip ─────────────────────────── */}
+            <div>
+              <label className="input-label">Tipo de Sessão</label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {TIPO_SESSAO_OPCOES.map(({ value, label, color }) => (
+                  <button
+                    key={value}
+                    onClick={() => setFilterTipoSessao(prev => prev === value ? '' : value as TipoSessaoTAF)}
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-widest border transition-all ${
+                      filterTipoSessao === value
+                        ? 'text-black'
+                        : 'border-outline text-gray-500 bg-surface-hover'
+                    }`}
+                    style={filterTipoSessao === value ? { background: color, borderColor: color } : undefined}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="input-label">De</label>
@@ -373,11 +407,11 @@ export default function History({ onNavigate }: HistoryProps) {
       {grouped.length === 0 ? (
         <div className="card p-8 text-center space-y-2">
           <p className="text-sm font-bold text-gray-400">
-            {search || startDate || filterGroup || filterObjetivo
+            {search || startDate || filterGroup || filterObjetivo || filterTipoSessao
               ? 'Nenhum treino corresponde aos filtros.'
               : 'Sem treinos ainda.'}
           </p>
-          {!search && !startDate && !filterGroup && !filterObjetivo && (
+          {!search && !startDate && !filterGroup && !filterObjetivo && !filterTipoSessao && (
             <p className="text-xs text-gray-600">
               Cada sessão aqui é permanente. Registre a primeira agora.
             </p>
@@ -411,7 +445,18 @@ export default function History({ onNavigate }: HistoryProps) {
                       )}
                       <div className="min-w-0">
                         <p className="font-bold text-sm truncate">{workout.nomeTreino ?? 'Treino'}</p>
-                        <div className="flex gap-2 mt-0.5">
+                        <div className="flex gap-2 mt-0.5 flex-wrap">
+                          {workout.tipoSessao && (() => {
+                            const opt = TIPO_SESSAO_OPCOES.find(o => o.value === workout.tipoSessao);
+                            return opt ? (
+                              <span
+                                className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded text-black"
+                                style={{ background: opt.color }}
+                              >
+                                {opt.label}
+                              </span>
+                            ) : null;
+                          })()}
                           {workout.objetivo && (
                             <span className="text-[11px] font-black uppercase tracking-wider text-gray-500 bg-surface-hover px-2 py-0.5 rounded">
                               {workout.objetivo}

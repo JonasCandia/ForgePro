@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
-import { Dumbbell, TrendingUp, Calendar, Trophy, Play, Ruler, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Dumbbell, TrendingUp, Calendar, Trophy, Play, Ruler, AlertCircle, ChevronLeft, ChevronRight, Target, Zap, User, Timer } from 'lucide-react';
 import type { Screen } from '../../App';
 import {
   format, startOfMonth, endOfMonth, isWithinInterval, differenceInDays,
   eachDayOfInterval, getDay, startOfWeek, endOfWeek, isSameMonth, addMonths, subMonths,
 } from 'date-fns';
+import { differenceInWeeks } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useWorkouts } from '../../hooks/useWorkouts';
 import { useMeasurements } from '../../hooks/useMeasurements';
 import { usePlanos } from '../../hooks/usePlanos';
+import { useTAFScores } from '../../hooks/useTAF';
+import { useProfile } from '../../hooks/useProfile';
+import { TAF_METAS_MUITO_BOM } from '../../constants';
+import type { TAFScore } from '../../types';
 
 // Portuguese weekday name ? JS getDay() index (0=Sun)
 const DIA_SEMANA_MAP: Record<string, number> = {
@@ -173,6 +178,181 @@ function LegendItem({ color, border, label, textColor = 'text-gray-500' }: {
   );
 }
 
+// --- TAFProgressWidget -------------------------------------------------------
+
+const CONCEITO_COLOR: Record<string, string> = {
+  Excelente:    '#CCFF00',
+  'Muito Bom':  '#34D399',
+  Bom:          '#60A5FA',
+  Regular:      '#F59E0B',
+  Insuficiente: '#EF4444',
+};
+
+const DISCIPLINAS = [
+  { key: 'barraFixa'       as const, label: 'Barra Fixa',  unit: 'reps', icon: User,  meta: TAF_METAS_MUITO_BOM.barraFixa,        pts: (s: TAFScore) => s.ptsBarra },
+  { key: 'remadorAbdominal'as const, label: 'Abdominal',   unit: 'reps', icon: Zap,   meta: TAF_METAS_MUITO_BOM.remadorAbdominal, pts: (s: TAFScore) => s.ptsAbdominal },
+  { key: 'corrida12min'    as const, label: 'Corrida 12min', unit: 'm', icon: Timer, meta: TAF_METAS_MUITO_BOM.corrida12min,    pts: (s: TAFScore) => s.ptsCorreida },
+];
+
+interface TAFProgressWidgetProps {
+  scores: TAFScore[];
+  onNavigate: (screen: Screen) => void;
+}
+
+function TAFProgressWidget({ scores, onNavigate }: TAFProgressWidgetProps) {
+  if (scores.length === 0) {
+    return (
+      <button
+        onClick={() => onNavigate('taf')}
+        className="w-full flex items-center gap-3 p-4 rounded-xl border border-dashed border-emerald-500/40 bg-emerald-500/5 hover:bg-emerald-500/10 transition-colors text-left"
+      >
+        <div className="flex-shrink-0 bg-emerald-500/15 rounded-full p-2">
+          <Target size={16} className="text-emerald-400" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs font-black uppercase tracking-wider text-emerald-400">Registrar Primeiro Simulado TAF</p>
+          <p className="text-xs text-gray-500 mt-0.5">Compare seu resultado com as metas do Muito Bom</p>
+        </div>
+      </button>
+    );
+  }
+
+  const sorted = [...scores].sort((a, b) => a.data.localeCompare(b.data));
+  const latest = sorted[sorted.length - 1];
+  const conceitoColor = CONCEITO_COLOR[latest.conceito] ?? '#6B7280';
+
+  // Projection: requires ≥2 scores with different dates
+  let projectionLabel: string | null = null;
+  if (sorted.length >= 2) {
+    const first = sorted[0];
+    const weeksDiff = differenceInWeeks(new Date(latest.data + 'T12:00:00'), new Date(first.data + 'T12:00:00'));
+    const notaGain = latest.notaFinal - first.notaFinal;
+    if (weeksDiff > 0 && notaGain > 0 && latest.notaFinal < 8.5) {
+      const ratePerWeek = notaGain / weeksDiff;
+      const weeksToGoal = Math.ceil((8.5 - latest.notaFinal) / ratePerWeek);
+      projectionLabel = `No ritmo atual → meta em ~${weeksToGoal} semana${weeksToGoal !== 1 ? 's' : ''}`;
+    } else if (latest.notaFinal >= 8.5) {
+      projectionLabel = 'Meta Muito Bom atingida!';
+    } else if (notaGain <= 0 && weeksDiff > 0) {
+      projectionLabel = 'Evolução estável — continue treinando';
+    }
+  }
+
+  return (
+    <section className="card p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Target size={14} style={{ color: conceitoColor }} />
+          <h3 className="text-[10px] text-gray-500 uppercase tracking-widest font-black">Progresso TAF</h3>
+        </div>
+        <button
+          onClick={() => onNavigate('taf')}
+          className="text-[10px] font-black uppercase tracking-widest text-gray-600 hover:text-gray-300 transition-colors"
+        >
+          Ver Todos →
+        </button>
+      </div>
+
+      {/* Nota final */}
+      <div className="flex items-end gap-3">
+        <div>
+          <p
+            className="font-mono font-black text-5xl leading-none tabular-nums"
+            style={{ color: conceitoColor, textShadow: `0 0 20px ${conceitoColor}50` }}
+          >
+            {latest.notaFinal.toFixed(1)}
+          </p>
+          <p className="text-[10px] font-black uppercase tracking-widest mt-1" style={{ color: conceitoColor }}>
+            {latest.conceito}
+          </p>
+        </div>
+        <div className="flex-1 min-w-0 pb-0.5 space-y-0.5">
+          <p className="text-[10px] text-gray-600 font-bold">
+            Último simulado: {format(new Date(latest.data + 'T12:00:00'), "dd/MM/yy", { locale: ptBR })}
+          </p>
+          {/* Mini nota timeline if >1 score */}
+          {sorted.length > 1 && (
+            <div className="flex items-center gap-1">
+              {sorted.slice(-6).map((s, i) => (
+                <div key={i} className="flex flex-col items-center gap-0.5">
+                  <div
+                    className="w-5 rounded-sm"
+                    style={{
+                      height: `${Math.max(4, Math.round((s.notaFinal / 10) * 28))}px`,
+                      background: CONCEITO_COLOR[s.conceito] ?? '#444',
+                      opacity: i === sorted.slice(-6).length - 1 ? 1 : 0.45,
+                    }}
+                  />
+                </div>
+              ))}
+              <span className="text-[8px] text-gray-600 font-bold ml-0.5">←evolução</span>
+            </div>
+          )}
+          {/* Meta Muito Bom reference */}
+          <p className="text-[9px] text-gray-600">
+            Meta Muito Bom: <span className="font-bold text-emerald-400">8.5</span>
+          </p>
+        </div>
+      </div>
+
+      {/* Per-discipline progress bars */}
+      <div className="space-y-2.5">
+        {DISCIPLINAS.map(({ key, label, unit, icon: Icon, meta, pts }) => {
+          const valor = latest[key];
+          const progress = Math.min(1, valor / meta);
+          const atingiu = valor >= meta;
+          return (
+            <div key={key} className="space-y-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                  <Icon size={9} />
+                  {label}
+                </div>
+                <div className="flex items-center gap-1.5 text-[10px] font-mono">
+                  <span className={atingiu ? 'text-emerald-400 font-black' : 'text-gray-300'}>
+                    {unit === 'm' ? `${valor}m` : `${valor} ${unit}`}
+                  </span>
+                  <span className="text-gray-700">/</span>
+                  <span className="text-gray-600">{unit === 'm' ? `${meta}m` : `${meta} ${unit}`}</span>
+                  <span
+                    className="text-[9px] font-black px-1 py-0.5 rounded"
+                    style={{
+                      color: atingiu ? '#34D399' : '#F59E0B',
+                      background: atingiu ? '#34D39915' : '#F59E0B15',
+                    }}
+                  >
+                    {pts(latest).toFixed(1)}pts
+                  </span>
+                </div>
+              </div>
+              <div className="h-1.5 rounded-full bg-surface-hover overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-[width] duration-700 ease-out"
+                  style={{
+                    width: `${progress * 100}%`,
+                    background: atingiu ? '#34D399' : '#F59E0B',
+                    boxShadow: atingiu ? '0 0 6px #34D39960' : 'none',
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Projection */}
+      {projectionLabel && (
+        <p
+          className="text-[10px] font-bold uppercase tracking-widest border-t border-outline pt-3"
+          style={{ color: latest.notaFinal >= 8.5 ? '#34D399' : '#F59E0B' }}
+        >
+          {projectionLabel}
+        </p>
+      )}
+    </section>
+  );
+}
+
 // --- Dashboard ---------------------------------------------------------------
 
 interface DashboardProps {
@@ -183,6 +363,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const { data: workouts = [], isLoading: loading } = useWorkouts();
   const { data: measurements = [] } = useMeasurements();
   const { data: planos = [] } = usePlanos();
+  const { data: tafScores = [] } = useTAFScores();
+  const { data: profile } = useProfile();
+  const isTAFUser = profile?.objetivo === 'taf' || tafScores.length > 0;
 
   const now = new Date();
   const [calendarMonth, setCalendarMonth] = useState(now);
@@ -299,6 +482,14 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               </div>
               <AlertCircle size={14} className="text-brand/60 flex-shrink-0 ml-auto" />
             </button>
+          )}
+
+          {/* ===== TAF PROGRESS WIDGET ===== */}
+          {isTAFUser && (
+            <TAFProgressWidget
+              scores={tafScores}
+              onNavigate={onNavigate}
+            />
           )}
 
           {/* ===== WORKOUT CALENDAR ===== */}

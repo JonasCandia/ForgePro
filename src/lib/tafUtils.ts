@@ -2,11 +2,12 @@
  * tafUtils.ts — Lógica de pontuação e conceitos do TAF CBMRS
  * Baseado na Instrução Reguladora n.º 001/Sec.Exec./GCG/2024, Anexo F
  */
-import type { ConceitoTAF } from '../types';
+import type { ConceitoTAF, FaixaEtariaTAF, SexoBio } from '../types';
 import {
   TAF_BARRA_MASC_25_29,
   TAF_ABDOMINAL_MASC_25_29,
   TAF_CORRIDA_MASC_25_29,
+  TAF_TABLES,
 } from '../constants';
 
 /**
@@ -98,4 +99,67 @@ export function projetarNotaTAF(
   const vals = { ...atual, [campo]: novoValor };
   const { notaFinal } = calcularResultadoTAF(vals.barraFixa, vals.remadorAbdominal, vals.corrida12min);
   return notaFinal;
+}
+
+// ─── Perfil-aware API ─────────────────────────────────────────────────────────
+
+/** Returns the TAF tables for a given sexo + faixaEtaria, defaulting to MASC 25-29. */
+export function getTAFTables(sexo?: SexoBio, faixa?: FaixaEtariaTAF) {
+  const key = sexo && faixa ? `${sexo}_${faixa}` : 'M_25_29';
+  return TAF_TABLES[key] ?? TAF_TABLES['M_25_29'];
+}
+
+/**
+ * Calcula resultado TAF usando as tabelas corretas para o perfil do atleta.
+ * Retorna o mesmo formato que calcularResultadoTAF.
+ */
+export function calcularResultadoTAFComPerfil(
+  barraFixa: number,
+  remadorAbdominal: number,
+  corrida12min: number,
+  sexo?: SexoBio,
+  faixa?: FaixaEtariaTAF,
+) {
+  const tables = getTAFTables(sexo, faixa);
+  const ptsBarra     = lookupPontuacao(tables.barra, barraFixa);
+  const ptsAbdominal = lookupPontuacao(tables.abdominal, remadorAbdominal);
+  const ptsCorreida  = lookupPontuacao(tables.corrida, corrida12min);
+  const notaFinal    = calcularNotaTAF(ptsBarra, ptsAbdominal, ptsCorreida);
+  const conceito     = calcularConceitoTAF(notaFinal);
+  return { ptsBarra, ptsAbdominal, ptsCorreida, notaFinal, conceito };
+}
+
+/**
+ * Retorna as metas de "Muito Bom" (nota ≥ 8.5) para o perfil do atleta.
+ * Encontra o menor valor em cada tabela que resulta em score ≥ 8.5 pts.
+ */
+export function getMetasMuitoBom(sexo?: SexoBio, faixa?: FaixaEtariaTAF) {
+  const tables = getTAFTables(sexo, faixa);
+  const thresholdForMuitoBom = 8.5;
+
+  function findMeta(table: ReadonlyArray<readonly [number, number]>): number {
+    // Table is sorted descending by min value; find first entry with pts >= threshold
+    for (const [min, pts] of table) {
+      if (pts >= thresholdForMuitoBom) return min;
+    }
+    return 0;
+  }
+
+  return {
+    barraFixa:        findMeta(tables.barra),
+    remadorAbdominal: findMeta(tables.abdominal),
+    corrida12min:     findMeta(tables.corrida),
+  };
+}
+
+/** Projeta nota usando tabelas corretas para o perfil. */
+export function projetarNotaTAFComPerfil(
+  campo: 'barraFixa' | 'remadorAbdominal' | 'corrida12min',
+  novoValor: number,
+  atual: { barraFixa: number; remadorAbdominal: number; corrida12min: number },
+  sexo?: SexoBio,
+  faixa?: FaixaEtariaTAF,
+): number {
+  const vals = { ...atual, [campo]: novoValor };
+  return calcularResultadoTAFComPerfil(vals.barraFixa, vals.remadorAbdominal, vals.corrida12min, sexo, faixa).notaFinal;
 }

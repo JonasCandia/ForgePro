@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, PlusCircle, History as HistoryIcon, TrendingUp, Dumbbell, LogIn, LogOut, Trophy, User as UserIcon, Sun, Moon, FileDown, WifiOff, Target, ClipboardList } from 'lucide-react';
+import { Home, PlusCircle, History as HistoryIcon, TrendingUp, Dumbbell, LogIn, LogOut, Trophy, User as UserIcon, Sun, Moon, FileDown, WifiOff, Target, ClipboardList, ShieldCheck } from 'lucide-react';
 import Dashboard from './components/screens/Dashboard';
 import LogWorkout from './components/screens/LogWorkout';
 import History from './components/screens/History';
@@ -9,6 +9,7 @@ import ExecutePlannedWorkout from './components/screens/ExecutePlannedWorkout';
 import UserProfile from './components/screens/UserProfile';
 import Records from './components/screens/Records';
 import BodyMeasurements from './components/screens/BodyMeasurements';
+import Prevention from './components/screens/Prevention';
 import TAFScore from './components/screens/TAFScore';
 import ViewPlan from './components/screens/ViewPlan';
 import ManageWorkouts from './components/screens/ManageWorkouts';
@@ -20,9 +21,9 @@ import { useAppStore } from './store/appStore';
 import { useProfile } from './hooks/useProfile';
 import { useOnlineSync } from './hooks/useOnlineSync';
 
-export type Screen = 'home' | 'log' | 'history' | 'progress' | 'import' | 'execute' | 'profile' | 'records' | 'measurements' | 'taf' | 'plan' | 'manage-workouts';
+export type Screen = 'home' | 'log' | 'history' | 'progress' | 'import' | 'execute' | 'profile' | 'records' | 'measurements' | 'taf' | 'plan' | 'manage-workouts' | 'prevention';
 
-const NAV_SCREENS = ['home', 'history', 'plan', 'progress', 'taf', 'records'] as const;
+const NAV_SCREENS = ['home', 'history', 'plan', 'progress', 'taf', 'records', 'prevention'] as const;
 type NavScreen = (typeof NAV_SCREENS)[number];
 
 function AppInner() {
@@ -141,6 +142,8 @@ function AppInner() {
         return <BodyMeasurements onBack={() => setCurrentScreen('home')} />;
       case 'taf':
         return <TAFScore />;
+      case 'prevention':
+        return <Prevention />;
       case 'plan':
         return <ViewPlan onNavigateImport={() => setCurrentScreen('import')} />;
       default:
@@ -161,14 +164,14 @@ function AppInner() {
         
         {/* Desktop Nav */}
         <div className="hidden md:flex gap-8 text-[11px] font-bold uppercase tracking-widest h-full">
-          {(['home', 'plan', 'history', 'progress', 'records', 'measurements', 'taf', 'import'] as const).map((screen) => (
+          {(['home', 'plan', 'history', 'progress', 'records', 'measurements', 'taf', 'prevention', 'import'] as const).map((screen) => (
             <button 
               key={screen}
               disabled={!user}
               onClick={() => setCurrentScreen(screen)}
               className={`h-full border-b-2 flex items-center px-2 transition-colors ${currentScreen === screen ? 'text-brand border-brand' : 'text-gray-500 border-transparent hover:text-gray-300'} disabled:opacity-30`}
             >
-              {screen === 'home' ? 'Início' : screen === 'plan' ? 'Plano' : screen === 'history' ? 'Histórico' : screen === 'progress' ? 'Progresso' : screen === 'records' ? 'Recordes' : screen === 'measurements' ? 'Medidas' : screen === 'taf' ? 'TAF' : 'Importar'}
+              {screen === 'home' ? 'Início' : screen === 'plan' ? 'Plano' : screen === 'history' ? 'Histórico' : screen === 'progress' ? 'Progresso' : screen === 'records' ? 'Recordes' : screen === 'measurements' ? 'Medidas' : screen === 'taf' ? 'TAF' : screen === 'prevention' ? 'Prevenção' : 'Importar'}
             </button>
           ))}
         </div>
@@ -301,8 +304,9 @@ function AppInner() {
                 <NavItem active={currentScreen === 'history'}  icon={<HistoryIcon size={20} />}  label="Histórico" onClick={() => setCurrentScreen('history')} />
                 <NavItem active={currentScreen === 'plan'}     icon={<ClipboardList size={20} />} label="Plano"    onClick={() => setCurrentScreen('plan')} />
                 <NavItem active={currentScreen === 'progress'} icon={<TrendingUp size={20} />}   label="Progresso" onClick={() => setCurrentScreen('progress')} />
-                <NavItem active={currentScreen === 'taf'}      icon={<Target size={20} />}       label="TAF"       onClick={() => setCurrentScreen('taf')} />
-                <NavItem active={currentScreen === 'records'}  icon={<Trophy size={20} />}       label="Recordes"  onClick={() => setCurrentScreen('records')} />
+                <NavItem active={currentScreen === 'taf'}        icon={<Target size={20} />}       label="TAF"       onClick={() => setCurrentScreen('taf')} />
+                <NavItem active={currentScreen === 'records'}    icon={<Trophy size={20} />}       label="Recordes"  onClick={() => setCurrentScreen('records')} />
+                <NavItem active={currentScreen === 'prevention'} icon={<ShieldCheck size={20} />}  label="Prevenção" onClick={() => setCurrentScreen('prevention')} />
               </div>
             </nav>
           </>

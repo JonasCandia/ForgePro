@@ -1,16 +1,16 @@
 ﻿import React, { useState, useMemo } from 'react';
-import { TrendingUp, ChevronDown, BarChart2, Activity } from 'lucide-react';
+import { TrendingUp, ChevronDown, BarChart2, Activity, GitCompare } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import {
   LineChart, Line,
   BarChart, Bar,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend,
 } from 'recharts';
 import { useWorkouts } from '../../hooks/useWorkouts';
 import { useExercises } from '../../hooks/useExercises';
 
-type Tab = 'evolution' | 'volume' | 'radar';
+type Tab = 'evolution' | 'volume' | 'radar' | 'blocos';
 type RadarPeriod = 7 | 30 | 90;
 
 function toDate(raw: unknown): Date {
@@ -95,11 +95,93 @@ export default function Progress() {
       .sort((a, b) => b.count - a.count);
   }, [workouts, radarPeriod]);
 
+  // -- Bloco 1 vs Bloco 2 -------------------------------------------------------
+  const blocoComparacao = useMemo(() => {
+    // Classify each finished workout into a bloco.
+    // Priority: explicit bloco field > semana-based heuristic (1-4 = B1, 5+ = B2)
+    function getBloco(w: (typeof workouts)[0]): 1 | 2 | null {
+      if (w.bloco === 1 || w.bloco === 2) return w.bloco as 1 | 2;
+      if (w.semana != null) return w.semana <= 4 ? 1 : 2;
+      return null;
+    }
+
+    const b1 = workouts.filter(w => w.status === 'finalizado' && getBloco(w) === 1);
+    const b2 = workouts.filter(w => w.status === 'finalizado' && getBloco(w) === 2);
+
+    if (b1.length === 0 && b2.length === 0) return null;
+
+    // Volume by muscle group per bloco
+    function groupVolume(sessions: typeof workouts) {
+      const map = new Map<string, number>();
+      sessions.forEach(w => {
+        w.exerciciosSummary?.forEach(s => {
+          const g = s.grupoMuscular ?? 'Outros';
+          map.set(g, (map.get(g) ?? 0) + (s.volumeTotal ?? 0));
+        });
+      });
+      return map;
+    }
+
+    const vol1 = groupVolume(b1);
+    const vol2 = groupVolume(b2);
+    const allGroups = Array.from(new Set([...vol1.keys(), ...vol2.keys()]));
+    const volumeChart = allGroups
+      .map(g => ({ group: shortLabel(g, 12), b1: vol1.get(g) ?? 0, b2: vol2.get(g) ?? 0 }))
+      .sort((a, b) => (b.b1 + b.b2) - (a.b1 + a.b2))
+      .slice(0, 8);
+
+    // Total volume per bloco
+    function totalVol(sessions: typeof workouts) {
+      return sessions.reduce((acc, w) => acc + (w.exerciciosSummary?.reduce((s, ex) => s + (ex.volumeTotal ?? 0), 0) ?? 0), 0);
+    }
+
+    // Avg load per exercise (top 8 by combined presence)
+    function avgLoadMap(sessions: typeof workouts) {
+      const map = new Map<string, { nome: string; totalPeso: number; count: number }>();
+      sessions.forEach(w => {
+        w.exerciciosSummary?.forEach(s => {
+          if (s.pesoMax > 0) {
+            const entry = map.get(s.exercicioId) ?? { nome: s.exercicioNome, totalPeso: 0, count: 0 };
+            entry.totalPeso += s.pesoMax;
+            entry.count += 1;
+            map.set(s.exercicioId, entry);
+          }
+        });
+      });
+      return map;
+    }
+
+    const load1 = avgLoadMap(b1);
+    const load2 = avgLoadMap(b2);
+    const allExIds = Array.from(new Set([...load1.keys(), ...load2.keys()]));
+    const loadChart = allExIds
+      .map(id => {
+        const e1 = load1.get(id);
+        const e2 = load2.get(id);
+        const nome = (e1 ?? e2)!.nome;
+        return {
+          nome: nome.length > 14 ? nome.slice(0, 13) + '…' : nome,
+          b1: e1 ? Math.round(e1.totalPeso / e1.count) : 0,
+          b2: e2 ? Math.round(e2.totalPeso / e2.count) : 0,
+        };
+      })
+      .filter(d => d.b1 > 0 || d.b2 > 0)
+      .sort((a, b) => Math.max(b.b1, b.b2) - Math.max(a.b1, a.b2))
+      .slice(0, 8);
+
+    return {
+      sessoes: { b1: b1.length, b2: b2.length },
+      volume:  { b1: totalVol(b1), b2: totalVol(b2) },
+      volumeChart,
+      loadChart,
+      hasData: volumeChart.length > 0 || loadChart.length > 0,
+    };
+  }, [workouts]);
+
   if (loading) {
     return (
       <div className="space-y-6 pt-4 pb-24">
         <div className="space-y-1">
-          <div className="h-3 w-20 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
           <div className="h-7 w-36 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
         </div>
         <div className="h-11 rounded-xl bg-surface-hover animate-pulse motion-reduce:animate-none" />
@@ -121,6 +203,7 @@ export default function Progress() {
           { key: 'evolution', label: 'Evolução',      icon: <TrendingUp size={12} /> },
           { key: 'volume',    label: 'Volume',         icon: <BarChart2  size={12} /> },
           { key: 'radar',     label: 'Mapa Muscular',  icon: <Activity   size={12} /> },
+          { key: 'blocos',    label: 'Blocos',         icon: <GitCompare size={12} /> },
         ] as const).map(t => (
           <button
             key={t.key}
@@ -379,6 +462,132 @@ export default function Progress() {
             <div className="h-48 flex items-center justify-center text-gray-600 text-sm">
               Nenhum treino nos últimos {radarPeriod} dias.
             </div>
+          )}
+        </div>
+      )}
+      {/* -- TAB: BLOCOS -------------------------------------------------------- */}
+      {tab === 'blocos' && (
+        <div className="space-y-5">
+          {!blocoComparacao || !blocoComparacao.hasData ? (
+            <div className="card p-8 text-center text-gray-500 space-y-3">
+              <GitCompare size={32} className="mx-auto text-gray-700" />
+              <p className="text-sm">Nenhum dado de bloco disponível ainda.</p>
+              <p className="text-[11px] leading-relaxed">
+                Execute treinos de um plano importado com campo <span className="text-brand font-mono">bloco</span> ou <span className="text-brand font-mono">semana</span>.<br/>
+                Semanas 1–4 = Bloco 1 · Semanas 5+ = Bloco 2
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Summary stats */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="card p-4 border-l-4 border-blue-500">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2">Bloco 1</p>
+                  <p className="font-mono text-2xl font-black">{blocoComparacao.sessoes.b1}</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">sessões</p>
+                  <p className="font-mono text-sm font-black text-blue-400 mt-2">
+                    {(blocoComparacao.volume.b1 / 1000).toFixed(1)}k <span className="text-[10px] text-gray-500 font-normal">kg vol.</span>
+                  </p>
+                </div>
+                <div className="card p-4 border-l-4 border-brand">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-brand mb-2">Bloco 2</p>
+                  <p className="font-mono text-2xl font-black">{blocoComparacao.sessoes.b2}</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">sessões</p>
+                  <p className="font-mono text-sm font-black text-brand mt-2">
+                    {(blocoComparacao.volume.b2 / 1000).toFixed(1)}k <span className="text-[10px] text-gray-500 font-normal">kg vol.</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Volume delta badge */}
+              {blocoComparacao.volume.b1 > 0 && blocoComparacao.volume.b2 > 0 && (() => {
+                const pct = ((blocoComparacao.volume.b2 - blocoComparacao.volume.b1) / blocoComparacao.volume.b1) * 100;
+                return (
+                  <div className={`flex items-center justify-center gap-2 p-3 rounded-xl border ${pct >= 0 ? 'bg-brand/5 border-brand/20' : 'bg-red-500/5 border-red-500/20'}`}>
+                    <TrendingUp size={14} className={pct >= 0 ? 'text-brand' : 'text-red-400'} />
+                    <p className="text-sm font-black">
+                      <span className={pct >= 0 ? 'text-brand' : 'text-red-400'}>{pct >= 0 ? '+' : ''}{pct.toFixed(1)}%</span>
+                      <span className="text-gray-400 font-normal ml-1.5 text-xs">de volume total do Bloco 1 → Bloco 2</span>
+                    </p>
+                  </div>
+                );
+              })()}
+
+              {/* Volume by muscle group chart */}
+              {blocoComparacao.volumeChart.length > 0 && (
+                <div className="card p-4 space-y-3">
+                  <div className="flex items-center gap-2 pb-2 border-b border-outline">
+                    <BarChart2 size={13} className="text-brand" />
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Volume por Grupo Muscular</h3>
+                  </div>
+                  <ResponsiveContainer width="100%" height={Math.max(200, blocoComparacao.volumeChart.length * 42)}>
+                    <BarChart
+                      data={blocoComparacao.volumeChart}
+                      layout="vertical"
+                      margin={{ top: 0, right: 8, left: 4, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#222" horizontal={false} />
+                      <XAxis
+                        type="number"
+                        tick={{ fontSize: 10, fill: '#666' }}
+                        tickFormatter={v => v >= 1000 ? `${Math.round(v / 1000)}k` : `${v}`}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="group"
+                        width={88}
+                        tick={{ fontSize: 10, fill: '#9ca3af' }}
+                      />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '8px', fontSize: '12px' }}
+                        formatter={(val, name) => [`${Number(val).toLocaleString()} kg`, name === 'b1' ? 'Bloco 1' : 'Bloco 2']}
+                      />
+                      <Legend formatter={v => v === 'b1' ? 'Bloco 1' : 'Bloco 2'} wrapperStyle={{ fontSize: '11px' }} />
+                      <Bar dataKey="b1" fill="#60A5FA" fillOpacity={0.8} radius={[0, 3, 3, 0]} barSize={10} />
+                      <Bar dataKey="b2" fill="#CCFF00" fillOpacity={0.85} radius={[0, 3, 3, 0]} barSize={10} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {/* Avg load per exercise chart */}
+              {blocoComparacao.loadChart.length > 0 && (
+                <div className="card p-4 space-y-3">
+                  <div className="flex items-center gap-2 pb-2 border-b border-outline">
+                    <TrendingUp size={13} className="text-brand" />
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400">Carga Média por Exercício (kg)</h3>
+                  </div>
+                  <ResponsiveContainer width="100%" height={Math.max(200, blocoComparacao.loadChart.length * 42)}>
+                    <BarChart
+                      data={blocoComparacao.loadChart}
+                      layout="vertical"
+                      margin={{ top: 0, right: 8, left: 4, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#222" horizontal={false} />
+                      <XAxis type="number" tick={{ fontSize: 10, fill: '#666' }} />
+                      <YAxis
+                        type="category"
+                        dataKey="nome"
+                        width={100}
+                        tick={{ fontSize: 10, fill: '#9ca3af' }}
+                      />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '8px', fontSize: '12px' }}
+                        formatter={(val, name) => [`${val} kg`, name === 'b1' ? 'Bloco 1' : 'Bloco 2']}
+                      />
+                      <Legend formatter={v => v === 'b1' ? 'Bloco 1' : 'Bloco 2'} wrapperStyle={{ fontSize: '11px' }} />
+                      <Bar dataKey="b1" fill="#60A5FA" fillOpacity={0.8} radius={[0, 3, 3, 0]} barSize={10} />
+                      <Bar dataKey="b2" fill="#CCFF00" fillOpacity={0.85} radius={[0, 3, 3, 0]} barSize={10} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                  <p className="text-[10px] text-gray-600 text-center">Média da carga máxima por sessão em cada exercício</p>
+                </div>
+              )}
+
+              <p className="text-[10px] text-gray-600 text-center pb-2">
+                Bloco 1 = semanas 1–4 · Bloco 2 = semanas 5–8
+              </p>
+            </>
           )}
         </div>
       )}

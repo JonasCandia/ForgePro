@@ -78,12 +78,19 @@ export interface Plano {
   tipoSessao?: TipoSessaoTAF;
 }
 
+export type FaixaEtariaTAF = '18_24' | '25_29' | '30_34' | '35_39' | '40_44' | '45_mais';
+export type SexoBio = 'M' | 'F';
+
 export interface Profile {
   uid?: string;
   nome: string;
   pesoCorporal?: number;
   altura?: number;
   objetivo?: 'cutting' | 'bulking' | 'manutencao' | 'taf';
+  /** Faixa etária para cálculo do TAF (Anexo F, IR 001/2024) */
+  faixaEtaria?: FaixaEtariaTAF;
+  /** Sexo biológico para seleção da tabela TAF correta */
+  sexo?: SexoBio;
   fotoUrl?: string;
   zeppConnected?: boolean; // reservado para integração futura Zepp Health
   createdAt?: any;
@@ -128,6 +135,10 @@ export interface WorkoutSession {
   planoId?: string;
   status: 'em_andamento' | 'finalizado';
   objetivo?: string;
+  /** Tipo de sessão do plano — usado para filtros e modo circuito */
+  tipoSessao?: TipoSessaoTAF;
+  /** Bloco de periodização (1 = semanas 1-4, 2 = semanas 5-8) */
+  bloco?: number;
   exerciciosSummary: WorkoutExerciseSummary[];
   /** Séries embutidas no documento (nova estrutura — elimina subcoleção series/) */
   series?: WorkoutSeries[];

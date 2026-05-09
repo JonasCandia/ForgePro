@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Target, TrendingUp, Trash2, ChevronUp, ChevronDown, Minus, ClipboardList, Info } from 'lucide-react';
 import { useTAFScores, useSaveTAFScore, useDeleteTAFScore } from '../../hooks/useTAF';
-import { calcularResultadoTAF, projetarNotaTAF } from '../../lib/tafUtils';
-import type { ConceitoTAF, TAFScore } from '../../types';
-import { TAF_METAS_MUITO_BOM } from '../../constants';
+import { calcularResultadoTAFComPerfil, projetarNotaTAFComPerfil, getMetasMuitoBom } from '../../lib/tafUtils';
+import type { ConceitoTAF, FaixaEtariaTAF, SexoBio, TAFScore } from '../../types';
+import { useProfile } from '../../hooks/useProfile';
 
 // ─── Utilitários de UI ─────────────────────────────────────────────────────────
 
@@ -75,7 +75,7 @@ const FORM_INICIAL: FormState = {
   simulado: true,
 };
 
-function FormNovaTAF({ onSaved }: { onSaved: () => void }) {
+function FormNovaTAF({ onSaved, sexo, faixa }: { onSaved: () => void; sexo?: SexoBio; faixa?: FaixaEtariaTAF }) {
   const [form, setForm] = useState<FormState>(FORM_INICIAL);
   const { mutateAsync: salvar, isPending } = useSaveTAFScore();
 
@@ -84,7 +84,7 @@ function FormNovaTAF({ onSaved }: { onSaved: () => void }) {
   const corrida = parseInt(form.corrida12min) || 0;
 
   const preview = barra > 0 || abdo > 0 || corrida > 0
-    ? calcularResultadoTAF(barra, abdo, corrida)
+    ? calcularResultadoTAFComPerfil(barra, abdo, corrida, sexo, faixa)
     : null;
 
   function handleChange(field: keyof FormState, value: string | boolean) {
@@ -225,7 +225,12 @@ function FormNovaTAF({ onSaved }: { onSaved: () => void }) {
 
 // ─── Card de resultado histórico ──────────────────────────────────────────────
 
-function CardScore({ score, delta, onDelete }: { score: TAFScore; delta: number | null; onDelete: () => void }) {
+function CardScore({ score, delta, onDelete, metas }: {
+  score: TAFScore;
+  delta: number | null;
+  onDelete: () => void;
+  metas: ReturnType<typeof getMetasMuitoBom>;
+}) {
   const [confirmando, setConfirmando] = useState(false);
 
   return (
@@ -260,19 +265,19 @@ function CardScore({ score, delta, onDelete }: { score: TAFScore; delta: number 
           <p className="text-[10px] text-gray-500 uppercase tracking-wider">Barra</p>
           <p className="font-bold text-sm">{score.barraFixa} <span className="text-[10px] text-gray-500">rep</span></p>
           <p className="text-[10px] text-brand font-mono">{score.ptsBarra.toFixed(1)} pts</p>
-          <ProgressBar value={score.barraFixa} max={20} meta={TAF_METAS_MUITO_BOM.barraFixa} />
+          <ProgressBar value={score.barraFixa} max={20} meta={metas.barraFixa} />
         </div>
         <div>
           <p className="text-[10px] text-gray-500 uppercase tracking-wider">Abdominal</p>
           <p className="font-bold text-sm">{score.remadorAbdominal} <span className="text-[10px] text-gray-500">rep</span></p>
           <p className="text-[10px] text-brand font-mono">{score.ptsAbdominal.toFixed(1)} pts</p>
-          <ProgressBar value={score.remadorAbdominal} max={60} meta={TAF_METAS_MUITO_BOM.remadorAbdominal} />
+          <ProgressBar value={score.remadorAbdominal} max={60} meta={metas.remadorAbdominal} />
         </div>
         <div>
           <p className="text-[10px] text-gray-500 uppercase tracking-wider">Corrida</p>
           <p className="font-bold text-sm">{score.corrida12min} <span className="text-[10px] text-gray-500">m</span></p>
           <p className="text-[10px] text-brand font-mono">{score.ptsCorreida.toFixed(1)} pts</p>
-          <ProgressBar value={score.corrida12min} max={4000} meta={TAF_METAS_MUITO_BOM.corrida12min} />
+          <ProgressBar value={score.corrida12min} max={4000} meta={metas.corrida12min} />
         </div>
       </div>
 
@@ -285,14 +290,14 @@ function CardScore({ score, delta, onDelete }: { score: TAFScore; delta: number 
 
 // ─── Painel de projeção ───────────────────────────────────────────────────────
 
-function PainelProjecao({ ultimo }: { ultimo: TAFScore }) {
+function PainelProjecao({ ultimo, sexo, faixa }: { ultimo: TAFScore; sexo?: SexoBio; faixa?: FaixaEtariaTAF }) {
   const [barraAlvo, setBarraAlvo] = useState(String(ultimo.barraFixa + 2));
   const [abdoAlvo, setAbdoAlvo]   = useState(String(ultimo.remadorAbdominal + 3));
   const [corridaAlvo, setCorridaAlvo] = useState(String(ultimo.corrida12min + 100));
 
-  const notaBarra   = projetarNotaTAF('barraFixa',       parseInt(barraAlvo) || 0,   { barraFixa: ultimo.barraFixa, remadorAbdominal: ultimo.remadorAbdominal, corrida12min: ultimo.corrida12min });
-  const notaAbdo    = projetarNotaTAF('remadorAbdominal', parseInt(abdoAlvo) || 0,    { barraFixa: ultimo.barraFixa, remadorAbdominal: ultimo.remadorAbdominal, corrida12min: ultimo.corrida12min });
-  const notaCorrida = projetarNotaTAF('corrida12min',    parseInt(corridaAlvo) || 0, { barraFixa: ultimo.barraFixa, remadorAbdominal: ultimo.remadorAbdominal, corrida12min: ultimo.corrida12min });
+  const notaBarra   = projetarNotaTAFComPerfil('barraFixa',       parseInt(barraAlvo) || 0,   { barraFixa: ultimo.barraFixa, remadorAbdominal: ultimo.remadorAbdominal, corrida12min: ultimo.corrida12min }, sexo, faixa);
+  const notaAbdo    = projetarNotaTAFComPerfil('remadorAbdominal', parseInt(abdoAlvo) || 0,    { barraFixa: ultimo.barraFixa, remadorAbdominal: ultimo.remadorAbdominal, corrida12min: ultimo.corrida12min }, sexo, faixa);
+  const notaCorrida = projetarNotaTAFComPerfil('corrida12min',    parseInt(corridaAlvo) || 0, { barraFixa: ultimo.barraFixa, remadorAbdominal: ultimo.remadorAbdominal, corrida12min: ultimo.corrida12min }, sexo, faixa);
 
   return (
     <div className="bg-surface border border-outline rounded-xl p-4 space-y-3">
@@ -316,7 +321,7 @@ function PainelProjecao({ ultimo }: { ultimo: TAFScore }) {
               onChange={e => setter(e.target.value)}
             />
             <span className="text-[11px] font-mono text-brand">→ {notaProjetada.toFixed(1)}</span>
-            <span className="text-[11px] text-gray-500">({calcularResultadoTAF === undefined ? '' : `+${(notaProjetada - ultimo.notaFinal).toFixed(1)}`})</span>
+            <span className="text-[11px] text-gray-500">(+{(notaProjetada - ultimo.notaFinal).toFixed(1)})</span>
           </div>
         ))}
       </div>
@@ -329,8 +334,21 @@ function PainelProjecao({ ultimo }: { ultimo: TAFScore }) {
 export default function TAFScore() {
   const { data: scores = [], isLoading } = useTAFScores();
   const { mutate: deletar } = useDeleteTAFScore();
+  const { data: profile } = useProfile();
   const [mostrarForm, setMostrarForm] = useState(false);
   const [mostrarInfo, setMostrarInfo] = useState(false);
+
+  const sexo  = profile?.sexo;
+  const faixa = profile?.faixaEtaria;
+  const metas = getMetasMuitoBom(sexo, faixa);
+
+  const FAIXA_LABEL: Record<string, string> = {
+    '18_24': '18–24', '25_29': '25–29', '30_34': '30–34',
+    '35_39': '35–39', '40_44': '40–44', '45_mais': '45+',
+  };
+  const perfilLabel = sexo && faixa
+    ? `${sexo === 'M' ? 'Masc.' : 'Fem.'} ${FAIXA_LABEL[faixa] ?? faixa} anos`
+    : 'Masc. 25–29 anos (padrão)';
 
   const ordenados = [...scores].sort((a, b) => a.data.localeCompare(b.data));
   const ultimo = ordenados.at(-1);
@@ -363,16 +381,9 @@ export default function TAFScore() {
         <div className="bg-surface border border-brand/20 rounded-xl p-4 space-y-2 text-[12px] text-gray-400">
           <p className="font-bold text-brand">Fórmula TAF (IR 001/CBMRS/2024)</p>
           <p>Nota Final = (Barra + Abdominal + 2 × Corrida) / 4</p>
-          <p className="mt-2 font-bold text-gray-300">Conceitos (25-29 anos, masc.):</p>
-          <div className="grid grid-cols-2 gap-1">
-            <span>Excelente: 10,0</span>
-            <span>Muito Bom: 8,5–9,9</span>
-            <span>Bom: 7,0–8,4</span>
-            <span>Regular: 5,0–6,9</span>
-            <span>Insuficiente: &lt;5,0</span>
-          </div>
-          <p className="mt-2 font-bold text-gray-300">Metas "Muito Bom":</p>
-          <p>Barra ≥10 reps | Abdominal ≥39 reps | Corrida ≥2850m</p>
+          <p className="mt-1 text-xs">Tabela ativa: <span className="text-brand font-bold">{perfilLabel}</span></p>
+          <p className="mt-2 font-bold text-gray-300">Metas "Muito Bom" para seu perfil:</p>
+          <p>Barra ≥{metas.barraFixa} reps | Abdominal ≥{metas.remadorAbdominal} reps | Corrida ≥{metas.corrida12min}m</p>
         </div>
       )}
 
@@ -382,13 +393,13 @@ export default function TAFScore() {
           <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-2">
             <ClipboardList size={13} /> Novo resultado
           </p>
-          <FormNovaTAF onSaved={() => setMostrarForm(false)} />
+          <FormNovaTAF onSaved={() => setMostrarForm(false)} sexo={sexo} faixa={faixa} />
         </div>
       )}
 
       {/* Projeção */}
       {ultimo && !mostrarForm && (
-        <PainelProjecao ultimo={ultimo} />
+        <PainelProjecao ultimo={ultimo} sexo={sexo} faixa={faixa} />
       )}
 
       {/* Histórico */}
@@ -420,6 +431,7 @@ export default function TAFScore() {
               score={score}
               delta={delta}
               onDelete={() => deletar(score.id)}
+              metas={metas}
             />
           );
         })}

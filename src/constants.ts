@@ -120,7 +120,79 @@ export const TAF_METAS_MUITO_BOM = {
   corrida12min:    2850, // ≥2850 m → 9.0 pts
 } as const;
 
+// ─── TAF — Tabelas por faixa etária e sexo (estimativas baseadas na IR 001/2024) ──
+// Apenas MASC_25_29 é verificada diretamente da regulação; demais são estimativas
+// baseadas no padrão de ajuste por faixa etária do CBMRS.
 
+type TAFTable = ReadonlyArray<readonly [number, number]>;
+
+/** Cria tabela com thresholds deslocados por `delta` (positivo = mais fácil). */
+function shiftTable(base: TAFTable, delta: number): TAFTable {
+  return base
+    .map(([min, pts]) => [min + delta, pts] as const)
+    .filter(([min]) => min > 0);
+}
+
+// ── Barra Fixa ──────────────────────────────────────────────────────────────
+export const TAF_BARRA_MASC_18_24 = shiftTable(TAF_BARRA_MASC_25_29,  1);
+// TAF_BARRA_MASC_25_29 already exported above
+export const TAF_BARRA_MASC_30_34 = shiftTable(TAF_BARRA_MASC_25_29, -2);
+export const TAF_BARRA_MASC_35_39 = shiftTable(TAF_BARRA_MASC_25_29, -4);
+export const TAF_BARRA_MASC_40_44 = shiftTable(TAF_BARRA_MASC_25_29, -6);
+export const TAF_BARRA_MASC_45_MAIS = shiftTable(TAF_BARRA_MASC_25_29, -7);
+
+export const TAF_BARRA_FEM_18_24   = shiftTable(TAF_BARRA_MASC_25_29, -5);
+export const TAF_BARRA_FEM_25_29   = shiftTable(TAF_BARRA_MASC_25_29, -6);
+export const TAF_BARRA_FEM_30_34   = shiftTable(TAF_BARRA_MASC_25_29, -7);
+export const TAF_BARRA_FEM_35_39   = shiftTable(TAF_BARRA_MASC_25_29, -8);
+export const TAF_BARRA_FEM_40_44   = shiftTable(TAF_BARRA_MASC_25_29, -9);
+export const TAF_BARRA_FEM_45_MAIS = shiftTable(TAF_BARRA_MASC_25_29, -10);
+
+// ── Abdominal Remador ────────────────────────────────────────────────────────
+export const TAF_ABDOMINAL_MASC_18_24   = shiftTable(TAF_ABDOMINAL_MASC_25_29,  2);
+// TAF_ABDOMINAL_MASC_25_29 already exported above
+export const TAF_ABDOMINAL_MASC_30_34   = shiftTable(TAF_ABDOMINAL_MASC_25_29, -2);
+export const TAF_ABDOMINAL_MASC_35_39   = shiftTable(TAF_ABDOMINAL_MASC_25_29, -4);
+export const TAF_ABDOMINAL_MASC_40_44   = shiftTable(TAF_ABDOMINAL_MASC_25_29, -8);
+export const TAF_ABDOMINAL_MASC_45_MAIS = shiftTable(TAF_ABDOMINAL_MASC_25_29, -10);
+
+export const TAF_ABDOMINAL_FEM_18_24    = shiftTable(TAF_ABDOMINAL_MASC_25_29, -14);
+export const TAF_ABDOMINAL_FEM_25_29    = shiftTable(TAF_ABDOMINAL_MASC_25_29, -16);
+export const TAF_ABDOMINAL_FEM_30_34    = shiftTable(TAF_ABDOMINAL_MASC_25_29, -18);
+export const TAF_ABDOMINAL_FEM_35_39    = shiftTable(TAF_ABDOMINAL_MASC_25_29, -20);
+export const TAF_ABDOMINAL_FEM_40_44    = shiftTable(TAF_ABDOMINAL_MASC_25_29, -24);
+export const TAF_ABDOMINAL_FEM_45_MAIS  = shiftTable(TAF_ABDOMINAL_MASC_25_29, -26);
+
+// ── Corrida 12 min ──────────────────────────────────────────────────────────
+export const TAF_CORRIDA_MASC_18_24   = shiftTable(TAF_CORRIDA_MASC_25_29,   100);
+// TAF_CORRIDA_MASC_25_29 already exported above
+export const TAF_CORRIDA_MASC_30_34   = shiftTable(TAF_CORRIDA_MASC_25_29,  -100);
+export const TAF_CORRIDA_MASC_35_39   = shiftTable(TAF_CORRIDA_MASC_25_29,  -250);
+export const TAF_CORRIDA_MASC_40_44   = shiftTable(TAF_CORRIDA_MASC_25_29,  -400);
+export const TAF_CORRIDA_MASC_45_MAIS = shiftTable(TAF_CORRIDA_MASC_25_29,  -500);
+
+export const TAF_CORRIDA_FEM_18_24    = shiftTable(TAF_CORRIDA_MASC_25_29,  -600);
+export const TAF_CORRIDA_FEM_25_29    = shiftTable(TAF_CORRIDA_MASC_25_29,  -700);
+export const TAF_CORRIDA_FEM_30_34    = shiftTable(TAF_CORRIDA_MASC_25_29,  -800);
+export const TAF_CORRIDA_FEM_35_39    = shiftTable(TAF_CORRIDA_MASC_25_29,  -900);
+export const TAF_CORRIDA_FEM_40_44    = shiftTable(TAF_CORRIDA_MASC_25_29, -1050);
+export const TAF_CORRIDA_FEM_45_MAIS  = shiftTable(TAF_CORRIDA_MASC_25_29, -1150);
+
+/** Lookup unificado de tabelas por `sexo_faixa`. */
+export const TAF_TABLES: Record<string, { barra: TAFTable; abdominal: TAFTable; corrida: TAFTable }> = {
+  M_18_24:   { barra: TAF_BARRA_MASC_18_24,   abdominal: TAF_ABDOMINAL_MASC_18_24,   corrida: TAF_CORRIDA_MASC_18_24 },
+  M_25_29:   { barra: TAF_BARRA_MASC_25_29,   abdominal: TAF_ABDOMINAL_MASC_25_29,   corrida: TAF_CORRIDA_MASC_25_29 },
+  M_30_34:   { barra: TAF_BARRA_MASC_30_34,   abdominal: TAF_ABDOMINAL_MASC_30_34,   corrida: TAF_CORRIDA_MASC_30_34 },
+  M_35_39:   { barra: TAF_BARRA_MASC_35_39,   abdominal: TAF_ABDOMINAL_MASC_35_39,   corrida: TAF_CORRIDA_MASC_35_39 },
+  M_40_44:   { barra: TAF_BARRA_MASC_40_44,   abdominal: TAF_ABDOMINAL_MASC_40_44,   corrida: TAF_CORRIDA_MASC_40_44 },
+  M_45_mais: { barra: TAF_BARRA_MASC_45_MAIS, abdominal: TAF_ABDOMINAL_MASC_45_MAIS, corrida: TAF_CORRIDA_MASC_45_MAIS },
+  F_18_24:   { barra: TAF_BARRA_FEM_18_24,    abdominal: TAF_ABDOMINAL_FEM_18_24,    corrida: TAF_CORRIDA_FEM_18_24 },
+  F_25_29:   { barra: TAF_BARRA_FEM_25_29,    abdominal: TAF_ABDOMINAL_FEM_25_29,    corrida: TAF_CORRIDA_FEM_25_29 },
+  F_30_34:   { barra: TAF_BARRA_FEM_30_34,    abdominal: TAF_ABDOMINAL_FEM_30_34,    corrida: TAF_CORRIDA_FEM_30_34 },
+  F_35_39:   { barra: TAF_BARRA_FEM_35_39,    abdominal: TAF_ABDOMINAL_FEM_35_39,    corrida: TAF_CORRIDA_FEM_35_39 },
+  F_40_44:   { barra: TAF_BARRA_FEM_40_44,    abdominal: TAF_ABDOMINAL_FEM_40_44,    corrida: TAF_CORRIDA_FEM_40_44 },
+  F_45_mais: { barra: TAF_BARRA_FEM_45_MAIS,  abdominal: TAF_ABDOMINAL_FEM_45_MAIS,  corrida: TAF_CORRIDA_FEM_45_MAIS },
+};
 
 export const MOCK_EXERCICIOS: Exercício[] = [
   // ── Catálogo base ─────────────────────────────────────────────────────────

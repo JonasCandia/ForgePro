@@ -1,10 +1,90 @@
-import React, { useState } from 'react';
-import { FileDown, FileUp, CheckCircle, AlertCircle, ArrowLeft, Copy } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { FileDown, FileUp, CheckCircle, AlertCircle, Copy, AlertTriangle, Plus } from 'lucide-react';
 import { workoutService } from '../../lib/workoutService';
 import { JSON_EXEMPLO } from '../../constants';
+import { useExercises } from '../../hooks/useExercises';
 
 interface ImportPlanProps {
   onBack: () => void;
+}
+
+interface ImportPreview {
+  semanas: number[];
+  totalDias: number;
+  totalExercicios: number;
+  newExercises: { id: string; nome: string }[];
+  warnings: string[];
+  errors: string[];
+}
+
+function buildPreview(jsonStr: string, catalogIds: Set<string>): ImportPreview | null {
+  if (!jsonStr.trim()) return null;
+  let data: any;
+  try { data = JSON.parse(jsonStr); } catch { return null; }
+  if (!data.plano || !Array.isArray(data.plano)) return null;
+
+  const semanasSet = new Set<number>();
+  let totalDias = 0;
+  let totalExercicios = 0;
+  const newExercises: { id: string; nome: string }[] = [];
+  const newExIds = new Set<string>();
+  const errors: string[] = [];
+  let stringRepCount = 0;
+  let noModalidadeCount = 0;
+  let noBlocoCount = 0;
+  const noTipoSessaoDias: string[] = [];
+
+  for (const semana of data.plano) {
+    if (semana.semana != null) semanasSet.add(semana.semana);
+    if (!semana.bloco) noBlocoCount++;
+    if (!Array.isArray(semana.dias)) {
+      errors.push(`Semana ${semana.semana}: "dias" deve ser um array.`);
+      continue;
+    }
+    for (const dia of semana.dias) {
+      totalDias++;
+      if (!dia.tipoSessao && dia.dia) noTipoSessaoDias.push(`Sem. ${semana.semana} · ${dia.dia}`);
+      if (!Array.isArray(dia.exercicios)) {
+        errors.push(`Sem. ${semana.semana} / ${dia.dia}: "exercicios" deve ser um array.`);
+        continue;
+      }
+      for (const ex of dia.exercicios) {
+        totalExercicios++;
+        const exId = String(ex.id);
+        if (!catalogIds.has(exId) && !newExIds.has(exId)) {
+          if (!ex.nome) {
+            errors.push(`ID "${exId}" não existe no catálogo e não tem campo "nome" — a importação falhará.`);
+          } else {
+            newExercises.push({ id: exId, nome: ex.nome });
+            newExIds.add(exId);
+          }
+        }
+        if (typeof ex.repeticoes === 'string') stringRepCount++;
+        if (!ex.modalidade) noModalidadeCount++;
+      }
+    }
+  }
+
+  const warnings: string[] = [];
+  if (noBlocoCount > 0) warnings.push(`${noBlocoCount} semana(s) sem campo "bloco" — diferenciação de blocos não funcionará.`);
+  if (noTipoSessaoDias.length > 0) {
+    if (noTipoSessaoDias.length <= 5) {
+      warnings.push(`"tipoSessao" ausente em: ${noTipoSessaoDias.join(', ')}.`);
+    } else {
+      warnings.push(`${noTipoSessaoDias.length} dias sem "tipoSessao" — filtros e modo circuito não funcionarão.`);
+    }
+  }
+  if (stringRepCount > 0) warnings.push(`${stringRepCount} campo(s) "repeticoes" com valor texto — serão salvos como 0.`);
+  if (noModalidadeCount > 0) warnings.push(`${noModalidadeCount} exercício(s) sem "modalidade" — o app usará o padrão força dinâmica.`);
+
+  return {
+    semanas: [...semanasSet].sort((a, b) => a - b),
+    totalDias,
+    totalExercicios,
+    newExercises,
+    warnings,
+    errors,
+  };
 }
 
 export default function ImportPlan({ onBack }: ImportPlanProps) {
@@ -12,6 +92,19 @@ export default function ImportPlan({ onBack }: ImportPlanProps) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const [exporting, setExporting] = useState(false);
+  const { data: exercises = [] } = useExercises();
+
+  const catalogIds = useMemo(
+    () => new Set(exercises.map(ex => String(ex.id))),
+    [exercises]
+  );
+
+  const preview = useMemo(
+    () => buildPreview(jsonInput, catalogIds),
+    [jsonInput, catalogIds]
+  );
+
+  const canImport = !!preview && preview.errors.length === 0;
 
   const handleCopyExample = () => {
     navigator.clipboard.writeText(JSON.stringify(JSON_EXEMPLO, null, 2));
@@ -21,14 +114,11 @@ export default function ImportPlan({ onBack }: ImportPlanProps) {
   };
 
   const handleImport = async () => {
-    if (!jsonInput.trim()) return;
+    if (!jsonInput.trim() || !canImport) return;
     setStatus('loading');
     setMessage('');
     try {
       const data = JSON.parse(jsonInput);
-      if (!data.plano || !Array.isArray(data.plano)) {
-        throw new Error('Formato JSON inválido. O objeto raiz deve conter a chave "plano" como um array.');
-      }
       await workoutService.importPlanMerge(data);
       setStatus('success');
       setMessage('Plano importado com sucesso! As semanas foram mescladas sem apagar outros dados existentes.');
@@ -36,7 +126,7 @@ export default function ImportPlan({ onBack }: ImportPlanProps) {
     } catch (error: any) {
       console.error(error);
       setStatus('error');
-      setMessage(error instanceof Error ? error.message : 'Falha ao importar o plano. Verifique a sintaxe do JSON.');
+      setMessage(error instanceof Error ? error.message : 'Falha ao importar o plano.');
     }
   };
 
@@ -94,8 +184,76 @@ export default function ImportPlan({ onBack }: ImportPlanProps) {
           className="w-full h-80 bg-surface-hover border border-input-border rounded-xl px-4 py-3 text-xs font-mono focus:border-brand focus:ring-0 transition-colors resize-none"
           placeholder='{ "plano": [ ... ] }'
           value={jsonInput}
-          onChange={(e) => setJsonInput(e.target.value)}
+          onChange={(e) => { setJsonInput(e.target.value); setStatus('idle'); setMessage(''); }}
         />
+
+        {/* ── Preview de Importação ─────────────────────────────────────── */}
+        {preview && (
+          <div className="rounded-xl border border-outline overflow-hidden text-sm">
+            {/* Summary header */}
+            <div className="bg-brand/10 border-b border-outline px-4 py-3 flex flex-wrap gap-x-5 gap-y-1 items-center">
+              <span className="text-[10px] font-black uppercase tracking-widest text-brand">Preview</span>
+              <span className="text-xs text-gray-300">
+                <span className="font-bold text-white">{preview.semanas.length}</span> semana(s)
+                {preview.semanas.length > 0 && ` (${preview.semanas[0]}–${preview.semanas[preview.semanas.length - 1]})`}
+              </span>
+              <span className="text-xs text-gray-300"><span className="font-bold text-white">{preview.totalDias}</span> dias</span>
+              <span className="text-xs text-gray-300"><span className="font-bold text-white">{preview.totalExercicios}</span> exercícios</span>
+            </div>
+
+            {/* New exercises to be created */}
+            {preview.newExercises.length > 0 && (
+              <div className="px-4 py-3 border-b border-outline space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-blue-400 flex items-center gap-1.5">
+                  <Plus size={11} /> Serão criados no catálogo
+                </p>
+                <ul className="space-y-1">
+                  {preview.newExercises.map(ex => (
+                    <li key={ex.id} className="text-xs text-gray-300 flex items-center gap-2">
+                      <code className="font-mono text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">{ex.id}</code>
+                      {ex.nome}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Warnings */}
+            {preview.warnings.length > 0 && (
+              <div className="px-4 py-3 border-b border-outline space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-yellow-500 flex items-center gap-1.5">
+                  <AlertTriangle size={11} /> Avisos (não bloqueiam a importação)
+                </p>
+                <ul className="space-y-1.5">
+                  {preview.warnings.map((w, i) => (
+                    <li key={i} className="text-xs text-yellow-500/80 leading-snug">{w}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Errors */}
+            {preview.errors.length > 0 && (
+              <div className="px-4 py-3 space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-red-500 flex items-center gap-1.5">
+                  <AlertCircle size={11} /> Erros críticos — importação bloqueada
+                </p>
+                <ul className="space-y-1.5">
+                  {preview.errors.map((e, i) => (
+                    <li key={i} className="text-xs text-red-400 leading-snug">{e}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* All clear */}
+            {preview.errors.length === 0 && (
+              <div className="px-4 py-2.5 flex items-center gap-2 text-xs text-brand">
+                <CheckCircle size={13} /> Pronto para importar
+              </div>
+            )}
+          </div>
+        )}
 
         {message && (status === 'success' || status === 'idle') && (
           <div className="flex items-center gap-3 p-4 bg-brand/10 border border-brand/20 rounded-lg text-brand text-sm animate-in fade-in slide-in-from-top-1">
@@ -112,7 +270,7 @@ export default function ImportPlan({ onBack }: ImportPlanProps) {
 
         <button
           onClick={handleImport}
-          disabled={status === 'loading' || !jsonInput.trim()}
+          disabled={status === 'loading' || !canImport}
           className="btn-primary w-full disabled:opacity-50 min-h-[48px]"
         >
           {status === 'loading' ? (
