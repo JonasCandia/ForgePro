@@ -126,3 +126,11 @@ pace (min/km) = (tempoSegundos / 60) / (distanciaMetros / 1000)
 ```
 
 Exibido no formato `MM:SS/km`.
+
+### Integrações com apps terceiros
+
+Não haverá integração com nenhum app ou plataforma externa: sem Strava, Garmin, Apple Health, Google Fit, Zepp Health ou similares. O campo `zeppConnected` no perfil é reservado para uso futuro, mas não está ativo e não deve ser exposto na UI. FORGE é um sistema fechado; todos os dados entram manualmente pelo próprio usuário.
+
+### Progressão de cargas
+
+Não existe progressão automática de carga. O app não sugere, calcula nem aplica aumentos de peso entre sessões. O usuário decide a carga de cada série no momento do treino. O 1RM estimado e a projeção de PR são informações de leitura apenas, nunca usadas para pré-preencher campos ou recomendar valores.
