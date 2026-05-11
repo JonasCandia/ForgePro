@@ -69,7 +69,12 @@ export interface Plano {
   id: string;
   userId: string;
   semana: number;
-  diaDaSemana: string;
+  /** Nome livre da sessão (ex.: "Treino A", "Pernas"). Substitui diaDaSemana. */
+  nomeSessao?: string;
+  /** Legado — mantido para retrocompatibilidade com planos antigos. */
+  diaDaSemana?: string;
+  /** Sugestão de dia da semana para executar esta sessão (ex.: "Segunda", "Quarta"). */
+  diaSugerido?: string;
   nomeTreino: string;
   exercicios: ExercicioNoPlano[];
   /** Bloco de periodização (ex.: 1 = semanas 1-4, 2 = semanas 5-8) */

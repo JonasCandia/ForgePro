@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { FileDown, FileUp, CheckCircle, AlertCircle, Copy, AlertTriangle, Plus } from 'lucide-react';
 import { workoutService } from '../../lib/workoutService';
-import { JSON_EXEMPLO } from '../../constants';
+import { JSON_EXEMPLO, PROMPT_ESPC } from '../../constants';
 import { useExercises } from '../../hooks/useExercises';
 
 interface ImportPlanProps {
@@ -71,7 +71,7 @@ function buildPreview(jsonStr: string, catalogIds: Set<string>): ImportPreview |
     if (noTipoSessaoDias.length <= 5) {
       warnings.push(`"tipoSessao" ausente em: ${noTipoSessaoDias.join(', ')}.`);
     } else {
-      warnings.push(`${noTipoSessaoDias.length} dias sem "tipoSessao" — filtros e modo circuito não funcionarão.`);
+      warnings.push(`${noTipoSessaoDias.length} sessões sem "tipoSessao" — filtros e modo circuito não funcionarão.`);
     }
   }
   if (stringRepCount > 0) warnings.push(`${stringRepCount} campo(s) "repeticoes" com valor texto — serão salvos como 0.`);
@@ -111,6 +111,13 @@ export default function ImportPlan({ onBack }: ImportPlanProps) {
     setMessage('Exemplo copiado para a área de transferência!');
     setStatus('idle');
     setTimeout(() => setMessage(''), 3000);
+  };
+
+  const handleCopyPrompt = () => {
+    navigator.clipboard.writeText(PROMPT_ESPC);
+    setMessage('Prompt copiado! Cole em uma IA e descreva seu treino.');
+    setStatus('idle');
+    setTimeout(() => setMessage(''), 4000);
   };
 
   const handleImport = async () => {
@@ -172,13 +179,23 @@ export default function ImportPlan({ onBack }: ImportPlanProps) {
       <section className="card p-6 space-y-4">
         <div className="flex justify-between items-center mb-1">
           <label className="input-label !mb-0">Cole o JSON do Plano</label>
-          <button
-            onClick={handleCopyExample}
-            className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-brand hover:text-white transition-colors"
-          >
-            <Copy size={12} />
-            Copiar Exemplo
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleCopyPrompt}
+              className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-violet-400 hover:text-white transition-colors"
+              title="Copia um prompt ESPC completo para colar em uma IA (ChatGPT, Gemini, etc.)"
+            >
+              <Copy size={12} />
+              Prompt IA
+            </button>
+            <button
+              onClick={handleCopyExample}
+              className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-brand hover:text-white transition-colors"
+            >
+              <Copy size={12} />
+              Copiar Exemplo
+            </button>
+          </div>
         </div>
         <textarea
           className="w-full h-80 bg-surface-hover border border-input-border rounded-xl px-4 py-3 text-xs font-mono focus:border-brand focus:ring-0 transition-colors resize-none"
@@ -197,7 +214,7 @@ export default function ImportPlan({ onBack }: ImportPlanProps) {
                 <span className="font-bold text-white">{preview.semanas.length}</span> semana(s)
                 {preview.semanas.length > 0 && ` (${preview.semanas[0]}–${preview.semanas[preview.semanas.length - 1]})`}
               </span>
-              <span className="text-xs text-gray-300"><span className="font-bold text-white">{preview.totalDias}</span> dias</span>
+              <span className="text-xs text-gray-300"><span className="font-bold text-white">{preview.totalDias}</span> sessões</span>
               <span className="text-xs text-gray-300"><span className="font-bold text-white">{preview.totalExercicios}</span> exercícios</span>
             </div>
 

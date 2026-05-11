@@ -140,6 +140,7 @@ export const workoutService = {
   async createActiveWorkout(data: {
     nomeTreino?: string;
     semana?: number;
+    nomeSessao?: string;
     diaDaSemana?: string;
     planoId?: string;
     objetivo?: string;
@@ -453,7 +454,9 @@ export const workoutService = {
           insertBatch.set(ref, {
             userId,
             semana: semanaData.semana,
+            nomeSessao: diaData.dia,
             diaDaSemana: diaData.dia,
+            ...(diaData.diaSugerido && { diaSugerido: diaData.diaSugerido }),
             nomeTreino: diaData.nomeTreino,
             // tipoSessao e bloco opcionais — fornecidos pelo JSON quando presentes
             ...(diaData.tipoSessao && { tipoSessao: diaData.tipoSessao }),
@@ -506,7 +509,7 @@ export const workoutService = {
         return {
           semana,
           dias: diasPlanos.map(p => ({
-            dia: p.diaDaSemana,
+            dia: p.nomeSessao ?? p.diaDaSemana,
             nomeTreino: p.nomeTreino,
             exercicios: p.exercicios.map(ex => ({
               id: ex.exercicioId,

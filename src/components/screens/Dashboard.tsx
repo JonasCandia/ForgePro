@@ -9,46 +9,20 @@ import { differenceInWeeks } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useWorkouts } from '../../hooks/useWorkouts';
 import { useMeasurements } from '../../hooks/useMeasurements';
-import { usePlanos } from '../../hooks/usePlanos';
 import { useTAFScores } from '../../hooks/useTAF';
 import { useProfile } from '../../hooks/useProfile';
 import { TAF_METAS_MUITO_BOM } from '../../constants';
 import type { TAFScore } from '../../types';
 
-// Portuguese weekday name ? JS getDay() index (0=Sun)
-const DIA_SEMANA_MAP: Record<string, number> = {
-  'domingo': 0, 'segunda': 1, 'segunda-feira': 1, 'terca': 2, 'terça': 2,
-  'terca-feira': 2, 'terça-feira': 2, 'quarta': 3, 'quarta-feira': 3,
-  'quinta': 4, 'quinta-feira': 4, 'sexta': 5, 'sexta-feira': 5,
-  'sabado': 6, 'sábado': 6,
-};
-
-function normalizeDia(dia: string): number | null {
-  const key = dia.toLowerCase().trim();
-  return DIA_SEMANA_MAP[key] ?? null;
-}
-
 // --- WorkoutCalendar ---------------------------------------------------------
 
 import type { WorkoutSession } from '../../types';
-import type { Plano } from '../../types';
 
 interface CalendarProps {
   workouts: WorkoutSession[];
-  planos: Plano[];
   month: Date;
   onPrevMonth: () => void;
   onNextMonth: () => void;
-}
-
-// Build set of weekday indices that have a plano
-function plannedWeekdays(planos: Plano[]): Set<number> {
-  const s = new Set<number>();
-  planos.forEach(p => {
-    const idx = normalizeDia(p.diaDaSemana ?? '');
-    if (idx !== null) s.add(idx);
-  });
-  return s;
 }
 
 function toDate(raw: unknown): Date {
@@ -71,8 +45,7 @@ function realisedDates(workouts: WorkoutSession[]): Set<string> {
 
 const WEEKDAY_LABELS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
 
-function WorkoutCalendar({ workouts, planos, month, onPrevMonth, onNextMonth }: CalendarProps) {
-  const planned = plannedWeekdays(planos);
+function WorkoutCalendar({ workouts, month, onPrevMonth, onNextMonth }: CalendarProps) {
   const realised = realisedDates(workouts);
 
   const mStart = startOfMonth(month);
@@ -92,7 +65,7 @@ function WorkoutCalendar({ workouts, planos, month, onPrevMonth, onNextMonth }: 
         <div className="flex items-center gap-2">
           <Calendar size={14} className="text-brand" />
           <h3 className="text-[10px] text-gray-500 uppercase tracking-widest font-black">
-            Planejado vs. Realizado
+            Histórico de Treinos
           </h3>
         </div>
         <div className="flex items-center gap-1">
@@ -120,28 +93,15 @@ function WorkoutCalendar({ workouts, planos, month, onPrevMonth, onNextMonth }: 
         {days.map(day => {
           const iso = format(day, 'yyyy-MM-dd');
           const inMonth = isSameMonth(day, month);
-          const isPast = iso <= today;
           const isToday = iso === today;
-          const isPlanned = planned.has(getDay(day));
           const isRealised = realised.has(iso);
 
           let cellClass = 'text-gray-700';
-          let dotColor = '';
 
           if (!inMonth) {
             cellClass = 'opacity-20 text-gray-700';
-          } else if (isRealised && isPlanned) {
-            // Both planned and done: filled brand
+          } else if (isRealised) {
             cellClass = 'bg-brand text-black font-black rounded-full';
-          } else if (isRealised && !isPlanned) {
-            // Unplanned workout done
-            cellClass = 'bg-gray-600 text-white font-bold rounded-full';
-          } else if (isPlanned && !isRealised && isPast && !isToday) {
-            // Planned but missed (past day)
-            cellClass = 'border border-dashed border-red-500/50 text-red-400 rounded-full';
-          } else if (isPlanned && !isRealised) {
-            // Planned, future or today – not yet done
-            cellClass = 'border border-brand/40 text-brand/70 rounded-full';
           } else if (isToday) {
             cellClass = 'border border-gray-500 text-white rounded-full';
           }
@@ -158,10 +118,8 @@ function WorkoutCalendar({ workouts, planos, month, onPrevMonth, onNextMonth }: 
 
       {/* Legend */}
       <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 border-t border-outline">
-        <LegendItem color="bg-brand" label="Planejado e realizado" />
-        <LegendItem color="bg-gray-600" label="Não planejado" />
-        <LegendItem border="border-brand/40" label="Planejado (pendente)" />
-        <LegendItem border="border-red-500/50 border-dashed" label="Faltou" textColor="text-red-400" />
+        <LegendItem color="bg-brand" label="Treino realizado" />
+        <LegendItem border="border-gray-500" label="Hoje" />
       </div>
     </section>
   );
@@ -362,7 +320,6 @@ interface DashboardProps {
 export default function Dashboard({ onNavigate }: DashboardProps) {
   const { data: workouts = [], isLoading: loading } = useWorkouts();
   const { data: measurements = [] } = useMeasurements();
-  const { data: planos = [] } = usePlanos();
   const { data: tafScores = [] } = useTAFScores();
   const { data: profile } = useProfile();
   const isTAFUser = profile?.objetivo === 'taf' || tafScores.length > 0;
@@ -495,7 +452,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           {/* ===== WORKOUT CALENDAR ===== */}
           <WorkoutCalendar
             workouts={workouts}
-            planos={planos}
             month={calendarMonth}
             onPrevMonth={() => setCalendarMonth(m => subMonths(m, 1))}
             onNextMonth={() => setCalendarMonth(m => addMonths(m, 1))}

@@ -179,10 +179,11 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
               }));
             }
             const lastDone = rebuilt[idx]?.[rebuilt[idx].length - 1];
+            const tempoBase = lastDone?.tempoSegundos ?? ex.tempoPlanejadoSegundos;
             inputs[idx] = {
               pesoReal: String(lastDone?.pesoReal ?? ex.pesoPlanejado ?? ''),
               repeticoesReais: String(lastDone?.repeticoesReais ?? ex.repeticoesPlanejadas ?? ''),
-              tempoSegundos: String(lastDone?.tempoSegundos ?? ex.tempoPlanejadoSegundos ?? ''),
+              tempoSegundos: tempoBase ? secsToMmss(tempoBase) : '',
               distanciaMetros: String(lastDone?.distanciaMetros ?? ex.distanciaPlanejadaMetros ?? ''),
               falhou: false,
             };
@@ -270,9 +271,9 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
   const semanas = planos.map(p => p.semana).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b);
   const diasForSemana = planos
     .filter(p => p.semana === selectedSemana)
-    .map(p => p.diaDaSemana)
-    .filter((d, i, a) => a.indexOf(d) === i);
-  const planoForDia = planos.find(p => p.semana === selectedSemana && p.diaDaSemana === selectedDia);
+    .map(p => p.nomeSessao ?? p.diaDaSemana ?? '')
+    .filter((d, i, a) => d !== '' && a.indexOf(d) === i);
+  const planoForDia = planos.find(p => p.semana === selectedSemana && (p.nomeSessao ?? p.diaDaSemana) === selectedDia);
 
   // ─── Circuit mode derived ─────────────────────────────────────────────────
   const isCircuitMode =
@@ -298,9 +299,10 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
     try {
       const profile = await workoutService.getUserProfile();
       const id = await workoutService.createActiveWorkout({
-        nomeTreino: planoForDia.nomeTreino ?? planoForDia.diaDaSemana,
+        nomeTreino: planoForDia.nomeTreino ?? planoForDia.nomeSessao ?? planoForDia.diaDaSemana,
         semana: planoForDia.semana,
-        diaDaSemana: planoForDia.diaDaSemana,
+        nomeSessao: planoForDia.nomeSessao ?? planoForDia.diaDaSemana,
+        diaDaSemana: planoForDia.nomeSessao ?? planoForDia.diaDaSemana,
         planoId: planoForDia.id,
         objetivo: profile?.objetivo,
         ...(planoForDia.tipoSessao && { tipoSessao: planoForDia.tipoSessao }),
@@ -313,7 +315,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
         inputs[idx] = {
           pesoReal: String(ex.pesoPlanejado ?? ''),
           repeticoesReais: String(ex.repeticoesPlanejadas ?? ''),
-          tempoSegundos: String(ex.tempoPlanejadoSegundos ?? ''),
+          tempoSegundos: ex.tempoPlanejadoSegundos ? secsToMmss(ex.tempoPlanejadoSegundos) : '',
           distanciaMetros: String(ex.distanciaPlanejadaMetros ?? ''),
           falhou: false,
         };
@@ -335,7 +337,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
     const mod = getModalidade(ex);
     const pesoReal = parseFloat(input.pesoReal) || 0;
     const repeticoesReais = parseInt(input.repeticoesReais) || 0;
-    const tempoSegundos = tempoOverride ?? (parseInt(input.tempoSegundos) || 0);
+    const tempoSegundos = tempoOverride ?? mmssToSecs(input.tempoSegundos);
     const distanciaMetros = parseInt(input.distanciaMetros) || 0;
     const paceMinKm = distanciaMetros > 0 && tempoSegundos > 0
       ? (tempoSegundos / 60) / (distanciaMetros / 1000)
@@ -528,19 +530,27 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
               <div>
                 <label className="input-label">Dia</label>
                 <div className="flex flex-wrap gap-2">
-                  {diasForSemana.map(d => (
-                    <button key={d} onClick={() => setSelectedDia(d)}
-                      className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${selectedDia === d ? 'bg-brand text-black border-brand' : 'border-outline text-gray-400 hover:border-brand'}`}>
-                      {d}
-                    </button>
-                  ))}
+                  {diasForSemana.map(d => {
+                    const plano = planos.find(p => p.semana === selectedSemana && (p.nomeSessao ?? p.diaDaSemana) === d);
+                    return (
+                      <button key={d} onClick={() => setSelectedDia(d)}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors flex flex-col items-start ${selectedDia === d ? 'bg-brand text-black border-brand' : 'border-outline text-gray-400 hover:border-brand'}`}>
+                        <span>{d}</span>
+                        {plano?.diaSugerido && (
+                          <span className={`text-[10px] font-bold uppercase tracking-wider ${selectedDia === d ? 'text-black/60' : 'text-gray-600'}`}>
+                            {plano.diaSugerido}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
             {planoForDia && (
               <div className="card p-4 space-y-3">
                 <h3 className="font-black text-sm uppercase tracking-wide">
-                  {planoForDia.diaDaSemana}: {planoForDia.exercicios.length} exercícios
+                  {planoForDia.nomeSessao ?? planoForDia.diaDaSemana}: {planoForDia.exercicios.length} exercícios
                 </h3>
                 <ul className="space-y-1.5">
                   {planoForDia.exercicios.map((ex, i) => {
@@ -581,7 +591,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
           </button>
           <div className="flex-1 min-w-0">
             <h2 className="text-brand text-xs font-bold uppercase tracking-widest mb-1">Em Execução</h2>
-            <h1 className="font-display text-xl font-black uppercase tracking-tight truncate">{selectedPlano?.diaDaSemana}</h1>
+            <h1 className="font-display text-xl font-black uppercase tracking-tight truncate">{selectedPlano?.nomeSessao ?? selectedPlano?.diaDaSemana}</h1>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {streak >= 3 && (
@@ -710,6 +720,11 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                 <span className="sm:hidden" style={{ color: theme.accentHex }}>
                   <theme.icon size={13} />
                 </span>
+                {isResting && !isActive && timerActive && (
+                  <span className="font-mono text-xs font-black tabular-nums text-[#CCFF00]">
+                    {Math.floor(timerSeconds / 60)}:{String(timerSeconds % 60).padStart(2, '0')}
+                  </span>
+                )}
                 {isActive ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
               </div>
             </button>
@@ -753,13 +768,14 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                         {/* ── Iniciar série button ──────────────────── */}
                         {!isStarted ? (
                           <button
+                            disabled={timerActive && restingCardIdx !== null && !isResting}
                             onClick={() => {
                               startElapsedTimer(exIdx);
                               if ((mod === 'isometria' || mod === 'cardio_livre') && ex.tempoPlanejadoSegundos) {
                                 startSerieCountdown(exIdx, ex.tempoPlanejadoSegundos);
                               }
                             }}
-                            className="w-full rounded-xl border-2 py-3.5 text-sm font-black uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                            className="w-full rounded-xl border-2 py-3.5 text-sm font-black uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                             style={{
                               borderColor: theme.accentHex,
                               color: theme.accentHex,
@@ -779,7 +795,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                               stopSerieCountdown(exIdx);
                               setCurrentInputs(prev => ({
                                 ...prev,
-                                [exIdx]: { ...prev[exIdx], tempoSegundos: String(elapsed) },
+                                [exIdx]: { ...prev[exIdx], tempoSegundos: secsToMmss(elapsed) },
                               }));
                             }}
                           />
@@ -932,6 +948,11 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                       <span className="sm:hidden" style={{ color: theme.accentHex }}>
                         <theme.icon size={13} />
                       </span>
+                      {isResting && !isActive && timerActive && (
+                        <span className="font-mono text-xs font-black tabular-nums text-[#CCFF00]">
+                          {Math.floor(timerSeconds / 60)}:{String(timerSeconds % 60).padStart(2, '0')}
+                        </span>
+                      )}
                       {isCurrent && (isActive ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />)}
                     </div>
                   </button>
@@ -959,13 +980,14 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                                 {/* ── Regras Oficiais TAF ─────────────── */}
                                 <RegrasOficiaisCard exercicioId={ex.exercicioId} modalidadeTAF={ex.modalidadeTAF} />
                                 <button
+                                  disabled={timerActive && restingCardIdx !== null && !isResting}
                                   onClick={() => {
                                     startElapsedTimer(exIdx);
                                     if ((mod === 'isometria' || mod === 'cardio_livre') && ex.tempoPlanejadoSegundos) {
                                       startSerieCountdown(exIdx, ex.tempoPlanejadoSegundos);
                                     }
                                   }}
-                                  className="w-full rounded-xl border-2 py-3.5 text-sm font-black uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                  className="w-full rounded-xl border-2 py-3.5 text-sm font-black uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                                   style={{ borderColor: theme.accentHex, color: theme.accentHex, background: `${theme.accentHex}12` }}
                                 >
                                   <Play size={15} />
@@ -982,7 +1004,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                                   stopSerieCountdown(exIdx);
                                   setCurrentInputs(prev => ({
                                     ...prev,
-                                    [exIdx]: { ...prev[exIdx], tempoSegundos: String(elapsed) },
+                                    [exIdx]: { ...prev[exIdx], tempoSegundos: secsToMmss(elapsed) },
                                   }));
                                 }}
                               />
@@ -1042,6 +1064,51 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
 
 // ─── Sub-componentes ──────────────────────────────────────────────────────────
 
+// ─── Time helpers ─────────────────────────────────────────────────────────────
+
+function secsToMmss(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function mmssToSecs(value: string): number {
+  const trimmed = value.trim();
+  if (trimmed.includes(':')) {
+    const [mPart, sPart] = trimmed.split(':');
+    const m = parseInt(mPart, 10) || 0;
+    const s = Math.min(parseInt(sPart, 10) || 0, 59);
+    return m * 60 + s;
+  }
+  return parseInt(trimmed, 10) || 0;
+}
+
+// ─── TimeInput ────────────────────────────────────────────────────────────────
+
+function TimeInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [local, setLocal] = React.useState(value);
+  React.useEffect(() => { setLocal(value); }, [value]);
+
+  function handleBlur() {
+    const secs = mmssToSecs(local);
+    const normalized = secs > 0 ? secsToMmss(secs) : '';
+    setLocal(normalized);
+    onChange(normalized);
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      className="form-input font-mono"
+      placeholder="00:00"
+      value={local}
+      onChange={e => setLocal(e.target.value)}
+      onBlur={handleBlur}
+    />
+  );
+}
+
 // ─── RegrasOficiaisCard ───────────────────────────────────────────────────────
 
 function RegrasOficiaisCard({
@@ -1096,7 +1163,7 @@ interface SerieInputsProps {
 function SerieInputs({ modalidade, input, onChange }: SerieInputsProps) {
   if (modalidade === 'corrida') {
     const dist = parseInt(input.distanciaMetros) || 0;
-    const tempo = parseInt(input.tempoSegundos) || 0;
+    const tempo = mmssToSecs(input.tempoSegundos);
     const pace = dist > 0 && tempo > 0 ? calcularPace(dist, tempo) : null;
     return (
       <div className="space-y-3">
@@ -1108,10 +1175,8 @@ function SerieInputs({ modalidade, input, onChange }: SerieInputsProps) {
               onChange={e => onChange('distanciaMetros', e.target.value)} />
           </div>
           <div>
-            <label className="input-label">Tempo (s)</label>
-            <input type="number" min="0" inputMode="numeric" className="form-input"
-              value={input.tempoSegundos}
-              onChange={e => onChange('tempoSegundos', e.target.value)} />
+            <label className="input-label">Tempo (mm:ss)</label>
+            <TimeInput value={input.tempoSegundos} onChange={v => onChange('tempoSegundos', v)} />
           </div>
         </div>
         {pace && <p className="text-xs font-mono text-brand/80">{formatarDistancia(dist)} · {formatarTempo(tempo)} · {pace}</p>}
@@ -1123,10 +1188,8 @@ function SerieInputs({ modalidade, input, onChange }: SerieInputsProps) {
     return (
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="input-label">Tempo (s)</label>
-          <input type="number" min="0" inputMode="numeric" className="form-input"
-            value={input.tempoSegundos}
-            onChange={e => onChange('tempoSegundos', e.target.value)} />
+          <label className="input-label">Tempo (mm:ss)</label>
+          <TimeInput value={input.tempoSegundos} onChange={v => onChange('tempoSegundos', v)} />
         </div>
         <div>
           <label className="input-label">Reps (opc.)</label>
@@ -1141,10 +1204,8 @@ function SerieInputs({ modalidade, input, onChange }: SerieInputsProps) {
   if (modalidade === 'cardio_livre') {
     return (
       <div>
-        <label className="input-label">Tempo (s)</label>
-        <input type="number" min="0" inputMode="numeric" className="form-input"
-          value={input.tempoSegundos}
-          onChange={e => onChange('tempoSegundos', e.target.value)} />
+        <label className="input-label">Tempo (mm:ss)</label>
+        <TimeInput value={input.tempoSegundos} onChange={v => onChange('tempoSegundos', v)} />
       </div>
     );
   }

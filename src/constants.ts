@@ -277,13 +277,54 @@ export const MOCK_EXERCICIOS: Exercício[] = [
   { id: 'custom_r04',              nome: 'Corrida Ritmo TAF',         grupoMuscular: 'Cardio',              modalidade: 'corrida' },
 ];
 
+export const PROMPT_ESPC = `Converta o plano de treino que vou descrever para o formato JSON abaixo. Não invente exercícios, séries ou cargas — use exatamente o que eu informar.
+
+## ESTRUTURA DO JSON
+\`\`\`
+{
+  "plano": [
+    {
+      "semana": 1,
+      "dias": [
+        {
+          "dia": "Treino A",          // nome livre da sessão (ex: "Pernas", "Peito", "Simulado TAF")
+          "nomeTreino": "...",        // título descritivo
+          "exercicios": [
+            {
+              "id": 1,                // ID numérico se for exercício do catálogo; string se for personalizado
+              "nome": "...",          // obrigatório se id for string
+              "grupoMuscular": "...", // obrigatório se id for string
+              "series": 3,           // número inteiro
+              "repeticoes": 10,      // número inteiro; use 0 para exercícios baseados em tempo
+              "peso": 40,            // kg (decimal permitido, ex: 42.5); 0 para peso corporal
+              "obs": ""              // observações opcionais
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+\`\`\`
+
+## REGRAS
+- \`"dia"\`: nome descritivo livre — NÃO use dias da semana ("Segunda", "Terça")
+- \`"series"\`, \`"repeticoes"\`, \`"peso"\`: sempre números, NUNCA strings
+- Para tempo (isometria, corrida): \`"repeticoes": 0\` e informe o tempo em \`"obs"\`
+- Responda APENAS com o JSON, sem explicações ou texto adicional
+
+## MEU PLANO
+`;
+
+
 export const JSON_EXEMPLO = {
   "plano": [
     {
       "semana": 1,
       "dias": [
         {
-          "dia": "Segunda",
+          "dia": "Treino A",
+          "diaSugerido": "Segunda",
           "nomeTreino": "Peito e Tríceps",
           "exercicios": [
             { "id": 1, "series": 4, "repeticoes": 10, "peso": 40, "obs": "aquecimento antes" },
@@ -292,7 +333,8 @@ export const JSON_EXEMPLO = {
           ]
         },
         {
-          "dia": "Quarta",
+          "dia": "Treino B",
+          "diaSugerido": "Quarta",
           "nomeTreino": "Pernas",
           "exercicios": [
             { "id": 2, "series": 4, "repeticoes": 10, "peso": 80, "obs": "" }
@@ -304,7 +346,8 @@ export const JSON_EXEMPLO = {
       "semana": 2,
       "dias": [
         {
-          "dia": "Segunda",
+          "dia": "Treino A",
+          "diaSugerido": "Segunda",
           "nomeTreino": "Peito e Tríceps (sobrecarga)",
           "exercicios": [
             { "id": 1, "series": 4, "repeticoes": 10, "peso": 42.5, "obs": "" },
@@ -313,7 +356,8 @@ export const JSON_EXEMPLO = {
           ]
         },
         {
-          "dia": "Quarta",
+          "dia": "Treino B",
+          "diaSugerido": "Quarta",
           "nomeTreino": "Pernas (sobrecarga)",
           "exercicios": [
             { "id": 2, "series": 4, "repeticoes": 10, "peso": 82.5, "obs": "" }

@@ -201,7 +201,7 @@ export default function ViewPlan({ onNavigateImport }: ViewPlanProps) {
                 >
                   <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isEditing ? 'bg-brand animate-pulse motion-reduce:animate-none' : 'bg-gray-600'}`} />
                   <div>
-                    <p className="font-bold text-sm">{plano.diaDaSemana}</p>
+                    <p className="font-bold text-sm">{plano.nomeSessao ?? plano.diaDaSemana}</p>
                     <p className="text-xs text-gray-500">
                       {plano.nomeTreino || 'Treino'}
                       <span className="ml-2">· {plano.exercicios.length} exercícios</span>
@@ -309,7 +309,7 @@ export default function ViewPlan({ onNavigateImport }: ViewPlanProps) {
                     <div className="bg-red-500/10 border-t border-red-500/30 p-4 flex items-center gap-3">
                       <AlertTriangle size={16} className="text-red-400 flex-shrink-0" />
                       <p className="text-xs text-red-300 flex-1">
-                        Excluir <strong>{plano.diaDaSemana}</strong>? Esta ação não pode ser desfeita.
+                        Excluir <strong>{plano.nomeSessao ?? plano.diaDaSemana}</strong>? Esta ação não pode ser desfeita.
                       </p>
                       <div className="flex gap-2">
                         <button

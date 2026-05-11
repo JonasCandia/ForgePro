@@ -6,7 +6,7 @@ import { workoutService } from '../../lib/workoutService';
 import { WorkoutExerciseSummary, WorkoutSession } from '../../types';
 import type { TipoSessaoTAF } from '../../types';
 import { useWorkouts, useInvalidateWorkouts } from '../../hooks/useWorkouts';
-import { exportToCSV } from '../../lib/exportUtils';
+import { exportToCSV, exportToJSON } from '../../lib/exportUtils';
 import { formatarResumoExercicio } from '../../lib/exercicioUtils';
 
 function toDate(raw: unknown): Date {
@@ -360,6 +360,15 @@ export default function History({ onNavigate }: HistoryProps) {
               >
                 <Download size={14} />
                 CSV
+              </button>
+              <button
+                onClick={() => exportToJSON(workouts)}
+                disabled={workouts.length === 0}
+                className="btn-secondary disabled:opacity-40 flex items-center gap-2 text-xs"
+                title="Exportar histórico como JSON"
+              >
+                <Download size={14} />
+                JSON
               </button>
             </>
           )}
