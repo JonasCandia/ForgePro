@@ -27,3 +27,19 @@ export function useDeletePlano() {
     onSuccess: invalidate,
   });
 }
+
+export function useDeleteAllPlanos() {
+  const invalidate = useInvalidatePlanos();
+  return useMutation({
+    mutationFn: () => workoutService.deleteAllPlanos(),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteManyPlanos() {
+  const invalidate = useInvalidatePlanos();
+  return useMutation({
+    mutationFn: (ids: string[]) => workoutService.deleteManyPlanos(ids),
+    onSuccess: invalidate,
+  });
+}

@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import {
   ChevronDown, ChevronUp, Edit3, Trash2, Check, X,
-  ClipboardList, Plus, AlertTriangle, Dumbbell
+  ClipboardList, Plus, AlertTriangle, Dumbbell, CheckSquare, Square
 } from 'lucide-react';
-import { usePlanos, useUpdatePlano, useDeletePlano } from '../../hooks/usePlanos';
+import { usePlanos, useUpdatePlano, useDeletePlano, useDeleteManyPlanos } from '../../hooks/usePlanos';
 import type { Plano, ExercicioNoPlano } from '../../types';
 import { LABEL_MODALIDADE } from '../../lib/exercicioUtils';
 
@@ -28,12 +28,16 @@ export default function ViewPlan({ onNavigateImport }: ViewPlanProps) {
   const { data: planos = [], isLoading } = usePlanos();
   const updatePlano = useUpdatePlano();
   const deletePlano = useDeletePlano();
+  const deleteManyPlanos = useDeleteManyPlanos();
 
   const [selectedSemana, setSelectedSemana] = useState<number | null>(null);
   const [expandedDias, setExpandedDias] = useState<Set<string>>(new Set());
   const [editingDia, setEditingDia] = useState<string | null>(null);  // planoId
   const [editState, setEditState] = useState<EditState>({});
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null); // planoId
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmDeleteSelected, setConfirmDeleteSelected] = useState(false);
 
   // Semanas disponíveis, ordenadas
   const semanas = useMemo(() => {
@@ -116,6 +120,41 @@ export default function ViewPlan({ onNavigateImport }: ViewPlanProps) {
     });
   }
 
+  function enterSelectionMode() {
+    setSelectionMode(true);
+    setSelectedIds(new Set());
+    setEditingDia(null);
+    setConfirmDelete(null);
+  }
+
+  function exitSelectionMode() {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+    setConfirmDeleteSelected(false);
+  }
+
+  function toggleSelect(planoId: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(planoId)) next.delete(planoId);
+      else next.add(planoId);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === planos.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(planos.map(p => p.id)));
+    }
+  }
+
+  async function handleDeleteSelected() {
+    await deleteManyPlanos.mutateAsync([...selectedIds]);
+    exitSelectionMode();
+  }
+
   // ─── loading skeleton ────────────────────────────────────────────────────
   if (isLoading) {
     return (
@@ -156,7 +195,70 @@ export default function ViewPlan({ onNavigateImport }: ViewPlanProps) {
 
   // ─── render principal ────────────────────────────────────────────────────
   return (
-    <div className="space-y-6 pt-4 pb-24">
+    <div className="space-y-6 pt-4 pb-36">
+
+      {/* Cabeçalho */}
+      <div className="flex items-center justify-between">
+        {selectionMode ? (
+          <>
+            <button
+              onClick={toggleSelectAll}
+              className="flex items-center gap-2 text-sm font-bold text-gray-300 hover:text-white transition-colors"
+            >
+              {selectedIds.size === planos.length
+                ? <CheckSquare size={16} className="text-brand" />
+                : <Square size={16} className="text-gray-500" />}
+              {selectedIds.size === 0
+                ? 'Selecionar todos'
+                : `${selectedIds.size} selecionado${selectedIds.size > 1 ? 's' : ''}`}
+            </button>
+            <button
+              onClick={exitSelectionMode}
+              className="flex items-center gap-1 text-xs text-gray-500 hover:text-white transition-colors"
+            >
+              <X size={14} />
+              Cancelar
+            </button>
+          </>
+        ) : (
+          <>
+            <h2 className="font-display text-xl font-black uppercase tracking-tight">Planos de Treino</h2>
+            <button
+              onClick={enterSelectionMode}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-400 border border-outline rounded-lg hover:border-red-500/50 hover:text-red-400 transition-colors"
+            >
+              <CheckSquare size={13} />
+              Selecionar
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Confirmação de exclusão em lote */}
+      {confirmDeleteSelected && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3">
+          <AlertTriangle size={18} className="text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-bold text-red-300">Excluir {selectedIds.size} plano{selectedIds.size > 1 ? 's' : ''}?</p>
+            <p className="text-xs text-red-400/80 mt-0.5">Esta ação não pode ser desfeita.</p>
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={handleDeleteSelected}
+                disabled={deleteManyPlanos.isPending}
+                className="px-4 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-60"
+              >
+                {deleteManyPlanos.isPending ? 'Excluindo…' : 'Confirmar'}
+              </button>
+              <button
+                onClick={() => setConfirmDeleteSelected(false)}
+                className="px-4 py-1.5 border border-outline text-gray-400 text-xs font-bold rounded-lg hover:text-white transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Pills de semana */}
       <div className="flex flex-wrap gap-2">
@@ -187,19 +289,39 @@ export default function ViewPlan({ onNavigateImport }: ViewPlanProps) {
           const isEditing = editingDia === plano.id;
           const isSaving = updatePlano.isPending;
           const isDeleting = deletePlano.isPending && confirmDelete === plano.id;
+          const isSelected = selectedIds.has(plano.id);
 
           return (
             <div
               key={plano.id}
-              className={`card overflow-hidden transition-colors ${isEditing ? 'border-brand/50' : 'border-outline'}`}
+              className={`card overflow-hidden transition-colors ${
+                selectionMode && isSelected
+                  ? 'border-red-500/50 bg-red-500/5'
+                  : isEditing
+                  ? 'border-brand/50'
+                  : 'border-outline'
+              }`}
             >
               {/* Cabeçalho do card */}
               <div className="flex items-center p-4">
+                {selectionMode && (
+                  <button
+                    onClick={() => toggleSelect(plano.id)}
+                    className="mr-3 flex-shrink-0 text-gray-500"
+                    aria-label={isSelected ? 'Desmarcar' : 'Selecionar'}
+                  >
+                    {isSelected
+                      ? <CheckSquare size={18} className="text-red-400" />
+                      : <Square size={18} />}
+                  </button>
+                )}
                 <button
                   className="flex-1 flex items-center gap-3 text-left"
-                  onClick={() => toggleDia(plano.id)}
+                  onClick={() => selectionMode ? toggleSelect(plano.id) : toggleDia(plano.id)}
                 >
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isEditing ? 'bg-brand animate-pulse motion-reduce:animate-none' : 'bg-gray-600'}`} />
+                  {!selectionMode && (
+                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isEditing ? 'bg-brand animate-pulse motion-reduce:animate-none' : 'bg-gray-600'}`} />
+                  )}
                   <div>
                     <p className="font-bold text-sm">{plano.nomeSessao ?? plano.diaDaSemana}</p>
                     <p className="text-xs text-gray-500">
@@ -209,23 +331,25 @@ export default function ViewPlan({ onNavigateImport }: ViewPlanProps) {
                     </p>
                   </div>
                 </button>
-                <div className="flex items-center gap-1 ml-2">
-                  {!isEditing && (
+                {!selectionMode && (
+                  <div className="flex items-center gap-1 ml-2">
+                    {!isEditing && (
+                      <button
+                        onClick={() => startEdit(plano)}
+                        className="p-2 text-gray-500 hover:text-brand transition-colors rounded-lg hover:bg-brand/10"
+                        title="Editar dia"
+                      >
+                        <Edit3 size={15} />
+                      </button>
+                    )}
                     <button
-                      onClick={() => startEdit(plano)}
-                      className="p-2 text-gray-500 hover:text-brand transition-colors rounded-lg hover:bg-brand/10"
-                      title="Editar dia"
+                      onClick={() => toggleDia(plano.id)}
+                      className="p-2 text-gray-500 hover:text-white transition-colors"
                     >
-                      <Edit3 size={15} />
+                      {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </button>
-                  )}
-                  <button
-                    onClick={() => toggleDia(plano.id)}
-                    className="p-2 text-gray-500 hover:text-white transition-colors"
-                  >
-                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                  </button>
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* Conteúdo expandido */}
@@ -336,15 +460,44 @@ export default function ViewPlan({ onNavigateImport }: ViewPlanProps) {
       </div>
 
       {/* Link rápido para importar nova semana */}
-      <div className="pt-2 text-center">
-        <button
-          onClick={onNavigateImport}
-          className="text-xs text-gray-600 hover:text-brand transition-colors flex items-center gap-1.5 mx-auto"
-        >
-          <Plus size={12} />
-          Importar / mesclar nova semana
-        </button>
-      </div>
+      {!selectionMode && (
+        <div className="pt-2 text-center">
+          <button
+            onClick={onNavigateImport}
+            className="text-xs text-gray-600 hover:text-brand transition-colors flex items-center gap-1.5 mx-auto"
+          >
+            <Plus size={12} />
+            Importar / mesclar nova semana
+          </button>
+        </div>
+      )}
+
+      {/* Barra flutuante de ação (modo seleção) */}
+      {selectionMode && (
+        <div className="fixed bottom-20 left-0 right-0 z-40 flex justify-center px-4 pointer-events-none">
+          <div className="pointer-events-auto flex items-center gap-3 bg-surface border border-outline rounded-2xl px-5 py-3 shadow-2xl">
+            <span className="text-sm text-gray-400">
+              {selectedIds.size === 0
+                ? 'Nenhum selecionado'
+                : `${selectedIds.size} selecionado${selectedIds.size > 1 ? 's' : ''}`}
+            </span>
+            <button
+              onClick={() => setConfirmDeleteSelected(true)}
+              disabled={selectedIds.size === 0}
+              className="flex items-center gap-1.5 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:bg-red-500/30 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl transition-colors"
+            >
+              <Trash2 size={13} />
+              Excluir
+            </button>
+            <button
+              onClick={exitSelectionMode}
+              className="px-3 py-2 border border-outline text-gray-400 text-xs font-bold rounded-xl hover:text-white transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
