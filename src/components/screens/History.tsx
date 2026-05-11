@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Trash2, Search, Calendar, ChevronDown, Flame, Download, CheckSquare, Square, ChevronUp, Settings2, SlidersHorizontal } from 'lucide-react';
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay, getYear } from 'date-fns';
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay, getYear, eachDayOfInterval, startOfYear, endOfYear, getDay, getWeek, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ResponsiveCalendar } from '@nivo/calendar';
 import { workoutService } from '../../lib/workoutService';
 import { WorkoutExerciseSummary, WorkoutSession } from '../../types';
 import type { TipoSessaoTAF } from '../../types';
@@ -29,6 +28,137 @@ const TIPO_SESSAO_OPCOES: { value: TipoSessaoTAF; label: string; color: string }
 interface HistoryProps {
   onNavigate?: (screen: string) => void;
   onBack?: () => void;
+}
+
+const HEAT_COLORS = ['#1a1a1a', '#2d4a00', '#5a9200', '#99d000', '#CCFF00'];
+
+function dayColor(count: number): string {
+  if (count === 0) return HEAT_COLORS[0];
+  if (count === 1) return HEAT_COLORS[1];
+  if (count === 2) return HEAT_COLORS[2];
+  if (count === 3) return HEAT_COLORS[3];
+  return HEAT_COLORS[4];
+}
+
+function CalendarHeatmap({ data, year }: { data: { day: string; value: number }[]; year: number }) {
+  const countMap = useMemo(() => {
+    const m = new Map<string, number>();
+    data.forEach(({ day, value }) => m.set(day, value));
+    return m;
+  }, [data]);
+
+  const days = useMemo(() => {
+    const start = startOfYear(new Date(year, 0, 1));
+    const end = endOfYear(new Date(year, 0, 1));
+    return eachDayOfInterval({ start, end });
+  }, [year]);
+
+  // Build a 7-row (Sun–Sat) × N-col (weeks) grid
+  const weeks = useMemo(() => {
+    const result: (Date | null)[][] = [];
+    // first week: pad with nulls until Jan 1
+    const firstDow = getDay(days[0]); // 0=Sun
+    let week: (Date | null)[] = Array(firstDow).fill(null);
+    days.forEach(d => {
+      week.push(d);
+      if (week.length === 7) { result.push(week); week = []; }
+    });
+    if (week.length > 0) {
+      while (week.length < 7) week.push(null);
+      result.push(week);
+    }
+    return result;
+  }, [days]);
+
+  const MONTH_LABELS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  // Compute which column each month starts at
+  const monthStarts = useMemo(() => {
+    const seen = new Set<number>();
+    return weeks.map((week, col) => {
+      const firstReal = week.find(d => d !== null);
+      if (!firstReal) return null;
+      const m = firstReal.getMonth();
+      if (!seen.has(m)) { seen.add(m); return m; }
+      return null;
+    });
+  }, [weeks]);
+
+  const CELL = 10; // px
+  const GAP = 2;   // px
+  const STEP = CELL + GAP;
+
+  return (
+    <div className="overflow-x-auto">
+      <div style={{ position: 'relative', height: 7 * STEP + 14, minWidth: weeks.length * STEP + 28 }}>
+        {/* Month labels */}
+        {monthStarts.map((m, col) =>
+          m !== null ? (
+            <span
+              key={col}
+              style={{
+                position: 'absolute',
+                left: 28 + col * STEP,
+                top: 0,
+                fontSize: 9,
+                color: '#6b7280',
+                fontWeight: 700,
+                fontFamily: 'inherit',
+                lineHeight: '12px',
+              }}
+            >
+              {MONTH_LABELS[m]}
+            </span>
+          ) : null
+        )}
+        {/* Day-of-week labels */}
+        {['D','S','T','Q','Q','S','S'].map((label, row) => (
+          row % 2 === 1 ? (
+            <span
+              key={row}
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 14 + row * STEP,
+                width: 24,
+                fontSize: 8,
+                color: '#4b5563',
+                fontWeight: 700,
+                fontFamily: 'inherit',
+                textAlign: 'right',
+              }}
+            >
+              {label}
+            </span>
+          ) : null
+        ))}
+        {/* Cells */}
+        {weeks.map((week, col) =>
+          week.map((d, row) => {
+            if (!d) return null;
+            const key = format(d, 'yyyy-MM-dd');
+            const count = countMap.get(key) ?? 0;
+            return (
+              <div
+                key={key}
+                title={`${format(d, "dd 'de' MMM", { locale: ptBR })}: ${count} treino${count !== 1 ? 's' : ''}`}
+                style={{
+                  position: 'absolute',
+                  left: 28 + col * STEP,
+                  top: 14 + row * STEP,
+                  width: CELL,
+                  height: CELL,
+                  borderRadius: 2,
+                  backgroundColor: dayColor(count),
+                  border: '1px solid #111',
+                }}
+              />
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function History({ onNavigate }: HistoryProps) {
@@ -261,44 +391,8 @@ export default function History({ onNavigate }: HistoryProps) {
           </div>
         </div>
 
-        {/* Nivo Calendar – needs a fixed height container */}
-        <div style={{ height: 160 }} className="w-full overflow-hidden">
-          <ResponsiveCalendar
-            data={heatmapData}
-            from={calendarFrom}
-            to={calendarTo}
-            emptyColor="#1a1a1a"
-            colors={['#2d4a00', '#5a9200', '#99d000', '#CCFF00']}
-            margin={{ top: 20, right: 4, bottom: 0, left: 28 }}
-            yearSpacing={0}
-            monthBorderColor="#111"
-            dayBorderWidth={2}
-            dayBorderColor="#111"
-            monthLegendOffset={10}
-            legends={[]}
-            tooltip={({ day, value }) => (
-              <div
-                style={{
-                  background: '#1a1a1a',
-                  border: '1px solid #333',
-                  borderRadius: 6,
-                  padding: '4px 8px',
-                  fontSize: 11,
-                  color: '#CCFF00',
-                  fontWeight: 700,
-                }}
-              >
-                {format(parseISO(day), "dd 'de' MMM", { locale: ptBR })}
-                {': '}
-                {value} treino{(value as unknown as number) !== 1 ? 's' : ''}
-              </div>
-            )}
-            theme={{
-              text: { fontSize: 10, fill: '#6b7280', fontFamily: 'inherit' },
-              tooltip: { container: { background: 'transparent', boxShadow: 'none', padding: 0 } },
-            }}
-          />
-        </div>
+        {/* Custom Calendar Heatmap */}
+        <CalendarHeatmap data={heatmapData} year={calendarYear} />
 
         {/* Legend */}
         <div className="flex items-center justify-end gap-2">
