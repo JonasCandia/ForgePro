@@ -91,7 +91,6 @@ export interface Profile {
   faixaEtaria?: FaixaEtariaTAF;
   /** Sexo biológico para seleção da tabela TAF correta */
   sexo?: SexoBio;
-  fotoUrl?: string;
   zeppConnected?: boolean; // reservado para integração futura Zepp Health
   createdAt?: any;
   updatedAt?: any;

@@ -198,11 +198,7 @@ function AppInner() {
                 aria-label="Menu do usuário"
                 aria-expanded={dropdownOpen}
               >
-                <img 
-                  src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`} 
-                  alt="Avatar" 
-                  className="w-full h-full object-cover"
-                />
+                <UserIcon size={18} className="text-gray-400" />
               </button>
               <div className={`absolute right-0 top-full mt-2 w-48 bg-surface border border-outline rounded-lg shadow-xl p-2 animate-in fade-in slide-in-from-top-2 ${dropdownOpen ? 'block' : 'hidden'}`}>
                 <p className="text-[10px] font-bold text-gray-500 px-2 py-1 uppercase">{user.displayName}</p>
