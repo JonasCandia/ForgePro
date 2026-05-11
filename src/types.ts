@@ -54,6 +54,8 @@ export interface ExercicioNoPlano {
   tempoPlanejadoSegundos?: number;
   /** Distância planejada por série em metros (corrida) */
   distanciaPlanejadaMetros?: number;
+  /** Se true, a série não exige meta de reps — executar até a falha */
+  ateAFalha?: boolean;
 }
 
 export type TipoSessaoTAF =
@@ -81,6 +83,8 @@ export interface Plano {
   bloco?: number;
   /** Tipo de sessão para planos TAF */
   tipoSessao?: TipoSessaoTAF;
+  /** Tempo de descanso entre ciclos no modo circuito (segundos). Padrão: 60s */
+  tempoDescansoCircuito?: number;
 }
 
 export type FaixaEtariaTAF = '18_24' | '25_29' | '30_34' | '35_39' | '40_44' | '45_mais';

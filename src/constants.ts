@@ -321,46 +321,72 @@ export const JSON_EXEMPLO = {
   "plano": [
     {
       "semana": 1,
+      "bloco": "Adaptação",
       "dias": [
         {
           "dia": "Treino A",
           "diaSugerido": "Segunda",
           "nomeTreino": "Peito e Tríceps",
+          "tipoSessao": "forca",
           "exercicios": [
-            { "id": 1, "series": 4, "repeticoes": 10, "peso": 40, "obs": "aquecimento antes" },
-            { "id": 7, "series": 3, "repeticoes": 12, "peso": 15, "obs": "" },
-            { "id": "custom_01", "nome": "Crossover no Cabo", "grupoMuscular": "Peitoral", "series": 3, "repeticoes": 15, "peso": 10, "obs": "finalização" }
+            { "id": 1, "series": 4, "repeticoes": 10, "peso": 40, "modalidade": "forca_dinamica", "obs": "aquecimento antes" },
+            { "id": 7, "series": 3, "repeticoes": 12, "peso": 15, "modalidade": "forca_dinamica", "obs": "" },
+            { "id": "custom_01", "nome": "Crossover no Cabo", "grupoMuscular": "Peitoral", "series": 3, "repeticoes": 15, "peso": 10, "modalidade": "forca_dinamica", "obs": "finalização" }
           ]
         },
         {
           "dia": "Treino B",
           "diaSugerido": "Quarta",
           "nomeTreino": "Pernas",
+          "tipoSessao": "forca",
           "exercicios": [
-            { "id": 2, "series": 4, "repeticoes": 10, "peso": 80, "obs": "" }
+            { "id": 2, "series": 4, "repeticoes": 10, "peso": 80, "modalidade": "forca_dinamica", "obs": "" },
+            { "id": "custom_02", "nome": "Agachamento Búlgaro", "grupoMuscular": "Pernas", "series": 3, "repeticoes": 12, "peso": 0, "modalidade": "peso_corporal", "obs": "apenas peso do corpo" }
+          ]
+        },
+        {
+          "dia": "Cardio",
+          "diaSugerido": "Sexta",
+          "nomeTreino": "Corrida Contínua",
+          "tipoSessao": "corrida",
+          "exercicios": [
+            { "id": "custom_03", "nome": "Corrida Leve", "grupoMuscular": "Cardio", "series": 1, "repeticoes": 0, "peso": 0, "modalidade": "corrida", "tempoPlanejadoSegundos": 1800, "obs": "30 min em ritmo leve" }
+          ]
+        },
+        {
+          "dia": "Circuito",
+          "diaSugerido": "Sábado",
+          "nomeTreino": "Circuito Funcional",
+          "tipoSessao": "circuito",
+          "exercicios": [
+            { "id": "custom_04", "nome": "Prancha", "grupoMuscular": "Core", "series": 3, "repeticoes": 0, "peso": 0, "modalidade": "isometria", "tempoPlanejadoSegundos": 60, "obs": "60s cada série" },
+            { "id": "custom_05", "nome": "Polichinelo", "grupoMuscular": "Cardio", "series": 3, "repeticoes": 30, "peso": 0, "modalidade": "cardio_livre", "obs": "" }
           ]
         }
       ]
     },
     {
       "semana": 2,
+      "bloco": "Adaptação",
       "dias": [
         {
           "dia": "Treino A",
           "diaSugerido": "Segunda",
           "nomeTreino": "Peito e Tríceps (sobrecarga)",
+          "tipoSessao": "forca",
           "exercicios": [
-            { "id": 1, "series": 4, "repeticoes": 10, "peso": 42.5, "obs": "" },
-            { "id": 7, "series": 3, "repeticoes": 12, "peso": 17.5, "obs": "" },
-            { "id": "custom_01", "nome": "Crossover no Cabo", "grupoMuscular": "Peitoral", "series": 3, "repeticoes": 15, "peso": 12, "obs": "" }
+            { "id": 1, "series": 4, "repeticoes": 10, "peso": 42.5, "modalidade": "forca_dinamica", "obs": "" },
+            { "id": 7, "series": 3, "repeticoes": 12, "peso": 17.5, "modalidade": "forca_dinamica", "obs": "" },
+            { "id": "custom_01", "nome": "Crossover no Cabo", "grupoMuscular": "Peitoral", "series": 3, "repeticoes": 15, "peso": 12, "modalidade": "forca_dinamica", "obs": "" }
           ]
         },
         {
           "dia": "Treino B",
           "diaSugerido": "Quarta",
           "nomeTreino": "Pernas (sobrecarga)",
+          "tipoSessao": "forca",
           "exercicios": [
-            { "id": 2, "series": 4, "repeticoes": 10, "peso": 82.5, "obs": "" }
+            { "id": 2, "series": 4, "repeticoes": 10, "peso": 82.5, "modalidade": "forca_dinamica", "obs": "" }
           ]
         }
       ]

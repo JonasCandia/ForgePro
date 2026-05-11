@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import {
-  ChevronDown, ChevronUp, Edit3, Trash2, Check, X,
-  ClipboardList, Plus, AlertTriangle, Dumbbell, CheckSquare, Square
+  ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
+  Edit3, Trash2, Check, X,
+  ClipboardList, Plus, AlertTriangle, CheckSquare, Square,
+  TrendingUp, TrendingDown,
 } from 'lucide-react';
 import { usePlanos, useUpdatePlano, useDeletePlano, useDeleteManyPlanos } from '../../hooks/usePlanos';
 import type { Plano, ExercicioNoPlano } from '../../types';
@@ -155,16 +157,28 @@ export default function ViewPlan({ onNavigateImport }: ViewPlanProps) {
     exitSelectionMode();
   }
 
+  // ─── lookup de semana anterior para progressão ──────────────────────────
+  const prevSemanaPlanos = useMemo(
+    () => planos.filter(p => p.semana === (activeSemana ?? 0) - 1),
+    [planos, activeSemana]
+  );
+
+  const prevWeightMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    prevSemanaPlanos.forEach(p =>
+      p.exercicios.forEach(ex => {
+        if (ex.pesoPlanejado > 0) map[ex.exercicioId] = ex.pesoPlanejado;
+      })
+    );
+    return map;
+  }, [prevSemanaPlanos]);
+
   // ─── loading skeleton ────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="space-y-6 pt-4 pb-24">
         <div className="h-8 w-48 rounded bg-surface-hover animate-pulse motion-reduce:animate-none" />
-        <div className="flex gap-2">
-          {[0, 1, 2].map(i => (
-            <div key={i} className="h-9 w-24 rounded-lg bg-surface-hover animate-pulse motion-reduce:animate-none" />
-          ))}
-        </div>
+        <div className="h-10 w-full rounded-xl bg-surface-hover animate-pulse motion-reduce:animate-none" />
         {[0, 1, 2].map(i => (
           <div key={i} className="card p-4 h-16 animate-pulse motion-reduce:animate-none" />
         ))}
@@ -193,11 +207,23 @@ export default function ViewPlan({ onNavigateImport }: ViewPlanProps) {
     );
   }
 
+  // Navegação de semana por índice
+  const semanaIdx = activeSemana !== null ? semanas.indexOf(activeSemana) : 0;
+  const canPrev = semanaIdx > 0;
+  const canNext = semanaIdx < semanas.length - 1;
+
+  function prevSemana() {
+    if (canPrev) setSelectedSemana(semanas[semanaIdx - 1]);
+  }
+  function nextSemana() {
+    if (canNext) setSelectedSemana(semanas[semanaIdx + 1]);
+  }
+
   // ─── render principal ────────────────────────────────────────────────────
   return (
-    <div className="space-y-6 pt-4 pb-36">
+    <div className="space-y-5 pt-4 pb-36">
 
-      {/* Cabeçalho */}
+      {/* ── Cabeçalho ──────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         {selectionMode ? (
           <>
@@ -234,7 +260,7 @@ export default function ViewPlan({ onNavigateImport }: ViewPlanProps) {
         )}
       </div>
 
-      {/* Confirmação de exclusão em lote */}
+      {/* ── Confirmação de exclusão em lote ──────────────────────────────── */}
       {confirmDeleteSelected && (
         <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3">
           <AlertTriangle size={18} className="text-red-400 flex-shrink-0 mt-0.5" />
@@ -260,138 +286,156 @@ export default function ViewPlan({ onNavigateImport }: ViewPlanProps) {
         </div>
       )}
 
-      {/* Pills de semana */}
-      <div className="flex flex-wrap gap-2">
-        {semanas.map(s => (
+      {/* ── Seletor de semana: setas ◀ Semana N ▶ ───────────────────────── */}
+      {semanas.length > 0 && (
+        <div className="flex items-center justify-between gap-3">
           <button
-            key={s}
-            onClick={() => setSelectedSemana(s)}
-            className={`px-4 py-2 rounded-lg text-sm font-bold border transition-colors ${
-              activeSemana === s
-                ? 'bg-brand text-black border-brand'
-                : 'border-outline text-gray-400 hover:border-brand hover:text-gray-200'
-            }`}
+            onClick={prevSemana}
+            disabled={!canPrev}
+            className="w-10 h-10 flex items-center justify-center rounded-xl border border-outline text-gray-500 hover:text-white hover:border-brand/50 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+            aria-label="Semana anterior"
           >
-            Semana {s}
+            <ChevronLeft size={18} />
           </button>
-        ))}
-      </div>
+          <div className="flex-1 text-center">
+            <p className="font-mono font-black text-base text-brand uppercase tracking-widest">
+              Semana {activeSemana}
+            </p>
+            <p className="text-[10px] text-gray-600 mt-0.5 font-black uppercase tracking-widest">
+              {planosNaSemana.length} {planosNaSemana.length === 1 ? 'sessão' : 'sessões'}
+            </p>
+          </div>
+          <button
+            onClick={nextSemana}
+            disabled={!canNext}
+            className="w-10 h-10 flex items-center justify-center rounded-xl border border-outline text-gray-500 hover:text-white hover:border-brand/50 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+            aria-label="Próxima semana"
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      )}
 
-      {/* Cards de dias */}
+      {/* ── Cards de sessão ───────────────────────────────────────────────── */}
       <div className="space-y-3">
         {planosNaSemana.length === 0 && (
-          <div className="card p-6 text-center text-gray-500 text-sm">
+          <div className="card p-8 text-center text-gray-600 text-sm font-black uppercase tracking-widest">
             Nenhum treino nessa semana.
           </div>
         )}
-        {planosNaSemana.map(plano => {
+        {planosNaSemana.map((plano, sessionIdx) => {
           const isExpanded = expandedDias.has(plano.id);
           const isEditing = editingDia === plano.id;
           const isSaving = updatePlano.isPending;
           const isDeleting = deletePlano.isPending && confirmDelete === plano.id;
           const isSelected = selectedIds.has(plano.id);
+          const ordinal = String(sessionIdx + 1).padStart(2, '0');
 
           return (
             <div
               key={plano.id}
-              className={`card overflow-hidden transition-colors ${
+              className={`card overflow-hidden transition-all duration-200 ${
                 selectionMode && isSelected
                   ? 'border-red-500/50 bg-red-500/5'
                   : isEditing
-                  ? 'border-brand/50'
+                  ? 'border-brand/60 bg-brand/[0.03]'
                   : 'border-outline'
               }`}
             >
-              {/* Cabeçalho do card */}
-              <div className="flex items-center p-4">
-                {selectionMode && (
-                  <button
-                    onClick={() => toggleSelect(plano.id)}
-                    className="mr-3 flex-shrink-0 text-gray-500"
-                    aria-label={isSelected ? 'Desmarcar' : 'Selecionar'}
-                  >
-                    {isSelected
-                      ? <CheckSquare size={18} className="text-red-400" />
-                      : <Square size={18} />}
-                  </button>
-                )}
+              {/* ── Header da sessão ─────────────────────────────────── */}
+              <div className="flex items-stretch">
+                {/* Número ordinal âncora */}
+                <div
+                  className={`flex items-center justify-center w-14 shrink-0 border-r transition-colors ${
+                    isEditing ? 'border-brand/30' : 'border-outline'
+                  }`}
+                >
+                  {selectionMode ? (
+                    <button
+                      onClick={() => toggleSelect(plano.id)}
+                      className="text-gray-500"
+                      aria-label={isSelected ? 'Desmarcar' : 'Selecionar'}
+                    >
+                      {isSelected
+                        ? <CheckSquare size={18} className="text-red-400" />
+                        : <Square size={18} />}
+                    </button>
+                  ) : (
+                    <span className={`font-mono font-black text-2xl leading-none transition-colors ${isEditing ? 'text-brand' : 'text-brand/40'}`}>
+                      {ordinal}
+                    </span>
+                  )}
+                </div>
+
+                {/* Corpo do header */}
                 <button
-                  className="flex-1 flex items-center gap-3 text-left"
+                  className="flex-1 flex items-center justify-between gap-3 p-4 text-left min-w-0"
                   onClick={() => selectionMode ? toggleSelect(plano.id) : toggleDia(plano.id)}
                 >
-                  {!selectionMode && (
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isEditing ? 'bg-brand animate-pulse motion-reduce:animate-none' : 'bg-gray-600'}`} />
-                  )}
-                  <div>
-                    <p className="font-bold text-sm">{plano.nomeSessao ?? plano.diaDaSemana}</p>
-                    <p className="text-xs text-gray-500">
-                      {plano.nomeTreino || 'Treino'}
-                      <span className="ml-2">· {plano.exercicios.length} exercícios</span>
-                      {plano.tipoSessao && <span className="ml-2 text-brand/70">{plano.tipoSessao}</span>}
+                  <div className="min-w-0">
+                    <p className="font-display font-black text-lg uppercase tracking-tight leading-tight truncate">
+                      {plano.nomeSessao ?? plano.diaDaSemana}
                     </p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <span className="text-[10px] text-gray-600 font-black uppercase tracking-widest">
+                        {plano.exercicios.length} ex.
+                      </span>
+                      {plano.diaSugerido && (
+                        <span className="text-[10px] text-gray-600">
+                          · sugerido {plano.diaSugerido}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {plano.tipoSessao && (
+                      <SessionTypeBadge tipo={plano.tipoSessao} />
+                    )}
+                    {!selectionMode && (
+                      isExpanded ? <ChevronUp size={16} className="text-gray-500" /> : <ChevronDown size={16} className="text-gray-500" />
+                    )}
                   </div>
                 </button>
-                {!selectionMode && (
-                  <div className="flex items-center gap-1 ml-2">
-                    {!isEditing && (
-                      <button
-                        onClick={() => startEdit(plano)}
-                        className="p-2 text-gray-500 hover:text-brand transition-colors rounded-lg hover:bg-brand/10"
-                        title="Editar dia"
-                      >
-                        <Edit3 size={15} />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => toggleDia(plano.id)}
-                      className="p-2 text-gray-500 hover:text-white transition-colors"
-                    >
-                      {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    </button>
-                  </div>
+
+                {/* Botão editar — fora do botão principal */}
+                {!selectionMode && !isEditing && (
+                  <button
+                    onClick={() => startEdit(plano)}
+                    className="flex items-center justify-center w-12 shrink-0 border-l border-outline text-gray-600 hover:text-brand hover:bg-brand/5 transition-colors"
+                    title="Editar sessão"
+                  >
+                    <Edit3 size={14} />
+                  </button>
                 )}
               </div>
 
-              {/* Conteúdo expandido */}
+              {/* ── Conteúdo expandido ───────────────────────────────── */}
               {isExpanded && (
-                <div className="border-t border-outline">
-                  {/* Tabela de exercícios */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="text-gray-600 border-b border-outline">
-                          <th className="text-left p-3 font-black uppercase tracking-wider">Exercício</th>
-                          <th className="text-center p-3 font-black uppercase tracking-wider w-16">Séries</th>
-                          <th className="text-center p-3 font-black uppercase tracking-wider w-16">Reps</th>
-                          <th className="text-center p-3 font-black uppercase tracking-wider w-20">Peso</th>
-                          {isEditing && (
-                            <th className="text-center p-3 font-black uppercase tracking-wider w-12" />
-                          )}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {plano.exercicios.map((ex) => (
-                          <ExercicioRow
-                            key={ex.exercicioId}
-                            ex={ex}
-                            isEditing={isEditing}
-                            editRow={editState[ex.exercicioId]}
-                            onEdit={(field, value) =>
-                              setEditState(prev => ({
-                                ...prev,
-                                [ex.exercicioId]: { ...prev[ex.exercicioId], [field]: value },
-                              }))
-                            }
-                            onRemove={() => removeExercicio(plano, ex.exercicioId)}
-                          />
-                        ))}
-                      </tbody>
-                    </table>
+                <div className={`border-t transition-colors ${isEditing ? 'border-brand/30' : 'border-outline'}`}>
+                  {/* Lista de exercícios */}
+                  <div className="divide-y divide-outline/40">
+                    {plano.exercicios.map((ex, exIdx) => (
+                      <ExercicioRow
+                        key={ex.exercicioId}
+                        ex={ex}
+                        exIdx={exIdx}
+                        isEditing={isEditing}
+                        editRow={editState[ex.exercicioId]}
+                        prevWeight={prevWeightMap[ex.exercicioId]}
+                        onEdit={(field, value) =>
+                          setEditState(prev => ({
+                            ...prev,
+                            [ex.exercicioId]: { ...prev[ex.exercicioId], [field]: value },
+                          }))
+                        }
+                        onRemove={() => removeExercicio(plano, ex.exercicioId)}
+                      />
+                    ))}
                   </div>
 
-                  {/* Ações de edição */}
+                  {/* ── Ações ────────────────────────────────────────── */}
                   {isEditing ? (
-                    <div className="flex items-center gap-2 p-3 border-t border-outline">
+                    <div className="flex items-center gap-2 p-3 border-t border-brand/20">
                       <button
                         onClick={() => saveEdit(plano)}
                         disabled={isSaving}
@@ -411,29 +455,29 @@ export default function ViewPlan({ onNavigateImport }: ViewPlanProps) {
                       <button
                         onClick={() => setConfirmDelete(plano.id)}
                         className="p-2 text-gray-600 hover:text-red-400 transition-colors rounded-lg hover:bg-red-500/10 ml-auto"
-                        title="Excluir dia"
+                        title="Excluir sessão"
                       >
                         <Trash2 size={15} />
                       </button>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-end p-3 border-t border-outline">
+                    <div className="flex items-center justify-end p-3 border-t border-outline/40">
                       <button
                         onClick={() => setConfirmDelete(plano.id)}
-                        className="flex items-center gap-1.5 text-[11px] text-gray-600 hover:text-red-400 transition-colors"
+                        className="flex items-center gap-1.5 text-[11px] text-gray-700 hover:text-red-400 transition-colors"
                       >
-                        <Trash2 size={13} />
-                        Excluir Dia
+                        <Trash2 size={12} />
+                        Excluir Sessão
                       </button>
                     </div>
                   )}
 
-                  {/* Confirmação de exclusão */}
+                  {/* ── Confirmação de exclusão ───────────────────────── */}
                   {confirmDelete === plano.id && (
                     <div className="bg-red-500/10 border-t border-red-500/30 p-4 flex items-center gap-3">
                       <AlertTriangle size={16} className="text-red-400 flex-shrink-0" />
                       <p className="text-xs text-red-300 flex-1">
-                        Excluir <strong>{plano.nomeSessao ?? plano.diaDaSemana}</strong>? Esta ação não pode ser desfeita.
+                        Excluir <strong>{plano.nomeSessao ?? plano.diaDaSemana}</strong>? Não pode ser desfeito.
                       </p>
                       <div className="flex gap-2">
                         <button
@@ -459,7 +503,7 @@ export default function ViewPlan({ onNavigateImport }: ViewPlanProps) {
         })}
       </div>
 
-      {/* Link rápido para importar nova semana */}
+      {/* ── Link rápido importar ─────────────────────────────────────────── */}
       {!selectionMode && (
         <div className="pt-2 text-center">
           <button
@@ -472,7 +516,7 @@ export default function ViewPlan({ onNavigateImport }: ViewPlanProps) {
         </div>
       )}
 
-      {/* Barra flutuante de ação (modo seleção) */}
+      {/* ── Barra flutuante modo seleção ─────────────────────────────────── */}
       {selectionMode && (
         <div className="fixed bottom-20 left-0 right-0 z-40 flex justify-center px-4 pointer-events-none">
           <div className="pointer-events-auto flex items-center gap-3 bg-surface border border-outline rounded-2xl px-5 py-3 shadow-2xl">
@@ -502,17 +546,41 @@ export default function ViewPlan({ onNavigateImport }: ViewPlanProps) {
   );
 }
 
-// ─── linha de exercício (leitura ou edição) ────────────────────────────────
+// ─── badge de tipo de sessão ──────────────────────────────────────────────────
+
+const TIPO_BADGE: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  circuito_taf: { label: 'CIRCUITO TAF', color: '#A78BFA', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.3)' },
+  simulado:     { label: 'SIMULADO',     color: '#F59E0B', bg: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.3)'  },
+  forca:        { label: 'FORÇA',        color: '#CCFF00', bg: 'rgba(204,255,0,0.08)',  border: 'rgba(204,255,0,0.25)'  },
+  hipertrofia:  { label: 'HIPERTROFIA',  color: '#34D399', bg: 'rgba(52,211,153,0.08)', border: 'rgba(52,211,153,0.25)' },
+  resistencia:  { label: 'RESISTÊNCIA',  color: '#60A5FA', bg: 'rgba(96,165,250,0.08)', border: 'rgba(96,165,250,0.25)' },
+};
+
+function SessionTypeBadge({ tipo }: { tipo: string }) {
+  const t = TIPO_BADGE[tipo] ?? { label: tipo.toUpperCase(), color: '#6B7280', bg: 'rgba(107,114,128,0.1)', border: 'rgba(107,114,128,0.3)' };
+  return (
+    <span
+      className="text-[9px] font-black uppercase tracking-[0.15em] rounded px-1.5 py-0.5 border shrink-0"
+      style={{ color: t.color, background: t.bg, borderColor: t.border }}
+    >
+      {t.label}
+    </span>
+  );
+}
+
+// ─── linha de exercício ────────────────────────────────────────────────────────
 
 interface ExercicioRowProps {
   ex: ExercicioNoPlano;
+  exIdx: number;
   isEditing: boolean;
   editRow: EditRow | undefined;
+  prevWeight: number | undefined;
   onEdit: (field: keyof EditRow, value: string | number) => void;
   onRemove: () => void;
 }
 
-function ExercicioRow({ ex, isEditing, editRow, onEdit, onRemove }: ExercicioRowProps) {
+function ExercicioRow({ ex, exIdx, isEditing, editRow, prevWeight, onEdit, onRemove }: ExercicioRowProps) {
   const row = editRow ?? {
     seriesPlanejadas: ex.seriesPlanejadas,
     repeticoesPlanejadas: ex.repeticoesPlanejadas,
@@ -524,89 +592,131 @@ function ExercicioRow({ ex, isEditing, editRow, onEdit, onRemove }: ExercicioRow
     ? LABEL_MODALIDADE[ex.modalidade]
     : null;
 
+  // Determinar display de reps/tempo
+  const repDisplay =
+    ex.modalidade === 'corrida' || ex.modalidade === 'cardio_livre'
+      ? ex.tempoPlanejadoSegundos ? `${ex.tempoPlanejadoSegundos}s` : '–'
+      : ex.modalidade === 'isometria'
+      ? ex.tempoPlanejadoSegundos ? `${ex.tempoPlanejadoSegundos}s` : String(ex.repeticoesPlanejadas)
+      : String(ex.repeticoesPlanejadas);
+
+  const hasPeso = !['peso_corporal', 'corrida', 'cardio_livre', 'isometria'].includes(ex.modalidade ?? '');
+
+  // Micro-indicador de progressão
+  let deltaNode: React.ReactNode = null;
+  if (hasPeso && prevWeight !== undefined && ex.pesoPlanejado > 0) {
+    const diff = ex.pesoPlanejado - prevWeight;
+    if (diff > 0) {
+      deltaNode = (
+        <span className="flex items-center gap-0.5 font-mono text-[10px] font-bold text-emerald-400">
+          <TrendingUp size={9} />+{diff}kg
+        </span>
+      );
+    } else if (diff < 0) {
+      deltaNode = (
+        <span className="flex items-center gap-0.5 font-mono text-[10px] font-bold text-red-400">
+          <TrendingDown size={9} />{diff}kg
+        </span>
+      );
+    } else {
+      deltaNode = <span className="font-mono text-[10px] text-gray-700">─</span>;
+    }
+  }
+
+  const ordinal = String(exIdx + 1).padStart(2, '0');
+
   if (!isEditing) {
     return (
-      <tr className="border-b border-outline/40 last:border-0 hover:bg-white/[0.02] transition-colors">
-        <td className="p-3">
-          <div className="flex items-center gap-2">
-            <Dumbbell size={11} className="text-gray-600 flex-shrink-0" />
-            <div>
-              <p className="font-medium">{ex.exercicioNome}</p>
-              {modalidadeLabel && (
-                <p className="text-[10px] text-brand/70 mt-0.5">{modalidadeLabel}</p>
-              )}
-              {ex.observacoesPlano && (
-                <p className="text-[10px] text-gray-600 mt-0.5 italic">{ex.observacoesPlano}</p>
-              )}
+      <div className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.015] transition-colors">
+        {/* Número âncora */}
+        <span className="font-mono font-black text-xs text-brand/50 w-5 shrink-0 select-none">{ordinal}</span>
+
+        {/* Nome + modalidade */}
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-sm truncate">{ex.exercicioNome}</p>
+          {modalidadeLabel && (
+            <p className="text-[10px] text-gray-600 mt-0.5">{modalidadeLabel}</p>
+          )}
+          {ex.observacoesPlano && (
+            <p className="text-[10px] text-gray-700 mt-0.5 italic truncate">{ex.observacoesPlano}</p>
+          )}
+        </div>
+
+        {/* Dados */}
+        <div className="flex items-center gap-3 shrink-0 text-right">
+          <span className="font-mono text-xs text-brand font-bold tabular-nums">{ex.seriesPlanejadas}×{repDisplay}</span>
+          {hasPeso && (
+            <div className="flex flex-col items-end gap-0.5">
+              <span className="font-mono text-xs text-gray-400 tabular-nums">{ex.pesoPlanejado}kg</span>
+              {deltaNode}
             </div>
-          </div>
-        </td>
-        <td className="p-3 text-center font-mono text-brand font-bold">{ex.seriesPlanejadas}</td>
-        <td className="p-3 text-center font-mono text-gray-300">
-          {ex.modalidade === 'corrida' || ex.modalidade === 'cardio_livre'
-            ? (ex.tempoPlanejadoSegundos ? `${ex.tempoPlanejadoSegundos}s` : '–')
-            : ex.modalidade === 'isometria'
-            ? (ex.tempoPlanejadoSegundos ? `${ex.tempoPlanejadoSegundos}s` : ex.repeticoesPlanejadas)
-            : ex.repeticoesPlanejadas}
-        </td>
-        <td className="p-3 text-center font-mono text-gray-300">
-          {ex.modalidade === 'peso_corporal' || ex.modalidade === 'corrida' || ex.modalidade === 'cardio_livre' || ex.modalidade === 'isometria'
-            ? '–'
-            : `${ex.pesoPlanejado}kg`}
-        </td>
-      </tr>
+          )}
+        </div>
+      </div>
     );
   }
 
-  // modo edição
+  // ── modo edição ─────────────────────────────────────────────────────────
   return (
-    <tr className="border-b border-outline/40 last:border-0 bg-brand/5">
-      <td className="p-2 pl-3">
-        <p className="font-medium text-xs mb-1">{ex.exercicioNome}</p>
-        {modalidadeLabel && (
-          <p className="text-[10px] text-brand/70">{modalidadeLabel}</p>
-        )}
-        <input
-          type="text"
-          className="form-input text-[11px] mt-1 py-1"
-          placeholder="Observações..."
-          value={row.observacoesPlano}
-          onChange={e => onEdit('observacoesPlano', e.target.value)}
-        />
-      </td>
-      <td className="p-2">
-        <input
-          type="number" min="1" inputMode="numeric"
-          className="form-input text-center text-xs w-full"
-          value={row.seriesPlanejadas}
-          onChange={e => onEdit('seriesPlanejadas', parseInt(e.target.value) || 1)}
-        />
-      </td>
-      <td className="p-2">
-        <input
-          type="number" min="0" inputMode="numeric"
-          className="form-input text-center text-xs w-full"
-          value={row.repeticoesPlanejadas}
-          onChange={e => onEdit('repeticoesPlanejadas', parseInt(e.target.value) || 0)}
-        />
-      </td>
-      <td className="p-2">
-        <input
-          type="number" min="0" step="0.5" inputMode="decimal"
-          className="form-input text-center text-xs w-full"
-          value={row.pesoPlanejado}
-          onChange={e => onEdit('pesoPlanejado', parseFloat(e.target.value) || 0)}
-        />
-      </td>
-      <td className="p-2 text-center">
+    <div className="px-4 py-3 bg-brand/[0.04] border-l-2 border-brand/50">
+      {/* Cabeçalho da row em edição */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="font-mono font-black text-xs text-brand/60">{ordinal}</span>
+          <p className="font-medium text-sm">{ex.exercicioNome}</p>
+          {modalidadeLabel && (
+            <span className="text-[10px] text-brand/60 font-black uppercase tracking-wide">{modalidadeLabel}</span>
+          )}
+        </div>
         <button
           onClick={onRemove}
-          className="p-1.5 text-gray-600 hover:text-red-400 transition-colors"
+          className="p-1 text-gray-700 hover:text-red-400 transition-colors rounded"
           title="Remover exercício"
         >
           <Trash2 size={13} />
         </button>
-      </td>
-    </tr>
+      </div>
+
+      {/* Inputs em grid */}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="input-label text-[10px]">Séries</label>
+          <input
+            type="number" min="1" inputMode="numeric"
+            className="form-input text-center text-xs"
+            value={row.seriesPlanejadas}
+            onChange={e => onEdit('seriesPlanejadas', parseInt(e.target.value) || 1)}
+          />
+        </div>
+        <div>
+          <label className="input-label text-[10px]">Reps</label>
+          <input
+            type="number" min="0" inputMode="numeric"
+            className="form-input text-center text-xs"
+            value={row.repeticoesPlanejadas}
+            onChange={e => onEdit('repeticoesPlanejadas', parseInt(e.target.value) || 0)}
+          />
+        </div>
+        <div>
+          <label className="input-label text-[10px]">Peso (kg)</label>
+          <input
+            type="number" min="0" step="0.5" inputMode="decimal"
+            className="form-input text-center text-xs"
+            value={row.pesoPlanejado}
+            onChange={e => onEdit('pesoPlanejado', parseFloat(e.target.value) || 0)}
+          />
+        </div>
+        <div>
+          <label className="input-label text-[10px]">Observações</label>
+          <input
+            type="text"
+            className="form-input text-xs"
+            placeholder="opcional"
+            value={row.observacoesPlano}
+            onChange={e => onEdit('observacoesPlano', e.target.value)}
+          />
+        </div>
+      </div>
+    </div>
   );
 }

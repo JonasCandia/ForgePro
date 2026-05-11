@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Play, CheckCircle, Trophy, ChevronDown, ChevronUp, Dumbbell, Timer, Zap, Heart, User, Flame, SkipForward, Plus, Clock, Repeat, ShieldAlert } from 'lucide-react';
 import { workoutService } from '../../lib/workoutService';
-import type { Plano, WorkoutSeries, ModalidadeExercicio } from '../../types';
+import type { Plano, WorkoutSeries, ModalidadeExercicio, ExercicioNoPlano } from '../../types';
 import { getModalidade, buildExercicioSummary, formatarTempo, calcularPace, formatarDistancia } from '../../lib/exercicioUtils';
 import { MOCK_EXERCICIOS } from '../../constants';
 
@@ -92,6 +92,9 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
   const serieAutoCompleteGuard = useRef<Set<number>>(new Set());
   const handleAddSerieRef = useRef<((exIdx: number, tempoOverride?: number) => Promise<void>) | null>(null);
   const [workoutStartTime] = useState(() => Date.now());
+  const [interCycleResting, setInterCycleResting] = useState(false);
+  const [preCountdownState, setPreCountdownState] = useState<Record<number, number>>({});
+  const preCountdownRefs = useRef<Record<number, ReturnType<typeof setInterval>>>({});
 
   useEffect(() => { loadPlanos(); }, []);
 
@@ -99,6 +102,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
     return () => {
       Object.values(elapsedIntervalRef.current).forEach(clearInterval);
       Object.values(serieCountdownRefs.current).forEach(clearInterval);
+      Object.values(preCountdownRefs.current).forEach(clearInterval);
     };
   }, []);
 
@@ -143,6 +147,37 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
       delete serieCountdownRefs.current[exIdx];
     }
     setSerieCountdown(prev => {
+      const next = { ...prev };
+      delete next[exIdx];
+      return next;
+    });
+  }
+
+  function startPreCountdown(exIdx: number, onComplete: () => void) {
+    setPreCountdownState(prev => ({ ...prev, [exIdx]: 5 }));
+    const ref = setInterval(() => {
+      setPreCountdownState(prev => {
+        const cur = prev[exIdx] ?? 0;
+        if (cur <= 1) {
+          clearInterval(preCountdownRefs.current[exIdx]);
+          delete preCountdownRefs.current[exIdx];
+          const next = { ...prev };
+          delete next[exIdx];
+          setTimeout(() => onComplete(), 0);
+          return next;
+        }
+        return { ...prev, [exIdx]: cur - 1 };
+      });
+    }, 1000);
+    preCountdownRefs.current[exIdx] = ref;
+  }
+
+  function stopPreCountdown(exIdx: number) {
+    if (preCountdownRefs.current[exIdx]) {
+      clearInterval(preCountdownRefs.current[exIdx]);
+      delete preCountdownRefs.current[exIdx];
+    }
+    setPreCountdownState(prev => {
       const next = { ...prev };
       delete next[exIdx];
       return next;
@@ -221,6 +256,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
       const t = setTimeout(() => {
         setRestingCardIdx(null);
         setRestMinimized(false);
+        setInterCycleResting(false);
       }, 500);
       prevTimerRef.current = 0;
       return () => clearTimeout(t);
@@ -240,6 +276,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
     setTimerSeconds(0);
     setRestingCardIdx(null);
     setRestMinimized(false);
+    setInterCycleResting(false);
   }
 
   function addRestTime(seconds: number) {
@@ -278,20 +315,39 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
   // ─── Circuit mode derived ─────────────────────────────────────────────────
   const isCircuitMode =
     selectedPlano?.tipoSessao === 'circuito_taf' || selectedPlano?.tipoSessao === 'simulado';
+
+  // Split circuit exercises into warmup / stations / cooldown
+  const circuitPhases = React.useMemo(() => {
+    if (!selectedPlano || !isCircuitMode) return null;
+    const warmup: { ex: (typeof selectedPlano.exercicios)[0]; idx: number }[] = [];
+    const circuit: { ex: (typeof selectedPlano.exercicios)[0]; idx: number }[] = [];
+    const cooldown: { ex: (typeof selectedPlano.exercicios)[0]; idx: number }[] = [];
+    selectedPlano.exercicios.forEach((ex, idx) => {
+      if (ex.exercicioId === 'custom_aq') warmup.push({ ex, idx });
+      else if (ex.exercicioId === 'custom_along') cooldown.push({ ex, idx });
+      else circuit.push({ ex, idx });
+    });
+    return { warmup, circuit, cooldown };
+  }, [selectedPlano, isCircuitMode]);
+
   const numVoltas = React.useMemo(() => {
-    if (!isCircuitMode || !selectedPlano || selectedPlano.exercicios.length === 0) return 0;
-    return Math.max(...selectedPlano.exercicios.map(ex => ex.seriesPlanejadas ?? 3));
-  }, [isCircuitMode, selectedPlano]);
+    if (!isCircuitMode || !selectedPlano) return 0;
+    const stations = circuitPhases?.circuit ?? [];
+    if (stations.length === 0) return 0;
+    return Math.max(...stations.map(({ ex }) => ex.seriesPlanejadas ?? 3));
+  }, [isCircuitMode, selectedPlano, circuitPhases]);
+
   const currentVolta = React.useMemo(() => {
     if (!isCircuitMode || !selectedPlano || numVoltas === 0) return 0;
+    const stations = circuitPhases?.circuit ?? [];
     for (let v = 1; v <= numVoltas; v++) {
-      const allDone = selectedPlano.exercicios.every(
-        (_, idx) => (completedSeries[idx]?.length ?? 0) >= v
+      const allDone = stations.every(
+        ({ idx }) => (completedSeries[idx]?.length ?? 0) >= v
       );
       if (!allDone) return v;
     }
     return numVoltas;
-  }, [isCircuitMode, selectedPlano, numVoltas, completedSeries]);
+  }, [isCircuitMode, selectedPlano, numVoltas, completedSeries, circuitPhases]);
 
   async function handleStartWorkout() {
     if (!planoForDia) return;
@@ -378,10 +434,31 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
 
       stopElapsedTimer(exIdx);
       stopSerieCountdown(exIdx);
+      stopPreCountdown(exIdx);
       setActiveExIdx(exIdx);
-      setRestingCardIdx(exIdx);
-      setRestMinimized(false);
-      startTimer();
+
+      if (isCircuitMode && circuitPhases) {
+        // Only trigger inter-cycle rest when the last circuit station finishes a volta
+        const isStation = circuitPhases.circuit.some(c => c.idx === exIdx);
+        if (isStation) {
+          const newDoneMap = { ...completedSeries, [exIdx]: [...(completedSeries[exIdx] ?? []), newRecord] };
+          const voltaJustCompleted = circuitPhases.circuit.every(
+            ({ idx }) => (newDoneMap[idx]?.length ?? 0) >= currentVolta
+          );
+          if (voltaJustCompleted && currentVolta < numVoltas) {
+            const restDuration = selectedPlano?.tempoDescansoCircuito ?? 60;
+            setInterCycleResting(true);
+            localStorage.setItem('forge_rest_end', String(Date.now() + restDuration * 1000));
+            setTimerSeconds(restDuration);
+            setTimerActive(true);
+          }
+        }
+        // No per-exercise rest for warmup/cooldown/circuit stations
+      } else {
+        setRestingCardIdx(exIdx);
+        setRestMinimized(false);
+        startTimer();
+      }
     } catch (e) { console.error(e); }
   }
 
@@ -655,8 +732,12 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
         const isLastEx = exIdx === (selectedPlano.exercicios.length - 1);
         const isLastSerie = done.length + 1 >= planned;
         const countdown = serieCountdown[exIdx];
+        const preCountdown = preCountdownState[exIdx];
+        const isWarmupCard = isCircuitMode && ex.exercicioId === 'custom_aq';
+        const isCooldownCard = isCircuitMode && ex.exercicioId === 'custom_along';
+        const isPhaseCard = isWarmupCard || isCooldownCard;
 
-        if (isCircuitMode) return null; // circuit mode renders below
+        if (isCircuitMode && !isPhaseCard) return null; // circuit stations render in volta section
 
         return (
           <div
@@ -669,6 +750,19 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                   : 'border-outline'
             }`}
           >
+            {/* Phase label for warmup/cooldown */}
+            {isWarmupCard && (
+              <div className="flex items-center gap-2 px-4 pt-3 pb-1 border-b border-orange-500/20">
+                <span className="text-[10px] font-black uppercase tracking-widest text-orange-400">🔥 Aquecimento</span>
+                <div className="flex-1 h-px bg-orange-500/20" />
+              </div>
+            )}
+            {isCooldownCard && (
+              <div className="flex items-center gap-2 px-4 pt-3 pb-1 border-b border-blue-500/20">
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">🧘 Alongamento</span>
+                <div className="flex-1 h-px bg-blue-500/20" />
+              </div>
+            )}
             {/* ── Card header / accordion ────────────────────────────── */}
             <button
               className="w-full flex items-center justify-between p-4"
@@ -762,17 +856,30 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                           </p>
                         </div>
 
+                        {/* ── Execution meta ───────────────────────── */}
+                        <ExecMetaDisplay ex={ex} accentHex={theme.accentHex} />
+
                         {/* ── Regras Oficiais TAF ──────────────────────── */}
                         <RegrasOficiaisCard exercicioId={ex.exercicioId} modalidadeTAF={ex.modalidadeTAF} />
 
-                        {/* ── Iniciar série button ──────────────────── */}
-                        {!isStarted ? (
+                        {/* ── Iniciar série / pre-countdown / timer / inputs ── */}
+                        {preCountdown !== undefined ? (
+                          <PreCountdownDisplay
+                            remaining={preCountdown}
+                            accentHex={theme.accentHex}
+                            onCancel={() => stopPreCountdown(exIdx)}
+                          />
+                        ) : !isStarted ? (
                           <button
                             disabled={timerActive && restingCardIdx !== null && !isResting}
                             onClick={() => {
-                              startElapsedTimer(exIdx);
                               if ((mod === 'isometria' || mod === 'cardio_livre') && ex.tempoPlanejadoSegundos) {
-                                startSerieCountdown(exIdx, ex.tempoPlanejadoSegundos);
+                                startPreCountdown(exIdx, () => {
+                                  startElapsedTimer(exIdx);
+                                  startSerieCountdown(exIdx, ex.tempoPlanejadoSegundos!);
+                                });
+                              } else {
+                                startElapsedTimer(exIdx);
                               }
                             }}
                             className="w-full rounded-xl border-2 py-3.5 text-sm font-black uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -804,6 +911,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                             <SerieInputs
                               modalidade={mod}
                               input={input}
+                              ateAFalha={ex.ateAFalha}
                               onChange={(field, value) => setCurrentInputs(prev => ({
                                 ...prev,
                                 [exIdx]: { ...prev[exIdx], [field]: value }
@@ -835,11 +943,24 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
         );
       })}
 
+      {/* ── Circuit mode: inter-cycle rest ───────────────────────── */}
+      {isCircuitMode && interCycleResting && (
+        <InterCycleRestCard
+          timerSeconds={timerSeconds}
+          defaultRestTime={selectedPlano?.tempoDescansoCircuito ?? 60}
+          currentVolta={currentVolta}
+          numVoltas={numVoltas}
+          onSkip={stopTimer}
+          onAddTime={() => addRestTime(30)}
+        />
+      )}
+
       {/* ── Circuit mode: group exercises by Volta ────────────────────── */}
-      {isCircuitMode && selectedPlano && Array.from({ length: numVoltas }, (_, voltaIdx) => {
+      {isCircuitMode && selectedPlano && circuitPhases && Array.from({ length: numVoltas }, (_, voltaIdx) => {
         const voltaNum = voltaIdx + 1;
         const isPast = voltaNum < currentVolta;
         const isCurrent = voltaNum === currentVolta;
+        const isBlocked = interCycleResting;
 
         return (
           <div key={voltaNum} className="space-y-2">
@@ -855,9 +976,14 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
               <span className="text-[11px] font-black uppercase tracking-widest">
                 Volta {voltaNum}
               </span>
-              {isCurrent && (
+              {isCurrent && !isBlocked && (
                 <span className="text-[9px] font-black uppercase tracking-[0.15em] text-violet-500 border border-violet-500/30 rounded px-1.5 py-0.5">
                   EM ANDAMENTO
+                </span>
+              )}
+              {isCurrent && isBlocked && (
+                <span className="text-[9px] font-black uppercase tracking-[0.15em] text-amber-500 border border-amber-500/30 rounded px-1.5 py-0.5">
+                  DESCANSANDO
                 </span>
               )}
               {isPast && <div className="ml-2 h-px flex-1 bg-brand/20 rounded" />}
@@ -866,7 +992,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
             {/* ── Past volta: collapsed summary ───────────────────────── */}
             {isPast && (
               <div className="card px-4 py-3 flex flex-wrap gap-x-4 gap-y-2">
-                {selectedPlano.exercicios.map((ex, idx) => {
+                {circuitPhases.circuit.map(({ ex, idx }) => {
                   const record = completedSeries[idx]?.[voltaIdx];
                   if (!record) return null;
                   const mod = getModalidade(ex);
@@ -889,7 +1015,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
             )}
 
             {/* ── Current & future voltas: exercise cards ─────────────── */}
-            {!isPast && selectedPlano.exercicios.map((ex, exIdx) => {
+            {!isPast && circuitPhases.circuit.map(({ ex, idx: exIdx }) => {
               const doneAll = completedSeries[exIdx] ?? [];
               const exDoneForVolta = doneAll.length >= voltaNum;
               const mod = getModalidade(ex);
@@ -899,8 +1025,8 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
               const isStarted = !!exerciseStartedAt[exIdx];
               const elapsed = exerciseElapsed[exIdx] ?? 0;
               const countdown = serieCountdown[exIdx];
+              const preCountdown = preCountdownState[exIdx];
               const input = currentInputs[exIdx] ?? { pesoReal: '', repeticoesReais: '', tempoSegundos: '', distanciaMetros: '', falhou: false };
-              const isLastEx = exIdx === selectedPlano.exercicios.length - 1;
               const isLastVolta = voltaNum === numVoltas;
 
               return (
@@ -911,15 +1037,15 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                       ? 'border-brand/50 bg-brand/5'
                       : isActive
                         ? `${theme.borderActive} ${theme.bgActive}`
-                        : !isCurrent
+                        : (!isCurrent || isBlocked)
                           ? 'border-outline opacity-40'
                           : 'border-outline'
                   }`}
                 >
                   <button
                     className="w-full flex items-center justify-between p-4"
-                    disabled={!isCurrent}
-                    onClick={() => isCurrent && setActiveExIdx(isActive ? null : exIdx)}
+                    disabled={!isCurrent || isBlocked}
+                    onClick={() => isCurrent && !isBlocked && setActiveExIdx(isActive ? null : exIdx)}
                   >
                     <div className="flex items-center gap-3 text-left min-w-0">
                       <div
@@ -937,6 +1063,8 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                             ? formatarTempo(ex.tempoPlanejadoSegundos)
                             : ex.distanciaPlanejadaMetros
                             ? formatarDistancia(ex.distanciaPlanejadaMetros)
+                            : ex.ateAFalha
+                            ? 'até a falha'
                             : ex.repeticoesPlanejadas
                             ? `${ex.repeticoesPlanejadas} reps`
                             : ''}
@@ -967,7 +1095,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                           nextSerieNum={voltaNum + 1}
                           totalSeries={numVoltas}
                           isExerciseComplete={exDoneForVolta}
-                          isLastExercise={isLastEx && isLastVolta}
+                          isLastExercise={isLastVolta && exIdx === circuitPhases.circuit[circuitPhases.circuit.length - 1]?.idx}
                           isLastSerie={isLastVolta && !exDoneForVolta}
                           onSkip={stopTimer}
                           onAddTime={() => addRestTime(30)}
@@ -975,16 +1103,30 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                       ) : (
                         <div className="px-4 pb-4 pt-2 space-y-3">
                           {!exDoneForVolta ? (
-                            !isStarted ? (
-                              <>
-                                {/* ── Regras Oficiais TAF ─────────────── */}
-                                <RegrasOficiaisCard exercicioId={ex.exercicioId} modalidadeTAF={ex.modalidadeTAF} />
+                            <>
+                              {/* ── Execution meta ───────────────────── */}
+                              <ExecMetaDisplay ex={ex} accentHex={theme.accentHex} />
+
+                              {/* ── Regras Oficiais TAF ─────────────── */}
+                              <RegrasOficiaisCard exercicioId={ex.exercicioId} modalidadeTAF={ex.modalidadeTAF} />
+
+                              {preCountdown !== undefined ? (
+                                <PreCountdownDisplay
+                                  remaining={preCountdown}
+                                  accentHex={theme.accentHex}
+                                  onCancel={() => stopPreCountdown(exIdx)}
+                                />
+                              ) : !isStarted ? (
                                 <button
                                   disabled={timerActive && restingCardIdx !== null && !isResting}
                                   onClick={() => {
-                                    startElapsedTimer(exIdx);
                                     if ((mod === 'isometria' || mod === 'cardio_livre') && ex.tempoPlanejadoSegundos) {
-                                      startSerieCountdown(exIdx, ex.tempoPlanejadoSegundos);
+                                      startPreCountdown(exIdx, () => {
+                                        startElapsedTimer(exIdx);
+                                        startSerieCountdown(exIdx, ex.tempoPlanejadoSegundos!);
+                                      });
+                                    } else {
+                                      startElapsedTimer(exIdx);
                                     }
                                   }}
                                   className="w-full rounded-xl border-2 py-3.5 text-sm font-black uppercase tracking-widest transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -993,37 +1135,38 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                                   <Play size={15} />
                                   Iniciar
                                 </button>
-                              </>
-                            ) : countdown ? (
-                              <SerieCountdownTimer
-                                remaining={countdown.remaining}
-                                total={countdown.total}
-                                elapsed={elapsed}
-                                accentHex={theme.accentHex}
-                                onStopEarly={() => {
-                                  stopSerieCountdown(exIdx);
-                                  setCurrentInputs(prev => ({
-                                    ...prev,
-                                    [exIdx]: { ...prev[exIdx], tempoSegundos: secsToMmss(elapsed) },
-                                  }));
-                                }}
-                              />
-                            ) : (
-                              <>
-                                <SerieInputs
-                                  modalidade={mod}
-                                  input={input}
-                                  onChange={(field, value) => setCurrentInputs(prev => ({
-                                    ...prev,
-                                    [exIdx]: { ...prev[exIdx], [field]: value },
-                                  }))}
+                              ) : countdown ? (
+                                <SerieCountdownTimer
+                                  remaining={countdown.remaining}
+                                  total={countdown.total}
+                                  elapsed={elapsed}
+                                  accentHex={theme.accentHex}
+                                  onStopEarly={() => {
+                                    stopSerieCountdown(exIdx);
+                                    setCurrentInputs(prev => ({
+                                      ...prev,
+                                      [exIdx]: { ...prev[exIdx], tempoSegundos: secsToMmss(elapsed) },
+                                    }));
+                                  }}
                                 />
-                                <button onClick={() => handleAddSerie(exIdx)} className="btn-primary w-full">
-                                  <CheckCircle size={16} />
-                                  Concluir
-                                </button>
-                              </>
-                            )
+                              ) : (
+                                <>
+                                  <SerieInputs
+                                    modalidade={mod}
+                                    input={input}
+                                    ateAFalha={ex.ateAFalha}
+                                    onChange={(field, value) => setCurrentInputs(prev => ({
+                                      ...prev,
+                                      [exIdx]: { ...prev[exIdx], [field]: value },
+                                    }))}
+                                  />
+                                  <button onClick={() => handleAddSerie(exIdx)} className="btn-primary w-full">
+                                    <CheckCircle size={16} />
+                                    Concluir
+                                  </button>
+                                </>
+                              )}
+                            </>
                           ) : (
                             <div className="py-2 flex items-center gap-2 text-brand text-sm font-bold">
                               <CheckCircle size={16} />Concluído nesta volta!
@@ -1118,7 +1261,7 @@ function RegrasOficiaisCard({
   exercicioId: string;
   modalidadeTAF?: string;
 }) {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   if (!modalidadeTAF) return null;
   const regras = REGRAS_MAP.get(exercicioId);
   if (!regras) return null;
@@ -1157,10 +1300,11 @@ function RegrasOficiaisCard({
 interface SerieInputsProps {
   modalidade: ModalidadeExercicio;
   input: InputState;
+  ateAFalha?: boolean;
   onChange: (field: string, value: string) => void;
 }
 
-function SerieInputs({ modalidade, input, onChange }: SerieInputsProps) {
+function SerieInputs({ modalidade, input, ateAFalha, onChange }: SerieInputsProps) {
   if (modalidade === 'corrida') {
     const dist = parseInt(input.distanciaMetros) || 0;
     const tempo = mmssToSecs(input.tempoSegundos);
@@ -1213,9 +1357,13 @@ function SerieInputs({ modalidade, input, onChange }: SerieInputsProps) {
   if (modalidade === 'peso_corporal') {
     return (
       <div>
-        <label className="input-label">Repetições</label>
+        <label className="input-label">
+          Repetições
+          {ateAFalha && <span className="ml-1 text-[9px] text-red-400 font-black">(opcional — até a falha)</span>}
+        </label>
         <input type="number" min="0" inputMode="numeric" className="form-input"
           value={input.repeticoesReais}
+          placeholder={ateAFalha ? '0 = falha' : undefined}
           onChange={e => onChange('repeticoesReais', e.target.value)} />
       </div>
     );
@@ -1224,8 +1372,12 @@ function SerieInputs({ modalidade, input, onChange }: SerieInputsProps) {
   return (
     <div className="grid grid-cols-2 gap-3">
       <div>
-        <label className="input-label">Repetições</label>
+        <label className="input-label">
+          Repetições
+          {ateAFalha && <span className="ml-1 text-[9px] text-red-400 font-black">(até falha)</span>}
+        </label>
         <input type="number" min="0" inputMode="numeric" className="form-input" value={input.repeticoesReais}
+          placeholder={ateAFalha ? '0 = falha' : undefined}
           onChange={e => onChange('repeticoesReais', e.target.value)} />
       </div>
       <div>
@@ -1417,6 +1569,132 @@ function RestMiniBar({ timerSeconds, defaultRestTime, exerciseName, onExpand }: 
         <span className="text-[10px] font-black uppercase tracking-widest text-gray-600 shrink-0 ml-2">↑ Ver</span>
       </div>
     </button>
+  );
+}
+
+// ─── ExecMetaDisplay ─────────────────────────────────────────────────────────
+
+function ExecMetaDisplay({ ex, accentHex }: { ex: ExercicioNoPlano; accentHex: string }) {
+  const hasReps = (ex.repeticoesPlanejadas ?? 0) > 0;
+  const hasTime = (ex.tempoPlanejadoSegundos ?? 0) > 0;
+  const hasDist = (ex.distanciaPlanejadaMetros ?? 0) > 0;
+  if (!hasReps && !hasTime && !hasDist && !ex.ateAFalha && !ex.observacoesPlano) return null;
+  return (
+    <div className="rounded-xl border overflow-hidden" style={{ borderColor: `${accentHex}30`, background: `${accentHex}08` }}>
+      <div className="px-3 py-2.5 flex flex-wrap items-center gap-2">
+        {ex.ateAFalha && (
+          <span className="text-[10px] font-black uppercase tracking-widest text-red-400 bg-red-500/15 border border-red-500/30 rounded px-2 py-0.5">
+            ATÉ A FALHA
+          </span>
+        )}
+        {hasReps && !ex.ateAFalha && (
+          <span className="font-mono font-black text-lg" style={{ color: accentHex }}>
+            {ex.repeticoesPlanejadas} reps
+          </span>
+        )}
+        {hasTime && (
+          <span className="font-mono font-black text-lg" style={{ color: accentHex }}>
+            {formatarTempo(ex.tempoPlanejadoSegundos!)}
+          </span>
+        )}
+        {hasDist && (
+          <span className="font-mono font-black text-lg" style={{ color: accentHex }}>
+            {formatarDistancia(ex.distanciaPlanejadaMetros!)}
+          </span>
+        )}
+      </div>
+      {ex.observacoesPlano && (
+        <p className="px-3 pb-2.5 text-xs text-gray-400 leading-relaxed border-t" style={{ borderColor: `${accentHex}20` }}>
+          {ex.observacoesPlano}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─── PreCountdownDisplay ──────────────────────────────────────────────────────
+
+function PreCountdownDisplay({ remaining, accentHex, onCancel }: {
+  remaining: number;
+  accentHex: string;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-3 py-4">
+      <p className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-600">Preparar em</p>
+      <span
+        className="font-mono font-black text-6xl leading-none tabular-nums"
+        style={{ color: accentHex, textShadow: `0 0 24px ${accentHex}60` }}
+      >
+        {remaining}
+      </span>
+      <button
+        onClick={onCancel}
+        className="text-[10px] font-black uppercase tracking-widest text-gray-600 hover:text-gray-400 transition-colors"
+      >
+        Cancelar
+      </button>
+    </div>
+  );
+}
+
+// ─── InterCycleRestCard ───────────────────────────────────────────────────────
+
+function InterCycleRestCard({ timerSeconds, defaultRestTime, currentVolta, numVoltas, onSkip, onAddTime }: {
+  timerSeconds: number;
+  defaultRestTime: number;
+  currentVolta: number;
+  numVoltas: number;
+  onSkip: () => void;
+  onAddTime: () => void;
+}) {
+  const RADIUS = 44;
+  const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+  const progress = defaultRestTime > 0 ? timerSeconds / defaultRestTime : 0;
+  const strokeColor = progress > 0.6 ? '#A78BFA' : progress > 0.3 ? '#F59E0B' : '#EF4444';
+  const offset = CIRCUMFERENCE * (1 - progress);
+  const m = Math.floor(timerSeconds / 60);
+  const s = timerSeconds % 60;
+  const display = `${m}:${s.toString().padStart(2, '0')}`;
+  return (
+    <div className="card overflow-hidden border-violet-500/40 bg-violet-500/5">
+      <div className="flex flex-col items-center gap-4 px-4 py-5">
+        <p className="font-mono text-[9px] font-black uppercase tracking-[0.4em] text-violet-500">
+          // DESCANSO ENTRE CICLOS
+        </p>
+        <div className="flex items-center gap-5 w-full">
+          <div className="relative flex items-center justify-center shrink-0">
+            <svg width="108" height="108" viewBox="0 0 108 108" aria-hidden="true">
+              <circle cx="54" cy="54" r={RADIUS} fill="none" stroke="#1A1A1A" strokeWidth="5" />
+              <circle cx="54" cy="54" r={RADIUS} fill="none" stroke={strokeColor} strokeWidth="5" strokeLinecap="round"
+                strokeDasharray={CIRCUMFERENCE} strokeDashoffset={offset} transform="rotate(-90 54 54)"
+                style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.6s ease' }} className="motion-reduce:transition-none" />
+            </svg>
+            <span className="absolute font-mono font-black text-2xl tabular-nums" style={{ color: strokeColor, textShadow: `0 0 14px ${strokeColor}80` }}>
+              {display}
+            </span>
+          </div>
+          <div className="flex-1 min-w-0 space-y-1">
+            <p className="text-[10px] uppercase tracking-widest font-black text-violet-400">
+              Próxima: Volta {Math.min(currentVolta + 1, numVoltas)} de {numVoltas}
+            </p>
+            <p className="font-display font-black text-sm uppercase tracking-tight text-gray-200">
+              Descanse e prepare-se
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-3 w-full">
+          <button onClick={onAddTime}
+            className="flex-1 rounded-xl border border-outline bg-surface py-3 text-xs font-black uppercase tracking-widest text-gray-400 active:bg-surface-hover transition-colors flex items-center justify-center gap-1.5">
+            <Plus size={12} />+30s
+          </button>
+          <button onClick={onSkip}
+            className="flex-1 rounded-xl border border-outline bg-surface py-3 text-xs font-black uppercase tracking-widest text-gray-300 active:bg-surface-hover transition-colors flex items-center justify-center gap-1.5">
+            <SkipForward size={12} />Pular
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
