@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Trash2, Search, Calendar, ChevronDown, Flame, Download, CheckSquare, Square, ChevronUp, Settings2, SlidersHorizontal } from 'lucide-react';
+import { Trash2, Search, Calendar, ChevronDown, Flame, Download, CheckSquare, Square, ChevronUp, Settings2, SlidersHorizontal, Dumbbell } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, getYear, eachDayOfInterval, startOfYear, endOfYear, getDay, getWeek, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { workoutService } from '../../lib/workoutService';
@@ -8,6 +8,7 @@ import type { TipoSessaoTAF } from '../../types';
 import { useWorkouts, useInvalidateWorkouts } from '../../hooks/useWorkouts';
 import { exportToCSV, exportToJSON } from '../../lib/exportUtils';
 import { formatarResumoExercicio } from '../../lib/exercicioUtils';
+import { useToast } from '../../store/appStore';
 
 function toDate(raw: unknown): Date {
   if (raw instanceof Date) return raw;
@@ -164,6 +165,7 @@ function CalendarHeatmap({ data, year }: { data: { day: string; value: number }[
 export default function History({ onNavigate }: HistoryProps) {
   const { data: workouts = [], isLoading: loading } = useWorkouts();
   const invalidateWorkouts = useInvalidateWorkouts();
+  const addToast = useToast();
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -248,7 +250,10 @@ export default function History({ onNavigate }: HistoryProps) {
     try {
       await workoutService.deleteWorkout(workoutId);
       invalidateWorkouts();
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      addToast('error', 'Falha ao excluir treino. Tente novamente.');
+    }
     finally { setDeleting(null); }
   }
 
@@ -281,7 +286,10 @@ export default function History({ onNavigate }: HistoryProps) {
       await workoutService.deleteManyWorkouts([...selected]);
       invalidateWorkouts();
       exitSelectMode();
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      addToast('error', 'Falha ao excluir treinos. Tente novamente.');
+    }
     finally { setBulkDeleting(false); }
   }
 
@@ -508,16 +516,23 @@ export default function History({ onNavigate }: HistoryProps) {
       </div>
 
       {grouped.length === 0 ? (
-        <div className="card p-8 text-center space-y-2">
-          <p className="text-sm font-bold text-gray-400">
-            {search || startDate || filterGroup || filterObjetivo || filterTipoSessao
-              ? 'Nenhum treino corresponde aos filtros.'
-              : 'Sem treinos ainda.'}
-          </p>
-          {!search && !startDate && !filterGroup && !filterObjetivo && !filterTipoSessao && (
-            <p className="text-xs text-gray-600">
-              Cada sessão aqui é permanente. Registre a primeira agora.
-            </p>
+        <div className="card p-10 text-center space-y-4">
+          {!search && !startDate && !filterGroup && !filterObjetivo && !filterTipoSessao ? (
+            <>
+              <Dumbbell size={40} className="mx-auto text-gray-700" />
+              <div>
+                <p className="text-sm font-black uppercase tracking-wide text-gray-300">Sem treinos ainda</p>
+                <p className="text-xs text-gray-600 mt-1">Cada sessão registrada aqui fica permanente e alimenta seus gráficos de progresso.</p>
+              </div>
+              <button
+                onClick={() => onNavigate?.('log')}
+                className="btn-primary mx-auto"
+              >
+                Registrar Primeiro Treino
+              </button>
+            </>
+          ) : (
+            <p className="text-sm font-bold text-gray-400">Nenhum treino corresponde aos filtros.</p>
           )}
         </div>
       ) : (

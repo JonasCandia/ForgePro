@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Trophy, Dumbbell, TrendingUp, ChevronDown, ChevronUp, TrendingDown } from 'lucide-react';
 import { PersonalRecord } from '../../types';
+import type { Screen } from '../../App';
 import { useWorkouts } from '../../hooks/useWorkouts';
 import { calcular1RM, calcular1RMDetalhado, projetarPR, ProjecaoPR } from '../../lib/performanceUtils';
 import { format } from 'date-fns';
@@ -12,7 +13,7 @@ const OBJETIVO_LABEL: Record<string, string> = {
   manutencao: 'Manutenção',
 };
 
-export default function Records() {
+export default function Records({ onNavigate }: { onNavigate?: (screen: Screen) => void }) {
   const { data: workouts = [], isLoading: loading } = useWorkouts();
   const [filterGroup, setFilterGroup] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -120,10 +121,21 @@ export default function Records() {
 
       {/* Records Grid */}
       {filtered.length === 0 ? (
-        <div className="card border-dashed border-2 bg-transparent text-center py-20 text-gray-700">
-          <Trophy size={48} className="mx-auto mb-4 opacity-10" />
-          <p className="text-xs uppercase tracking-widest font-bold">Sem recordes ainda.</p>
-          <p className="text-[10px] text-gray-600 mt-2">Complete séries com carga. O algoritmo calcula seu 1RM estimado.</p>
+        <div className="card border-dashed border-2 bg-transparent text-center py-16 space-y-4 text-gray-700">
+          <Trophy size={44} className="mx-auto opacity-10" />
+          {workouts.length === 0 ? (
+            <>
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest text-gray-400">Sem recordes ainda</p>
+                <p className="text-[11px] text-gray-600 mt-2 px-6">Complete séries com carga. O algoritmo calcula seu 1RM estimado automaticamente.</p>
+              </div>
+              <button onClick={() => onNavigate?.('log')} className="btn-primary mx-auto">
+                Registrar Primeiro Treino
+              </button>
+            </>
+          ) : (
+            <p className="text-xs uppercase tracking-widest font-bold">Nenhum recorde para o filtro selecionado.</p>
+          )}
         </div>
       ) : (
         <div className="space-y-3">

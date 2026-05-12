@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dumbbell, TrendingUp, Calendar, Trophy, Play, Ruler, AlertCircle, ChevronLeft, ChevronRight, Target, Zap, User, Timer } from 'lucide-react';
+import { Dumbbell, TrendingUp, Calendar, Trophy, Play, Ruler, AlertCircle, ChevronLeft, ChevronRight, Target, Zap, User, Timer, CheckCircle2, Circle } from 'lucide-react';
 import type { Screen } from '../../App';
 import {
   format, startOfMonth, endOfMonth, isWithinInterval, differenceInDays,
@@ -11,6 +11,7 @@ import { useWorkouts } from '../../hooks/useWorkouts';
 import { useMeasurements } from '../../hooks/useMeasurements';
 import { useTAFScores } from '../../hooks/useTAF';
 import { useProfile } from '../../hooks/useProfile';
+import { usePlanos } from '../../hooks/usePlanos';
 import { TAF_METAS_MUITO_BOM } from '../../constants';
 import type { TAFScore } from '../../types';
 
@@ -243,11 +244,11 @@ function TAFProgressWidget({ scores, onNavigate }: TAFProgressWidgetProps) {
                   />
                 </div>
               ))}
-              <span className="text-[8px] text-gray-600 font-bold ml-0.5">←evolução</span>
+
             </div>
           )}
           {/* Meta Muito Bom reference */}
-          <p className="text-[9px] text-gray-600">
+          <p className="text-[11px] text-gray-600">
             Meta Muito Bom: <span className="font-bold text-emerald-400">8.5</span>
           </p>
         </div>
@@ -273,7 +274,7 @@ function TAFProgressWidget({ scores, onNavigate }: TAFProgressWidgetProps) {
                   <span className="text-gray-700">/</span>
                   <span className="text-gray-600">{unit === 'm' ? `${meta}m` : `${meta} ${unit}`}</span>
                   <span
-                    className="text-[9px] font-black px-1 py-0.5 rounded"
+                    className="text-[11px] font-black px-1 py-0.5 rounded"
                     style={{
                       color: atingiu ? '#34D399' : '#F59E0B',
                       background: atingiu ? '#34D39915' : '#F59E0B15',
@@ -322,7 +323,13 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const { data: measurements = [] } = useMeasurements();
   const { data: tafScores = [] } = useTAFScores();
   const { data: profile } = useProfile();
+  const { data: planos = [] } = usePlanos();
   const isTAFUser = profile?.objetivo === 'taf' || tafScores.length > 0;
+
+  // Onboarding: show for users without any workout yet
+  const profileDone = !!(profile?.nome);
+  const planoDone = planos.length > 0;
+  const isNewUser = workouts.length === 0 && !loading;
 
   const now = new Date();
   const [calendarMonth, setCalendarMonth] = useState(now);
@@ -374,6 +381,62 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         </div>
       ) : (
         <>
+          {/* Onboarding checklist — visible until first workout is registered */}
+          {isNewUser && (
+            <div className="card p-5 space-y-4 border-brand/20">
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest text-brand mb-0.5">Bem-vindo ao ForgePro</p>
+                <p className="text-[11px] text-gray-500">Complete os passos abaixo para começar a treinar.</p>
+              </div>
+              <div className="space-y-3">
+                {/* Passo 1: Configurar Perfil */}
+                <button
+                  onClick={() => onNavigate('profile')}
+                  className="w-full flex items-center gap-3 text-left group"
+                >
+                  {profileDone
+                    ? <CheckCircle2 size={20} className="text-brand shrink-0" />
+                    : <Circle size={20} className="text-gray-600 shrink-0 group-hover:text-gray-400 transition-colors" />}
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-black uppercase tracking-wide ${profileDone ? 'text-gray-500 line-through' : 'text-gray-200 group-hover:text-white transition-colors'}`}>
+                      Configurar Perfil
+                    </p>
+                    <p className="text-[11px] text-gray-600">Nome, objetivo e dados físicos</p>
+                  </div>
+                  {!profileDone && <span className="text-[11px] text-brand font-black shrink-0">Começar →</span>}
+                </button>
+
+                {/* Passo 2: Importar Plano (opcional) */}
+                <button
+                  onClick={() => onNavigate('import')}
+                  className="w-full flex items-center gap-3 text-left group"
+                >
+                  {planoDone
+                    ? <CheckCircle2 size={20} className="text-brand shrink-0" />
+                    : <Circle size={20} className="text-gray-600 shrink-0 group-hover:text-gray-400 transition-colors" />}
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-black uppercase tracking-wide ${planoDone ? 'text-gray-500 line-through' : 'text-gray-200 group-hover:text-white transition-colors'}`}>
+                      Importar Plano
+                    </p>
+                    <p className="text-[11px] text-gray-600">Opcional — organize suas semanas e sessões</p>
+                  </div>
+                  {!planoDone && <span className="text-[11px] text-gray-600 font-black shrink-0">Opcional</span>}
+                </button>
+
+                {/* Passo 3: Registrar Primeiro Treino */}
+                <div className="pt-1">
+                  <button
+                    onClick={() => onNavigate('log')}
+                    className="btn-primary w-full"
+                  >
+                    <Dumbbell size={16} />
+                    Registrar Primeiro Treino
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Stats – primary metric up top, 3 supporting below */}
           <div className="space-y-3">
             <div className="card p-5 flex items-center justify-between">

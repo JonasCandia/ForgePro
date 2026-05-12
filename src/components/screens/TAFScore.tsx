@@ -263,20 +263,20 @@ function CardScore({ score, delta, onDelete, metas }: {
       <div className="grid grid-cols-3 gap-2 text-center">
         <div>
           <p className="text-[10px] text-gray-500 uppercase tracking-wider">Barra</p>
-          <p className="font-bold text-sm">{score.barraFixa} <span className="text-[10px] text-gray-500">rep</span></p>
-          <p className="text-[10px] text-brand font-mono">{score.ptsBarra.toFixed(1)} pts</p>
+          <p className="font-bold text-sm">{score.barraFixa} <span className="text-[11px] text-gray-500">rep</span></p>
+          <p className="text-[11px] text-brand font-mono">{score.ptsBarra.toFixed(1)} pts</p>
           <ProgressBar value={score.barraFixa} max={20} meta={metas.barraFixa} />
         </div>
         <div>
           <p className="text-[10px] text-gray-500 uppercase tracking-wider">Abdominal</p>
-          <p className="font-bold text-sm">{score.remadorAbdominal} <span className="text-[10px] text-gray-500">rep</span></p>
-          <p className="text-[10px] text-brand font-mono">{score.ptsAbdominal.toFixed(1)} pts</p>
+          <p className="font-bold text-sm">{score.remadorAbdominal} <span className="text-[11px] text-gray-500">rep</span></p>
+          <p className="text-[11px] text-brand font-mono">{score.ptsAbdominal.toFixed(1)} pts</p>
           <ProgressBar value={score.remadorAbdominal} max={60} meta={metas.remadorAbdominal} />
         </div>
         <div>
           <p className="text-[10px] text-gray-500 uppercase tracking-wider">Corrida</p>
-          <p className="font-bold text-sm">{score.corrida12min} <span className="text-[10px] text-gray-500">m</span></p>
-          <p className="text-[10px] text-brand font-mono">{score.ptsCorreida.toFixed(1)} pts</p>
+          <p className="font-bold text-sm">{score.corrida12min} <span className="text-[11px] text-gray-500">m</span></p>
+          <p className="text-[11px] text-brand font-mono">{score.ptsCorreida.toFixed(1)} pts</p>
           <ProgressBar value={score.corrida12min} max={4000} meta={metas.corrida12min} />
         </div>
       </div>

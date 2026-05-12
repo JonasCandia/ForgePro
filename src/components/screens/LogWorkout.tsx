@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Plus, Trash2, Check, ChevronDown, Timer, Dumbbell, Activity } from 'lucide-react';
+import React, { useState, useRef, useCallback } from 'react';
+import { ArrowLeft, Plus, Trash2, Check, ChevronDown, Timer, Dumbbell, Activity, Undo2 } from 'lucide-react';
 import { workoutService } from '../../lib/workoutService';
 import { useExercises } from '../../hooks/useExercises';
 import { useProfile } from '../../hooks/useProfile';
 import { useInvalidateWorkouts } from '../../hooks/useWorkouts';
 import type { ModalidadeExercicio } from '../../types';
 import { getModalidade, COLUNAS_SERIE, LABEL_MODALIDADE, formatarTempo, calcularPace, formatarDistancia } from '../../lib/exercicioUtils';
+import { useToast } from '../../store/appStore';
 
 interface SeriesEntry {
   series: number;
@@ -71,12 +72,34 @@ export default function LogWorkout({ onBack }: LogWorkoutProps) {
   const { data: exercises = [], isLoading: loadingExercises } = useExercises();
   const { data: profile, isLoading: loadingProfile } = useProfile();
   const invalidateWorkouts = useInvalidateWorkouts();
+  const addToast = useToast();
   const loading = loadingExercises || loadingProfile;
   const objetivo = profile?.objetivo;
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const [selectedExId, setSelectedExId] = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // ─── Undo state for series removal ───────────────────────────────────────
+  interface UndoState {
+    entryIdx: number;
+    seriesIdx: number;
+    seriesData: SeriesEntry;
+  }
+  const [undoState, setUndoState] = useState<UndoState | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function clearUndoTimer() {
+    if (undoTimerRef.current) {
+      clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
+    }
+  }
+
+  const dismissUndo = useCallback(() => {
+    clearUndoTimer();
+    setUndoState(null);
+  }, []);
 
   function addEntry() {
     if (!selectedExId) return;
@@ -106,12 +129,38 @@ export default function LogWorkout({ onBack }: LogWorkoutProps) {
   }
 
   function removeSeries(entryIdx: number, seriesIdx: number) {
+    // Save removed data for undo
+    const removed = entries[entryIdx]?.seriesData[seriesIdx];
+    if (!removed) return;
+
+    // Dismiss any previous pending undo
+    clearUndoTimer();
+
+    // Optimistically remove
     setEntries(prev => prev.map((e, i) => i !== entryIdx ? e : ({
       ...e,
       seriesData: e.seriesData
         .filter((_, j) => j !== seriesIdx)
         .map((s, j) => ({ ...s, series: j + 1 })),
     })));
+
+    setUndoState({ entryIdx, seriesIdx, seriesData: removed });
+    undoTimerRef.current = setTimeout(() => {
+      setUndoState(null);
+      undoTimerRef.current = null;
+    }, 4500);
+  }
+
+  function undoRemoveSeries() {
+    if (!undoState) return;
+    const { entryIdx, seriesIdx, seriesData } = undoState;
+    setEntries(prev => prev.map((e, i) => {
+      if (i !== entryIdx) return e;
+      const next = [...e.seriesData];
+      next.splice(seriesIdx, 0, seriesData);
+      return { ...e, seriesData: next.map((s, j) => ({ ...s, series: j + 1 })) };
+    }));
+    dismissUndo();
   }
 
   function updateSeries(entryIdx: number, seriesIdx: number, field: keyof SeriesEntry, value: number) {
@@ -142,7 +191,10 @@ export default function LogWorkout({ onBack }: LogWorkoutProps) {
       invalidateWorkouts();
       setSaved(true);
       setEntries([]);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      addToast('error', 'Falha ao salvar treino. Dados retidos localmente — tente novamente.');
+    }
     finally { setSaving(false); }
   }
 
@@ -228,6 +280,22 @@ export default function LogWorkout({ onBack }: LogWorkoutProps) {
           {saving ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin motion-reduce:animate-none" /> : <Check size={16} />}
           {saving ? 'Salvando...' : 'Finalizar e Salvar'}
         </button>
+      )}
+
+      {/* Undo banner — série removida */}
+      {undoState && (
+        <div className="fixed bottom-[5.5rem] left-4 right-4 z-[150] flex items-center justify-between gap-3 bg-[#1e1e1e] border border-outline rounded-xl px-4 py-3 shadow-xl animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <p className="text-sm text-gray-300">
+            Série <span className="font-bold text-white">S{undoState.seriesData.series}</span> removida
+          </p>
+          <button
+            onClick={undoRemoveSeries}
+            className="flex items-center gap-1.5 text-brand text-sm font-black uppercase tracking-wide shrink-0 hover:brightness-110"
+          >
+            <Undo2 size={14} />
+            Desfazer
+          </button>
+        </div>
       )}
     </div>
   );

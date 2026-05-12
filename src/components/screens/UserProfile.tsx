@@ -4,6 +4,7 @@ import { workoutService } from '../../lib/workoutService';
 import { useProfile, useInvalidateProfile } from '../../hooks/useProfile';
 import { useWorkouts } from '../../hooks/useWorkouts';
 import { exportToCSV } from '../../lib/exportUtils';
+import { useToast } from '../../store/appStore';
 import type { Screen } from '../../App';
 import type { FaixaEtariaTAF, SexoBio } from '../../types';
 
@@ -18,6 +19,7 @@ export default function UserProfile({ onBack, onSaved, onNavigate, isFirstTime }
   const { data: profileData, isLoading: loading } = useProfile();
   const { data: workouts = [] } = useWorkouts();
   const invalidateProfile = useInvalidateProfile();
+  const addToast = useToast();
   const [saving, setSaving] = useState(false);
   const [nome, setNome] = useState('');
   const [pesoCorporal, setPesoCorporal] = useState<number | ''>('');
@@ -59,6 +61,7 @@ export default function UserProfile({ onBack, onSaved, onNavigate, isFirstTime }
       invalidateProfile();
     } catch (err) {
       setError('Falha ao salvar. Tente novamente.');
+      addToast('error', 'Falha ao salvar perfil. Tente novamente.');
     } finally {
       setSaving(false);
     }

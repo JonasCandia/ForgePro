@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, PlusCircle, History as HistoryIcon, TrendingUp, Dumbbell, LogIn, LogOut, Trophy, User as UserIcon, Sun, Moon, FileDown, WifiOff, Target, ClipboardList, ShieldCheck } from 'lucide-react';
+import { Home, PlusCircle, History as HistoryIcon, TrendingUp, Dumbbell, LogIn, LogOut, Trophy, User as UserIcon, Sun, Moon, FileDown, WifiOff, Target, ClipboardList, ShieldCheck, Ruler, MoreHorizontal, X, Play } from 'lucide-react';
 import Dashboard from './components/screens/Dashboard';
 import LogWorkout from './components/screens/LogWorkout';
 import History from './components/screens/History';
@@ -20,6 +20,8 @@ import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { useAppStore } from './store/appStore';
 import { useProfile } from './hooks/useProfile';
 import { useOnlineSync } from './hooks/useOnlineSync';
+import { usePlanos } from './hooks/usePlanos';
+import ToastContainer from './components/ToastContainer';
 
 export type Screen = 'home' | 'log' | 'history' | 'progress' | 'import' | 'execute' | 'profile' | 'records' | 'measurements' | 'taf' | 'plan' | 'manage-workouts' | 'prevention';
 
@@ -35,12 +37,28 @@ function AppInner() {
   const setupChecked = useRef(false);
   const [isNewLogin, setIsNewLogin] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [moreSheetOpen, setMoreSheetOpen] = useState(false);
+  const [fabSheetOpen, setFabSheetOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { user, setUser } = useAppStore();
   const [authLoading, setAuthLoading] = useState(true);
   const { data: profile, isLoading: profileLoading, isError: profileError } = useProfile();
   const { theme, toggleTheme } = useTheme();
   const { isOnline } = useOnlineSync();
+  const { data: planos = [] } = usePlanos();
+  const hasActivePlan = planos.length > 0;
+
+  // Pulse apenas na transição offline → online (~2s), não de forma permanente
+  const [justReconnected, setJustReconnected] = useState(false);
+  const prevOnlineRef = useRef(isOnline);
+  useEffect(() => {
+    if (!prevOnlineRef.current && isOnline) {
+      setJustReconnected(true);
+      const t = setTimeout(() => setJustReconnected(false), 2000);
+      return () => clearTimeout(t);
+    }
+    prevOnlineRef.current = isOnline;
+  }, [isOnline]);
 
   // Close avatar dropdown on outside click
   useEffect(() => {
@@ -123,7 +141,7 @@ function AppInner() {
       case 'manage-workouts':
         return <ManageWorkouts onBack={() => setCurrentScreen('history')} />;
       case 'progress':
-        return <Progress />;
+        return <Progress onNavigate={setCurrentScreen} />;
       case 'import':
         return <ImportPlan onBack={() => setCurrentScreen('home')} />;
       case 'execute':
@@ -137,7 +155,7 @@ function AppInner() {
           />
         );
       case 'records':
-        return <Records />;
+        return <Records onNavigate={setCurrentScreen} />;
       case 'measurements':
         return <BodyMeasurements onBack={() => setCurrentScreen('home')} />;
       case 'taf':
@@ -153,6 +171,7 @@ function AppInner() {
 
   return (
     <div className="min-h-screen bg-background text-gray-200 font-sans selection:bg-brand selection:text-black">
+      <ToastContainer />
       {/* Top Header / Navigation */}
       <nav className="h-16 border-b border-outline bg-surface flex items-center justify-between px-6 sticky top-0 z-50">
         <div className="flex items-center gap-3">
@@ -162,19 +181,50 @@ function AppInner() {
           <span className="text-xl font-black tracking-tighter text-brand italic">FORGE PRO</span>
         </div>
         
-        {/* Desktop Nav */}
-        <div className="hidden md:flex gap-8 text-[11px] font-bold uppercase tracking-widest h-full">
-          {(['home', 'plan', 'history', 'progress', 'records', 'measurements', 'taf', 'prevention', 'import'] as const).map((screen) => (
-            <button 
+        {/* Desktop Nav — 3 grupos com separadores visuais */}
+        <nav className="hidden md:flex items-stretch text-[11px] font-bold uppercase tracking-widest h-full" aria-label="Navegação principal">
+          {/* Grupo: Treino */}
+          {([['home', 'Início']] as const).map(([screen, label]) => (
+            <button
               key={screen}
               disabled={!user}
               onClick={() => setCurrentScreen(screen)}
-              className={`h-full border-b-2 flex items-center px-2 transition-colors ${currentScreen === screen ? 'text-brand border-brand' : 'text-gray-500 border-transparent hover:text-gray-300'} disabled:opacity-30`}
+              className={`h-full border-b-2 flex items-center px-3 transition-colors ${currentScreen === screen ? 'text-brand border-brand' : 'text-gray-500 border-transparent hover:text-gray-300'} disabled:opacity-30`}
             >
-              {screen === 'home' ? 'Início' : screen === 'plan' ? 'Plano' : screen === 'history' ? 'Histórico' : screen === 'progress' ? 'Progresso' : screen === 'records' ? 'Recordes' : screen === 'measurements' ? 'Medidas' : screen === 'taf' ? 'TAF' : screen === 'prevention' ? 'Prevenção' : 'Importar'}
+              {label}
             </button>
           ))}
-        </div>
+
+          {/* Separador Treino | Análise */}
+          <span className="self-center mx-2 text-outline select-none" aria-hidden>|</span>
+
+          {/* Grupo: Análise */}
+          {([['history', 'Histórico'], ['progress', 'Progresso'], ['records', 'Recordes']] as const).map(([screen, label]) => (
+            <button
+              key={screen}
+              disabled={!user}
+              onClick={() => setCurrentScreen(screen)}
+              className={`h-full border-b-2 flex items-center px-3 transition-colors ${currentScreen === screen ? 'text-brand border-brand' : 'text-gray-500 border-transparent hover:text-gray-300'} disabled:opacity-30`}
+            >
+              {label}
+            </button>
+          ))}
+
+          {/* Separador Análise | Ferramentas */}
+          <span className="self-center mx-2 text-outline select-none" aria-hidden>|</span>
+
+          {/* Grupo: Ferramentas */}
+          {([['plan', 'Plano'], ['taf', 'TAF'], ['prevention', 'Prevenção'], ['measurements', 'Medidas'], ['import', 'Importar']] as const).map(([screen, label]) => (
+            <button
+              key={screen}
+              disabled={!user}
+              onClick={() => setCurrentScreen(screen)}
+              className={`h-full border-b-2 flex items-center px-3 transition-colors ${currentScreen === screen ? 'text-brand border-brand' : 'text-gray-500 border-transparent hover:text-gray-300'} disabled:opacity-30`}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
 
         <div className="flex items-center gap-3">
           {/* Theme Toggle */}
@@ -187,7 +237,7 @@ function AppInner() {
           </button>
 
           <div className="hidden sm:flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-brand">
-            <span className={`w-2 h-2 rounded-full ${user ? 'bg-brand' : 'bg-gray-500'} animate-pulse`}></span>
+            <span className={`w-2 h-2 rounded-full ${user ? 'bg-brand' : 'bg-gray-500'} ${justReconnected ? 'animate-pulse' : ''}`}></span>
             {user ? 'CONECTADO' : 'OFFLINE'}
           </div>
           {user && (
@@ -255,23 +305,32 @@ function AppInner() {
 
       {/* Mobile Bottom Navigation */}
       {user && (() => {
-        const activeNavIndex = NAV_SCREENS.indexOf(currentScreen as NavScreen);
-        const tabW = 100 / NAV_SCREENS.length;
+        const SECONDARY_SCREENS_LIST = ['plan', 'taf', 'records', 'prevention', 'measurements', 'import'] as const;
+        const isSecondaryActive = SECONDARY_SCREENS_LIST.includes(currentScreen as (typeof SECONDARY_SCREENS_LIST)[number]);
+        const primaryTabIndex = currentScreen === 'home' ? 0 : currentScreen === 'history' ? 1 : currentScreen === 'progress' ? 2 : isSecondaryActive ? 3 : -1;
+        const tabW = 25; // 4 tabs
         return (
           <>
-            {/* FAB — Novo Treino */}
+            {/* FAB — Novo Treino / contextualizável */}
             <div className="fixed bottom-[5.5rem] right-4 z-50">
-              {currentScreen !== 'log' && (
+              {currentScreen !== 'log' && currentScreen !== 'execute' && (
                 <span
                   className="fab-ring absolute inset-0 rounded-full bg-brand pointer-events-none"
                   aria-hidden="true"
                 />
               )}
               <button
-                onClick={() => setCurrentScreen('log')}
+                onClick={() => {
+                  if (hasActivePlan && currentScreen !== 'log' && currentScreen !== 'execute') {
+                    setFabSheetOpen(true);
+                  } else {
+                    setCurrentScreen('log');
+                  }
+                }}
                 aria-label="Novo treino"
+                aria-haspopup={hasActivePlan ? 'dialog' : undefined}
                 className={`relative w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 active:scale-90 ${
-                  currentScreen === 'log'
+                  currentScreen === 'log' || currentScreen === 'execute'
                     ? 'bg-brand text-black scale-110 shadow-brand/40'
                     : 'bg-brand text-black hover:brightness-110 shadow-brand/25'
                 }`}
@@ -280,6 +339,58 @@ function AppInner() {
               </button>
             </div>
 
+            {/* FAB Context Sheet */}
+            {fabSheetOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+                  onClick={() => setFabSheetOpen(false)}
+                />
+                <div
+                  role="dialog"
+                  aria-label="Escolher tipo de treino"
+                  className="fixed bottom-0 left-0 w-full z-50 bg-surface border-t border-outline rounded-t-2xl pb-[env(safe-area-inset-bottom,1.5rem)]"
+                >
+                  <div className="flex items-center justify-between px-4 pt-4 pb-3">
+                    <span className="text-xs font-black uppercase tracking-widest text-gray-500">Iniciar treino</span>
+                    <button
+                      onClick={() => setFabSheetOpen(false)}
+                      className="p-1.5 text-gray-500 hover:text-gray-300 rounded-lg"
+                      aria-label="Fechar"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-2 px-4 pb-4">
+                    <button
+                      onClick={() => { setCurrentScreen('execute'); setFabSheetOpen(false); }}
+                      className="flex items-center gap-4 p-4 rounded-xl border border-brand/30 bg-brand/10 text-left hover:bg-brand/20 transition-colors active:scale-[0.98]"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-brand/20 flex items-center justify-center shrink-0">
+                        <Play size={20} className="text-brand" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-black uppercase tracking-wide text-brand">Executar Plano</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">Seguir a sessão do plano de treino ativo</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => { setCurrentScreen('log'); setFabSheetOpen(false); }}
+                      className="flex items-center gap-4 p-4 rounded-xl border border-outline bg-surface-hover text-left hover:bg-white/5 transition-colors active:scale-[0.98]"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-surface flex items-center justify-center shrink-0 border border-outline">
+                        <Dumbbell size={20} className="text-gray-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-black uppercase tracking-wide text-gray-200">Treino Livre</p>
+                        <p className="text-[11px] text-gray-500 mt-0.5">Registrar exercícios avulsos sem plano</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
             <nav className="md:hidden fixed bottom-0 left-0 w-full bg-surface z-40 pb-[env(safe-area-inset-bottom,1.5rem)]">
               {/* Sliding HUD indicator */}
               <div className="relative h-[2px] bg-outline overflow-hidden">
@@ -287,8 +398,8 @@ function AppInner() {
                   className="absolute top-0 h-full bg-brand"
                   style={{
                     width: `${tabW}%`,
-                    transform: activeNavIndex >= 0
-                      ? `translateX(${activeNavIndex * 100}%)`
+                    transform: primaryTabIndex >= 0
+                      ? `translateX(${primaryTabIndex * 100}%)`
                       : 'translateX(-100%)',
                     transition: 'transform 280ms cubic-bezier(0.16, 1, 0.3, 1)',
                     boxShadow: '0 0 8px 1px oklch(88% 0.28 125 / 0.7)',
@@ -296,15 +407,44 @@ function AppInner() {
                 />
               </div>
               <div className="flex items-stretch border-t border-outline">
-                <NavItem active={currentScreen === 'home'}     icon={<Home size={20} />}         label="Início"    onClick={() => setCurrentScreen('home')} />
-                <NavItem active={currentScreen === 'history'}  icon={<HistoryIcon size={20} />}  label="Histórico" onClick={() => setCurrentScreen('history')} />
-                <NavItem active={currentScreen === 'plan'}     icon={<ClipboardList size={20} />} label="Plano"    onClick={() => setCurrentScreen('plan')} />
-                <NavItem active={currentScreen === 'progress'} icon={<TrendingUp size={20} />}   label="Progresso" onClick={() => setCurrentScreen('progress')} />
-                <NavItem active={currentScreen === 'taf'}        icon={<Target size={20} />}       label="TAF"       onClick={() => setCurrentScreen('taf')} />
-                <NavItem active={currentScreen === 'records'}    icon={<Trophy size={20} />}       label="Recordes"  onClick={() => setCurrentScreen('records')} />
-                <NavItem active={currentScreen === 'prevention'} icon={<ShieldCheck size={20} />}  label="Prevenção" onClick={() => setCurrentScreen('prevention')} />
+                <NavItem active={currentScreen === 'home'}     icon={<Home size={20} />}        label="Início"    onClick={() => setCurrentScreen('home')} />
+                <NavItem active={currentScreen === 'history'}  icon={<HistoryIcon size={20} />} label="Histórico" onClick={() => setCurrentScreen('history')} />
+                <NavItem active={currentScreen === 'progress'} icon={<TrendingUp size={20} />}  label="Progresso" onClick={() => setCurrentScreen('progress')} />
+                <NavItem active={isSecondaryActive || moreSheetOpen} icon={<MoreHorizontal size={20} />} label="Mais" onClick={() => setMoreSheetOpen(true)} />
               </div>
             </nav>
+
+            {/* More Bottom Sheet */}
+            {moreSheetOpen && (
+              <>
+                {/* Backdrop */}
+                <div
+                  className="md:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+                  onClick={() => setMoreSheetOpen(false)}
+                />
+                {/* Sheet */}
+                <div className="md:hidden fixed bottom-0 left-0 w-full z-50 bg-surface border-t border-outline rounded-t-2xl pb-[env(safe-area-inset-bottom,1.5rem)]">
+                  <div className="flex items-center justify-between px-4 pt-4 pb-3">
+                    <span className="text-xs font-black uppercase tracking-widest text-gray-500">Mais</span>
+                    <button
+                      onClick={() => setMoreSheetOpen(false)}
+                      className="p-1.5 text-gray-500 hover:text-gray-300 rounded-lg"
+                      aria-label="Fechar menu"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 px-4 pb-4">
+                    <MoreSheetItem icon={<ClipboardList size={22} />} label="Plano"     active={currentScreen === 'plan'}         onClick={() => { setCurrentScreen('plan');         setMoreSheetOpen(false); }} />
+                    <MoreSheetItem icon={<Target size={22} />}        label="TAF"       active={currentScreen === 'taf'}          onClick={() => { setCurrentScreen('taf');          setMoreSheetOpen(false); }} />
+                    <MoreSheetItem icon={<Trophy size={22} />}        label="Recordes"  active={currentScreen === 'records'}      onClick={() => { setCurrentScreen('records');      setMoreSheetOpen(false); }} />
+                    <MoreSheetItem icon={<ShieldCheck size={22} />}   label="Prevenção" active={currentScreen === 'prevention'}   onClick={() => { setCurrentScreen('prevention');   setMoreSheetOpen(false); }} />
+                    <MoreSheetItem icon={<Ruler size={22} />}         label="Medidas"   active={currentScreen === 'measurements'} onClick={() => { setCurrentScreen('measurements'); setMoreSheetOpen(false); }} />
+                    <MoreSheetItem icon={<FileDown size={22} />}      label="Importar"  active={currentScreen === 'import'}       onClick={() => { setCurrentScreen('import');       setMoreSheetOpen(false); }} />
+                  </div>
+                </div>
+              </>
+            )}
           </>
         );
       })()}
@@ -344,12 +484,35 @@ function NavItem({ active, icon, label, onClick }: NavItemProps) {
         {icon}
       </div>
       <span
-        className={`text-[9px] font-black uppercase tracking-widest leading-none ${
+        className={`text-[11px] font-black uppercase tracking-widest leading-none ${
           active ? 'nav-label-active' : 'opacity-0 pointer-events-none'
         }`}
       >
         {label}
       </span>
+    </button>
+  );
+}
+
+interface MoreSheetItemProps {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}
+
+function MoreSheetItem({ icon, label, active, onClick }: MoreSheetItemProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-colors active:scale-95 ${
+        active
+          ? 'bg-brand/15 border-brand/30 text-brand'
+          : 'bg-surface-hover border-outline text-gray-400 hover:text-gray-200'
+      }`}
+    >
+      {icon}
+      <span className="text-[11px] font-bold uppercase tracking-wider">{label}</span>
     </button>
   );
 }

@@ -5,6 +5,7 @@ import { ptBR } from 'date-fns/locale';
 import { workoutService } from '../../lib/workoutService';
 import { WorkoutSession, WorkoutSeries } from '../../types';
 import { useWorkouts, useInvalidateWorkouts } from '../../hooks/useWorkouts';
+import { useToast } from '../../store/appStore';
 
 function toDate(raw: unknown): Date {
   if (raw instanceof Date) return raw;
@@ -26,6 +27,7 @@ interface ManageWorkoutsProps {
 export default function ManageWorkouts({ onBack }: ManageWorkoutsProps) {
   const { data: workouts = [], isLoading: loading } = useWorkouts();
   const invalidateWorkouts = useInvalidateWorkouts();
+  const addToast = useToast();
 
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -104,6 +106,7 @@ export default function ManageWorkouts({ onBack }: ManageWorkoutsProps) {
       cancelEdit(workoutId);
     } catch (e) {
       console.error(e);
+      addToast('error', 'Falha ao salvar alterações. Tente novamente.');
     } finally {
       setSaving(null);
     }
@@ -115,7 +118,10 @@ export default function ManageWorkouts({ onBack }: ManageWorkoutsProps) {
     try {
       await workoutService.deleteWorkout(workoutId);
       invalidateWorkouts();
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      addToast('error', 'Falha ao excluir treino. Tente novamente.');
+    }
     finally { setDeleting(null); }
   }
 
@@ -140,7 +146,10 @@ export default function ManageWorkouts({ onBack }: ManageWorkoutsProps) {
       await workoutService.deleteManyWorkouts([...selected]);
       invalidateWorkouts();
       exitSelectMode();
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      addToast('error', 'Falha ao excluir treinos. Tente novamente.');
+    }
     finally { setBulkDeleting(false); }
   }
 

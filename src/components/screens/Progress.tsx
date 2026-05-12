@@ -1,6 +1,7 @@
 ﻿import React, { useState, useMemo } from 'react';
-import { TrendingUp, ChevronDown, BarChart2, Activity, GitCompare } from 'lucide-react';
+import { TrendingUp, ChevronDown, BarChart2, Activity, GitCompare, Dumbbell } from 'lucide-react';
 import { format, subDays } from 'date-fns';
+import type { Screen } from '../../App';
 import {
   LineChart, Line,
   BarChart, Bar,
@@ -24,7 +25,7 @@ function shortLabel(s: string, max = 10) {
   return s.length > max ? s.slice(0, max - 1) + '…' : s;
 }
 
-export default function Progress() {
+export default function Progress({ onNavigate }: { onNavigate?: (screen: Screen) => void }) {
   const { data: workouts = [], isLoading: loadingWorkouts } = useWorkouts();
   const { data: exercises = [], isLoading: loadingExercises } = useExercises();
   const loading = loadingWorkouts || loadingExercises;
@@ -197,6 +198,19 @@ export default function Progress() {
 
   return (
     <div className="space-y-6 pt-4 pb-24">
+      {workouts.length === 0 && (
+        <div className="card p-10 text-center space-y-4">
+          <TrendingUp size={40} className="mx-auto text-gray-700" />
+          <div>
+            <p className="text-sm font-black uppercase tracking-wide text-gray-300">Sem dados de progressão</p>
+            <p className="text-xs text-gray-600 mt-1">Registre treinos com carga e os gráficos de evolução, volume e mapa muscular serão gerados automaticamente.</p>
+          </div>
+          <button onClick={() => onNavigate?.('log')} className="btn-primary mx-auto">
+            Registrar Primeiro Treino
+          </button>
+        </div>
+      )}
+
       {/* Tab bar */}
       <div className="flex gap-1 p-1 bg-surface-hover rounded-xl border border-outline">
         {([

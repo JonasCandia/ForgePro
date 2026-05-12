@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { workoutService } from '../../lib/workoutService';
 import { useMeasurements, useInvalidateMeasurements } from '../../hooks/useMeasurements';
+import { useToast } from '../../store/appStore';
 
 interface BodyMeasurementsProps {
   onBack: () => void;
@@ -31,6 +32,7 @@ const FIELDS: { key: NumField; label: string; unit: string }[] = [
 export default function BodyMeasurements({ onBack }: BodyMeasurementsProps) {
   const { data: measurements = [], isLoading } = useMeasurements();
   const invalidate = useInvalidateMeasurements();
+  const addToast = useToast();
 
   const today = format(new Date(), 'yyyy-MM-dd');
   const [data, setData] = useState(today);
@@ -67,6 +69,7 @@ export default function BodyMeasurements({ onBack }: BodyMeasurementsProps) {
       setTimeout(() => setSaved(false), 2500);
     } catch {
       setError('Falha ao salvar. Tente novamente.');
+      addToast('error', 'Falha ao salvar medidas. Tente novamente.');
     } finally {
       setSaving(false);
     }

@@ -1,8 +1,9 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Play, CheckCircle, Trophy, ChevronDown, ChevronUp, Dumbbell, Timer, Zap, Heart, User, Flame, SkipForward, Plus, Clock, Repeat, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Play, CheckCircle, Trophy, ChevronDown, ChevronUp, Dumbbell, Timer, Zap, Heart, User, Flame, SkipForward, Plus, Clock, Repeat, ShieldAlert, X } from 'lucide-react';
 import { workoutService } from '../../lib/workoutService';
 import type { Plano, WorkoutSeries, ModalidadeExercicio, ExercicioNoPlano } from '../../types';
 import { getModalidade, buildExercicioSummary, formatarTempo, calcularPace, formatarDistancia } from '../../lib/exercicioUtils';
+import { useToast } from '../../store/appStore';
 import { MOCK_EXERCICIOS } from '../../constants';
 
 // Lookup map: exercicioId → regrasOficiais (only for TAF exercises)
@@ -54,6 +55,7 @@ interface ExecutePlannedWorkoutProps {
 }
 
 export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutProps) {
+  const addToast = useToast();
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSemana, setSelectedSemana] = useState<number | null>(null);
@@ -74,6 +76,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
   const prevTimerRef = useRef<number>(0);
   const [saving, setSaving] = useState(false);
   const [finished, setFinished] = useState(false);
+  const [finalizeSheetOpen, setFinalizeSheetOpen] = useState(false);
 
   // ─── Rest timer inline state ──────────────────────────────────────────────
   const [restingCardIdx, setRestingCardIdx] = useState<number | null>(null);
@@ -228,7 +231,10 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
           setExecuting(true);
         }
       }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      addToast('error', 'Falha ao carregar sessão. Tente novamente.');
+    }
     finally { setLoading(false); }
   }
 
@@ -379,7 +385,10 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
       setCurrentInputs(inputs);
       setCompletedSeries({});
       setExecuting(true);
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      addToast('error', 'Falha ao iniciar treino. Dados retidos localmente — tente novamente.');
+    }
     finally { setSaving(false); }
   }
 
@@ -459,7 +468,10 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
         setRestMinimized(false);
         startTimer();
       }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      addToast('error', 'Falha ao salvar série. Dados retidos localmente — tente novamente.');
+    }
   }
 
   // Keep ref current so auto-complete effect always calls the latest version
@@ -511,7 +523,10 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
       await workoutService.finalizeWorkout(workoutId, summary);
       stopTimer();
       setFinished(true);
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      addToast('error', 'Falha ao finalizar treino. Dados retidos localmente — tente novamente.');
+    }
     finally { setSaving(false); }
   }
 
@@ -696,7 +711,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
               Volta {Math.min(currentVolta, numVoltas)} de {numVoltas}
             </span>
             {selectedPlano?.tipoSessao === 'simulado' && (
-              <span className="ml-2 text-[9px] font-black uppercase tracking-widest text-violet-500 border border-violet-500/30 rounded px-1.5 py-0.5">
+              <span className="ml-2 text-[11px] font-black uppercase tracking-widest text-violet-500 border border-violet-500/30 rounded px-1.5 py-0.5">
                 SIMULADO
               </span>
             )}
@@ -805,7 +820,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
               </div>
               <div className="flex items-center gap-2 shrink-0 ml-2">
                 <span
-                  className="hidden sm:flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border"
+                  className="hidden sm:flex items-center gap-1 text-[11px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border"
                   style={{ color: theme.accentHex, borderColor: `${theme.accentHex}33` }}
                 >
                   <theme.icon size={9} />
@@ -977,12 +992,12 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                 Volta {voltaNum}
               </span>
               {isCurrent && !isBlocked && (
-                <span className="text-[9px] font-black uppercase tracking-[0.15em] text-violet-500 border border-violet-500/30 rounded px-1.5 py-0.5">
+                <span className="text-[11px] font-black uppercase tracking-[0.15em] text-violet-500 border border-violet-500/30 rounded px-1.5 py-0.5">
                   EM ANDAMENTO
                 </span>
               )}
               {isCurrent && isBlocked && (
-                <span className="text-[9px] font-black uppercase tracking-[0.15em] text-amber-500 border border-amber-500/30 rounded px-1.5 py-0.5">
+                <span className="text-[11px] font-black uppercase tracking-[0.15em] text-amber-500 border border-amber-500/30 rounded px-1.5 py-0.5">
                   DESCANSANDO
                 </span>
               )}
@@ -1183,7 +1198,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
         );
       })}
 
-      <button onClick={handleFinalize} disabled={saving} className="btn-primary w-full mt-4">
+      <button onClick={() => setFinalizeSheetOpen(true)} disabled={saving} className="btn-primary w-full mt-4">
         {saving ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin motion-reduce:animate-none" /> : <Trophy size={16} />}
         {saving ? 'Salvando...' : 'Finalizar Treino'}
       </button>
@@ -1200,6 +1215,65 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
           }
           onExpand={() => setActiveExIdx(restingCardIdx)}
         />
+      )}
+
+      {/* Bottom sheet — confirmar Finalizar Treino */}
+      {finalizeSheetOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+            onClick={() => setFinalizeSheetOpen(false)}
+          />
+          <div
+            role="dialog"
+            aria-label="Confirmar finalização do treino"
+            className="fixed bottom-0 left-0 w-full z-50 bg-surface border-t border-outline rounded-t-2xl pb-[env(safe-area-inset-bottom,1.5rem)]"
+          >
+            <div className="flex items-center justify-between px-4 pt-4 pb-3">
+              <span className="text-xs font-black uppercase tracking-widest text-gray-500">Finalizar treino</span>
+              <button
+                onClick={() => setFinalizeSheetOpen(false)}
+                className="p-1.5 text-gray-500 hover:text-gray-300 rounded-lg"
+                aria-label="Fechar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            {/* Resumo da sessão */}
+            <div className="flex justify-around px-4 py-3 border-y border-outline mb-3">
+              <div className="text-center">
+                <p className="font-mono font-black text-2xl text-brand">{selectedPlano?.exercicios.length ?? 0}</p>
+                <p className="text-[11px] uppercase tracking-widest text-gray-500 mt-0.5">Exercícios</p>
+              </div>
+              <div className="text-center">
+                <p className="font-mono font-black text-2xl text-brand">{totalDone}</p>
+                <p className="text-[11px] uppercase tracking-widest text-gray-500 mt-0.5">Séries</p>
+              </div>
+              <div className="text-center">
+                <p className="font-mono font-black text-2xl text-brand">{totalDuration}</p>
+                <p className="text-[11px] uppercase tracking-widest text-gray-500 mt-0.5">Minutos</p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 px-4 pb-2">
+              <button
+                onClick={() => { setFinalizeSheetOpen(false); handleFinalize(); }}
+                disabled={saving}
+                className="btn-primary w-full"
+              >
+                {saving
+                  ? <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin motion-reduce:animate-none" />
+                  : <Trophy size={16} />}
+                {saving ? 'Salvando...' : 'Confirmar e Finalizar'}
+              </button>
+              <button
+                onClick={() => setFinalizeSheetOpen(false)}
+                className="btn-secondary w-full"
+              >
+                Continuar Treinando
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
@@ -1359,7 +1433,7 @@ function SerieInputs({ modalidade, input, ateAFalha, onChange }: SerieInputsProp
       <div>
         <label className="input-label">
           Repetições
-          {ateAFalha && <span className="ml-1 text-[9px] text-red-400 font-black">(opcional — até a falha)</span>}
+          {ateAFalha && <span className="ml-1 text-[11px] text-red-400 font-black">(opcional — até a falha)</span>}
         </label>
         <input type="number" min="0" inputMode="numeric" className="form-input"
           value={input.repeticoesReais}
@@ -1374,7 +1448,7 @@ function SerieInputs({ modalidade, input, ateAFalha, onChange }: SerieInputsProp
       <div>
         <label className="input-label">
           Repetições
-          {ateAFalha && <span className="ml-1 text-[9px] text-red-400 font-black">(até falha)</span>}
+          {ateAFalha && <span className="ml-1 text-[11px] text-red-400 font-black">(até falha)</span>}
         </label>
         <input type="number" min="0" inputMode="numeric" className="form-input" value={input.repeticoesReais}
           placeholder={ateAFalha ? '0 = falha' : undefined}
@@ -1474,7 +1548,7 @@ function InlineRestTimer({
 
   return (
     <div className="flex flex-col items-center gap-4 px-4 py-5">
-      <p className="font-mono text-[9px] font-black uppercase tracking-[0.4em] text-gray-600">
+      <p className="font-mono text-[11px] font-black uppercase tracking-[0.4em] text-gray-600">
         // DESCANSO
       </p>
       <div className="flex items-center gap-5 w-full">
@@ -1659,7 +1733,7 @@ function InterCycleRestCard({ timerSeconds, defaultRestTime, currentVolta, numVo
   return (
     <div className="card overflow-hidden border-violet-500/40 bg-violet-500/5">
       <div className="flex flex-col items-center gap-4 px-4 py-5">
-        <p className="font-mono text-[9px] font-black uppercase tracking-[0.4em] text-violet-500">
+        <p className="font-mono text-[11px] font-black uppercase tracking-[0.4em] text-violet-500">
           // DESCANSO ENTRE CICLOS
         </p>
         <div className="flex items-center gap-5 w-full">
@@ -1800,7 +1874,7 @@ function SerieCountdownTimer({ remaining, total, elapsed, accentHex, onStopEarly
 
   return (
     <div className="flex flex-col items-center gap-3 py-3">
-      <p className="font-mono text-[9px] font-black uppercase tracking-[0.4em] text-gray-600">
+      <p className="font-mono text-[11px] font-black uppercase tracking-[0.4em] text-gray-600">
         // SÉRIE EM ANDAMENTO
       </p>
       <div className="relative flex items-center justify-center">

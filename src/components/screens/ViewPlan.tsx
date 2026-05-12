@@ -560,7 +560,7 @@ function SessionTypeBadge({ tipo }: { tipo: string }) {
   const t = TIPO_BADGE[tipo] ?? { label: tipo.toUpperCase(), color: '#6B7280', bg: 'rgba(107,114,128,0.1)', border: 'rgba(107,114,128,0.3)' };
   return (
     <span
-      className="text-[9px] font-black uppercase tracking-[0.15em] rounded px-1.5 py-0.5 border shrink-0"
+      className="text-[11px] font-black uppercase tracking-[0.15em] rounded px-1.5 py-0.5 border shrink-0"
       style={{ color: t.color, background: t.bg, borderColor: t.border }}
     >
       {t.label}

@@ -1,20 +1,34 @@
 ﻿/* Enable class-based dark mode for Tailwind CSS v4 */
 @variant dark (&:where(.dark, .dark *));
 
-/* Light mode base overrides */
-.light body {
-  background-color: #f5f5f5;
-  color: #111111;
+/*
+  Light mode: override CSS custom properties on <html class="light">.
+  Tailwind v4 utilities use var(--color-*) at runtime, so overriding the
+  variable here propagates to all descendant elements without fragile
+  utility-class selectors that break under Tailwind's build-time hashing.
+*/
+.light {
+  /* Surface / structural tokens */
+  --color-background:    oklch(96% 0.004 125);
+  --color-surface:       oklch(100% 0.000 0);
+  --color-surface-hover: oklch(93% 0.004 125);
+  --color-outline:       oklch(83% 0.004 125);
+  --color-input-border:  oklch(77% 0.004 125);
+
+  /* Text scale — override Tailwind's built-in gray custom properties */
+  --color-gray-200: oklch(12% 0.005 125);
+  --color-gray-400: oklch(30% 0.005 125);
+  --color-gray-500: oklch(42% 0.004 125);
+  --color-gray-600: oklch(50% 0.004 125);
+  --color-gray-700: oklch(60% 0.004 125);
 }
 
-.light .bg-background { background-color: #f5f5f5; }
-.light .bg-surface { background-color: #ffffff; }
-.light .bg-surface-hover { background-color: #ebebeb; }
-.light .border-outline { border-color: #d4d4d4; }
-.light .border-input-border { border-color: #c0c0c0; }
-.light .text-gray-200 { color: #1a1a1a; }
-.light .text-gray-400 { color: #4a4a4a; }
-.light .text-gray-500 { color: #6a6a6a; }
-.light .text-gray-600 { color: #7a7a7a; }
-.light .text-white { color: #111111; }
-.light .shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15); }
+/*
+  text-white inversion: semantic flip — components use text-white for primary
+  headings in dark mode; light mode maps it to near-black via the tinted gray.
+  This is an intentional inversion, not a fragile utility override.
+*/
+.light .text-white { color: var(--color-gray-200); }
+
+/* Softer elevation shadows in light mode */
+.light .shadow-2xl { box-shadow: 0 25px 50px -12px oklch(0% 0 0 / 15%); }
