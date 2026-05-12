@@ -16,15 +16,15 @@ Os problemas encontrados estão organizados por impacto real no usuário, do mai
 
 | # | Critério | Nota | Observação |
 |---|---|---|---|
-| 1 | Visibilidade do sistema | 3/4 | `useToast` implementado apenas em History e UserProfile; ausente nos screens críticos de treino |
+| 1 | Visibilidade do sistema | 3/4 | Toasts de erro implementados em LogWorkout e ExecutePlannedWorkout; TAFScore ainda sem feedback em falha de save |
 | 2 | Linguagem do usuário | 3/4 | Português correto; sigla "TAF" sem glossário; typo em UserProfile: "Primeiro acesso é configure..." |
 | 3 | Controle e liberdade | 3/4 | `onBack` em todos os sub-screens; ViewPlan confirma delete; LogWorkout e ExecutePlannedWorkout não confirmam |
 | 4 | Consistência visual | 2/4 | Classe `input-field` em TAFScore não existe no CSS; `form-input` nos outros screens; `rounded-xl` e `rounded-lg` misturados |
 | 5 | Prevenção de erros | 2/4 | TAFScore tem `min={0}` nos campos; LogWorkout não valida; peso corporal = 0 invalida 1RM silenciosamente |
 | 6 | Reconhecimento vs. memorização | 3/4 | Valores anteriores pré-preenchidos na execução; heatmap sem legenda de intensidade |
-| 7 | Eficiência para usuários avançados | 2/4 | History tem seleção em lote; sem atalhos; ExecutePlannedWorkout exige 4 toques para iniciar |
-| 8 | Design minimalista | 3/4 | Bom foco; contaminado por nav de 7 itens e textos de 8-9px em dados |
-| 9 | Recuperação de erros | 2/4 | `catch` silenciosos na maioria dos screens; apenas UserProfile e History têm toast |
+| 7 | Eficiência para usuários avançados | 2/4 | History tem seleção em lote; sem atalhos; seleção de exercício em Progress não persiste entre sessões |
+| 8 | Design minimalista | 3/4 | Bom foco; textos de 8-9px em dados de History, Prevention e Progress |
+| 9 | Recuperação de erros | 2/4 | TAFScore sem feedback de erro em save; reload durante execução com Firebase lento pode perder contexto visual |
 | 10 | Ajuda e documentação | 1/4 | Records e TAFScore têm banners de contexto; restante dos screens não orienta em estado vazio |
 | **Total** | | **25/40** | |
 
@@ -50,85 +50,30 @@ Os problemas encontrados estão organizados por impacto real no usuário, do mai
 
 ---
 
-### 2. Falhas de save silenciosas na maioria dos screens — Risco de perda de dados
-
-**Impacto:** Crítico — contradiz o critério de sucesso do produto
-
-**Descrição:**
-`useToast` foi implementado em **History** e **UserProfile**, mas está ausente nos screens críticos. Em `LogWorkout.handleFinish` e em `ExecutePlannedWorkout`, blocos `catch` capturam erros e os descartam com `console.error()` sem nenhum feedback ao usuário. Se o Firebase retornar erro por timeout, token expirado ou problema de rede, o usuário vê a tela de "Treino Salvo!" sem saber que os dados não foram persistidos.
-
-**Arquivos:** `src/components/screens/LogWorkout.tsx`, `src/components/screens/ExecutePlannedWorkout.tsx`, `src/components/screens/TAFScore.tsx`
-
-**Ideias de solução:**
-- Expandir o `useToast` (já em `appStore.ts`) para todos os screens que fazem operações de save.
-- Em caso de falha: "Falha ao salvar. Dados retidos localmente — tente novamente."
-- Usar a flag `isOnline` existente: se offline, "Sem conexão — salvo localmente. Sincronização automática ao reconectar."
-- Para operações críticas (finalizar treino, salvar score TAF), adicionar **retry explícito** com botão "Tentar novamente", em vez de descartar silenciosamente.
-- Garantir que o Dexie sempre receba o dado antes da tentativa Firebase.
-
----
-
-### 3. Navegação mobile com 7 abas — Sobrecarga cognitiva
-
-**Impacto:** Alto — afeta todas as sessões de treino
-
-**Descrição:**
-O menu inferior contém 7 abas simultâneas: Início, Histórico, Plano, Progresso, TAF, Recordes e Prevenção. Pesquisas de usabilidade (Miller/Cowan) estabelecem que humanos processam no máximo 4 itens em memória de trabalho. Com 7 abas em 375px, cada aba tem aproximadamente 54px — alvos de toque borderline para uso com uma mão dentro da academia.
-
-Adicionalmente, há 3 zonas de navegação concorrentes: bottom nav, FAB flutuante e dropdown de avatar no topo.
-
-**Arquivo:** `src/App.tsx`
-
-**Ideias de solução:**
-- Reduzir o bottom nav para **4 abas fixas**: Início, Histórico, Progresso e "Mais".
-- A aba "Mais" abre um **bottom sheet** com as seções secundárias: Plano, TAF, Recordes, Prevenção, Medidas e Importar.
-- O FAB de "Novo Treino" permanece como ação primária flutuante.
-- Isso reduz o esforço de decisão de 7 para 4 opções — dentro do limite cognitivo recomendado.
-
----
-
-### 4. Textos de 8-9px em dados relevantes — Ilegibilidade em academia
+### 2. Textos de 8-9px em dados relevantes — Ilegibilidade em academia
 
 **Impacto:** Alto — afeta leitura de dados durante o treino
 
 **Descrição:**
 Casos críticos encontrados na revisão completa:
 
-- `text-[8px]` no span `←evolução` no widget TAF do Dashboard
 - `fontSize: 8` e `fontSize: 9` inline no `CalendarHeatmap` de History
 - `text-[9px]` nos headers da tabela de Prevenção
-- `text-[10px]` no parágrafo de legenda de 1RM em Records
+- `fontSize: 9` nos eixos do gráfico de radar em Progress
 
 8px equivale a aproximadamente 6pt — abaixo do limite de legibilidade de qualquer fonte. Para um usuário com mãos suadas e tela com brilho médio, esses textos tornam-se invisíveis.
 
-**Arquivos:** `src/components/screens/Dashboard.tsx`, `src/components/screens/History.tsx`, `src/components/screens/Prevention.tsx`, `src/components/screens/Records.tsx`
+**Arquivos:** `src/components/screens/History.tsx`, `src/components/screens/Prevention.tsx`, `src/components/screens/Progress.tsx`
 
 **Ideias de solução:**
 - Estabelecer **floor absoluto de 11px** para qualquer texto que carregue informação de valor.
 - Tudo abaixo de 10px deve ser substituído por ícone (sem label) ou removido.
 - Heatmap: substituir labels de 8px por `title` attribute (tooltip nativo) e manter label do mês em 10px.
-- Widget TAF do Dashboard: substituir o span `←evolução` por ícone de seta com `aria-label`.
 - Tabela de Prevenção: usar apenas ícones com tooltip nos headers, sem texto de 9px.
 
 ---
 
-### 5. FAB "Novo Treino" não cobre o fluxo de plano
-
-**Impacto:** Alto — afeta o fluxo mais frequente do produto
-
-**Descrição:**
-O FAB dispara `LogWorkout` (treino livre). Para quem usa plano de treino — o fluxo mais sofisticado e provavelmente o mais frequente para usuários ativos — o FAB não faz nada útil. O caminho para executar um treino planejado exige: Dashboard, localizar card "Executar Plano", selecionar semana, selecionar dia, iniciar. São 4 interações antes de ver o primeiro exercício.
-
-**Arquivo:** `src/App.tsx`
-
-**Ideias de solução:**
-- Se o usuário tiver plano ativo, o FAB exibe um **bottom sheet** rápido: "Executar Plano" ou "Treino Livre".
-- Ou: detectar treino do plano previsto para hoje e exibir no Dashboard um card prioritário "Hoje: Treino A — 6 exercícios [Iniciar]" que elimina a seleção de semana/dia.
-- O caminho de 4 interações reduz para 2 sem mudança de arquitetura.
-
----
-
-### 6. Ações destrutivas sem confirmação
+### 3. Ações destrutivas sem confirmação
 
 **Impacto:** Médio — risco de perda de dado por toque acidental
 
@@ -145,7 +90,7 @@ Remover série em `LogWorkout` e `ExecutePlannedWorkout` não exige confirmaçã
 
 ---
 
-### 7. Heatmap anual inacessível em mobile
+### 4. Heatmap anual inacessível em mobile
 
 **Impacto:** Médio — funcionalidade de destaque fica inutilizável em mobile
 
@@ -164,7 +109,7 @@ Labels de dia usam `fontSize: 8` e de mês `fontSize: 9` em inline styles — il
 
 ---
 
-### 8. Perfil TAF incompleto não gera alerta em TAFScore
+### 5. Perfil TAF incompleto não gera alerta em TAFScore
 
 **Impacto:** Médio — nota calculada pode estar errada sem o usuário saber
 
@@ -181,7 +126,7 @@ O toggle "É um simulado?" tem `simulado: true` como default — se o usuário e
 
 ---
 
-### 9. Empty states sem orientação em Progress e Prevention
+### 6. Empty states sem orientação em Progress e Prevention
 
 **Impacto:** Médio — usuário novo não sabe o que fazer
 
@@ -198,7 +143,7 @@ O toggle "É um simulado?" tem `simulado: true` como default — se o usuário e
 
 ---
 
-### 10. Typo em UserProfile e labels de screen frágeis
+### 7. Typo em UserProfile e labels de screen frágeis
 
 **Impacto:** Baixo-médio — credibilidade do produto
 
@@ -220,7 +165,7 @@ Na nav desktop em `App.tsx`, um ternário encadeado traduz labels de screen. Nov
 
 ---
 
-### 11. Cores em hexadecimal sem tinting de neutros
+### 8. Cores em hexadecimal sem tinting de neutros
 
 **Impacto:** Baixo-médio — cosmético, mas afeta coesão de identidade
 
@@ -238,20 +183,15 @@ Tokens de cor em hexadecimal puro: `#0A0A0A` (background), `#111111` (surface). 
 
 ---
 
-### 12. Animação `forge-pop` com overshoot e indicador de status pulsando
+## Corrigido desde a versão anterior
 
-**Impacto:** Baixo — cosmético, mas contradiz o brand "brutal · preciso"
-
-**Descrição:**
-`@keyframes forge-pop` tem keyframe em 65% com `transform: scale(1.1)` — overshoot que produz efeito bounce. O design system proíbe bounce explicitamente.
-
-O badge de status usa `animate-pulse` permanentemente no estado online — pulse contínuo perde significado semântico (pulso = atividade, não estado estável).
-
-**Arquivo:** `src/index.css`, `src/App.tsx`
-
-**Ideias de solução:**
-- `forge-pop`: remover o keyframe de 65%. Ir de `scale(0.8); opacity: 0` para `scale(1); opacity: 1` diretamente.
-- Badge de status: remover `animate-pulse` do estado estático. Usar pulse apenas durante transições (offline → online), animar por ~2 segundos, depois parar.
+| Item | Correção aplicada |
+|---|---|
+| Falhas de save silenciosas | `useToast` implementado em `LogWorkout.tsx` e `ExecutePlannedWorkout.tsx` com mensagens de erro e contexto offline |
+| Navegação mobile com 7 abas | Reformulada para 3 abas primárias (Início, Histórico, Progresso) + aba "Mais" com bottom sheet |
+| FAB não contextual | FAB agora abre bottom sheet com "Executar Plano" e "Treino Livre" |
+| Animação `forge-pop` com overshoot | Keyframe de 65% removido; animação vai de `scale(0.65)` para `scale(1)` diretamente |
+| Indicador "CONECTADO" pulsando continuamente | `animate-pulse` agora ativo apenas por 2 segundos ao reconectar (`justReconnected`) |
 
 ---
 
@@ -267,15 +207,12 @@ As personas foram selecionadas com base no perfil do produto: atleta com celular
 
 **Red flags encontrados:**
 
-- **Nav com 7 abas de 54px.** Um toque errado durante o descanso manda Casey para "Prevenção" quando queria "Início". Recuperar a navegação exige dois toques adicionais — e o descanso acabou.
-- **FAB leva ao treino errado.** Casey usa plano de treino. Toca no FAB esperando continuar a sessão planejada. Cai em "Registrar Treino Livre". Sai sem salvar nada.
 - **Estado de treino em risco na interrupção.** Se Casey troca de app e o navegador descarta a sessão PWA, o treino em andamento depende de `loadPlanos` recarregar o workout ativo. Se o Firebase demorar ou falhar offline, Casey vê a tela de seleção de plano novamente, sem feedback de onde parou.
 - **Inputs pequenos em ExecutePlannedWorkout.** Os campos de `pesoReal` e `repeticoesReais` em cards compactos com polegar suado são alvos imprecisos.
 
 **Correções prioritárias:**
-1. Nav com 4 abas e alvos de no mínimo 44px cada.
-2. FAB contextual: se plano ativo, bottom sheet "Plano ou Livre?"
-3. Garantir que o estado de execução seja recuperado com feedback visual claro, mesmo com Firebase lento.
+1. Garantir que o estado de execução seja recuperado com feedback visual claro, mesmo com Firebase lento.
+2. Aumentar tamanho mínimo dos inputs de série para `py-3 text-base` em ExecutePlannedWorkout.
 
 ---
 
@@ -285,7 +222,6 @@ As personas foram selecionadas com base no perfil do produto: atleta com celular
 
 **Red flags encontrados:**
 
-- **4 toques para iniciar um treino planejado.** Não há atalho. Para quem faz isso 5x por semana, 52 semanas, são mais de 1.000 toques extras no ano.
 - **Progress/Evolução sem persistência de seleção.** Alex sempre quer ver o supino. Cada visita, precisa selecionar novamente no dropdown. O estado não é salvo em `localStorage`.
 - **Heatmap de History requer scroll horizontal não óbvio.** Em mobile, o heatmap escapa para fora da tela sem sinalização visual clara de que há conteúdo além.
 - **Desktop subutilizado.** O layout `max-w-4xl` centralizado não aproveita a largura no tablet. Sem atalhos de teclado para nenhuma ação.
@@ -358,10 +294,7 @@ A tela de plano tem o padrão correto de confirmação inline antes de ações d
 | Prioridade | Problema | Esforço |
 |---|---|---|
 | P0 — Crítico | Corrigir `input-field` para `form-input` em TAFScore | Muito baixo |
-| P0 — Crítico | Expandir `useToast` para todos os screens com save | Médio |
-| P1 — Alto | Nav mobile: reduzir para 4 abas + bottom sheet | Médio |
-| P1 — Alto | Floor tipográfico de 11px — eliminar textos de 8-9px | Baixo |
-| P1 — Alto | FAB contextual: plano vs. livre | Baixo |
+| P1 — Alto | Floor tipográfico de 11px — eliminar textos de 8-9px em History, Prevention e Progress | Baixo |
 | P2 — Médio | Confirmação em ações destrutivas (remover série, finalizar treino) | Baixo |
 | P2 — Médio | Heatmap em mobile: visão alternativa de 12 semanas | Médio |
 | P2 — Médio | Alerta de perfil TAF incompleto em TAFScore | Baixo |
@@ -371,5 +304,3 @@ A tela de plano tem o padrão correto de confirmação inline antes de ações d
 | P3 — Baixo | Typo em UserProfile e extração de SCREEN_LABELS | Muito baixo |
 | P3 — Baixo | Migração de cores para OKLCH + tinting de neutros | Baixo |
 | P3 — Baixo | Linha de meta 8.5 no histórico de scores TAF | Muito baixo |
-| P3 — Baixo | Correção da animação `forge-pop` (remover overshoot) | Muito baixo |
-| P3 — Baixo | Indicador de status sem pulse permanente | Muito baixo |
