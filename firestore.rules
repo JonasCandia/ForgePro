@@ -63,6 +63,15 @@ service cloud.firestore {
       match /measurements/{monthId} {
         allow read, write: if isOwner(userId);
       }
+
+      // TAF score history
+      match /tafScores/{scoreId} {
+        allow read, delete: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.userId == userId;
+        allow update: if isOwner(userId)
+          && resource.data.userId == userId;
+      }
     }
   }
 }

@@ -632,7 +632,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                 <ul className="space-y-1.5">
                   {planoForDia.exercicios.map((ex, i) => {
                     const mod = getModalidade(ex);
-                    const theme = MODALIDADE_THEME[mod];
+                    const theme = MODALIDADE_THEME[mod] ?? MODALIDADE_THEME['forca_dinamica'];
                     return (
                       <li key={i} className="text-xs text-gray-400 flex gap-2 items-center">
                         <span className="font-bold w-4 shrink-0" style={{ color: theme.accentHex }}>{i + 1}.</span>
@@ -725,7 +725,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
         const allDone = done.length >= planned;
         const input = currentInputs[exIdx] ?? { pesoReal: '', repeticoesReais: '', tempoSegundos: '', distanciaMetros: '', falhou: false };
         const mod = getModalidade(ex);
-        const theme = MODALIDADE_THEME[mod];
+        const theme = MODALIDADE_THEME[mod] ?? MODALIDADE_THEME['forca_dinamica'];
         const isResting = restingCardIdx === exIdx;
         const isStarted = !!exerciseStartedAt[exIdx];
         const elapsed = exerciseElapsed[exIdx] ?? 0;
@@ -996,7 +996,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
                   const record = completedSeries[idx]?.[voltaIdx];
                   if (!record) return null;
                   const mod = getModalidade(ex);
-                  const theme = MODALIDADE_THEME[mod];
+                  const theme = MODALIDADE_THEME[mod] ?? MODALIDADE_THEME['forca_dinamica'];
                   const value =
                     mod === 'corrida'
                       ? record.distanciaMetros ? formatarDistancia(record.distanciaMetros) : '–'
@@ -1019,7 +1019,7 @@ export default function ExecutePlannedWorkout({ onBack }: ExecutePlannedWorkoutP
               const doneAll = completedSeries[exIdx] ?? [];
               const exDoneForVolta = doneAll.length >= voltaNum;
               const mod = getModalidade(ex);
-              const theme = MODALIDADE_THEME[mod];
+              const theme = MODALIDADE_THEME[mod] ?? MODALIDADE_THEME['forca_dinamica'];
               const isActive = activeExIdx === exIdx && isCurrent;
               const isResting = restingCardIdx === exIdx && isCurrent;
               const isStarted = !!exerciseStartedAt[exIdx];
