@@ -140,6 +140,7 @@ export const workoutService = {
   async createActiveWorkout(data: {
     nomeTreino?: string;
     semana?: number;
+    nomeSessao?: string;
     diaDaSemana?: string;
     planoId?: string;
     objetivo?: string;
@@ -453,7 +454,9 @@ export const workoutService = {
           insertBatch.set(ref, {
             userId,
             semana: semanaData.semana,
+            nomeSessao: diaData.dia,
             diaDaSemana: diaData.dia,
+            ...(diaData.diaSugerido && { diaSugerido: diaData.diaSugerido }),
             nomeTreino: diaData.nomeTreino,
             // tipoSessao e bloco opcionais — fornecidos pelo JSON quando presentes
             ...(diaData.tipoSessao && { tipoSessao: diaData.tipoSessao }),
@@ -506,7 +509,7 @@ export const workoutService = {
         return {
           semana,
           dias: diasPlanos.map(p => ({
-            dia: p.diaDaSemana,
+            dia: p.nomeSessao ?? p.diaDaSemana,
             nomeTreino: p.nomeTreino,
             exercicios: p.exercicios.map(ex => ({
               id: ex.exercicioId,
@@ -549,6 +552,37 @@ export const workoutService = {
     const uid = auth.currentUser.uid;
     try {
       await deleteDoc(doc(db, USERS_COL, uid, PLANOS_COL, planoId));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `${USERS_COL}/${uid}/${PLANOS_COL}`);
+    }
+  },
+
+  async deleteManyPlanos(planoIds: string[]): Promise<void> {
+    if (!auth.currentUser) throw new Error('User must be logged in');
+    if (planoIds.length === 0) return;
+    const uid = auth.currentUser.uid;
+    try {
+      // Firestore batch suporta até 500 operações
+      const BATCH_SIZE = 500;
+      for (let i = 0; i < planoIds.length; i += BATCH_SIZE) {
+        const batch = writeBatch(db);
+        planoIds.slice(i, i + BATCH_SIZE).forEach(id =>
+          batch.delete(doc(db, USERS_COL, uid, PLANOS_COL, id))
+        );
+        await batch.commit();
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `${USERS_COL}/${uid}/${PLANOS_COL}`);
+    }
+  },
+
+  async deleteAllPlanos(): Promise<void> {
+    if (!auth.currentUser) throw new Error('User must be logged in');
+    const uid = auth.currentUser.uid;
+    try {
+      const snap = await getDocs(collection(db, USERS_COL, uid, PLANOS_COL));
+      if (snap.empty) return;
+      await this.deleteManyPlanos(snap.docs.map(d => d.id));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `${USERS_COL}/${uid}/${PLANOS_COL}`);
     }

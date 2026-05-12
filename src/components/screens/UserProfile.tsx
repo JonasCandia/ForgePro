@@ -23,7 +23,7 @@ export default function UserProfile({ onBack, onSaved, onNavigate, isFirstTime }
   const [pesoCorporal, setPesoCorporal] = useState<number | ''>('');
   const [altura, setAltura] = useState<number | ''>('');
   const [objetivo, setObjetivo] = useState<'cutting' | 'bulking' | 'manutencao' | 'taf' | ''>('');
-  const [fotoUrl, setFotoUrl] = useState('');
+
   const [sexo, setSexo] = useState<SexoBio | ''>('');
   const [faixaEtaria, setFaixaEtaria] = useState<FaixaEtariaTAF | ''>('');
   const [saved, setSaved] = useState(false);
@@ -36,7 +36,6 @@ export default function UserProfile({ onBack, onSaved, onNavigate, isFirstTime }
       setPesoCorporal(profileData.pesoCorporal ?? '');
       setAltura(profileData.altura ?? '');
       setObjetivo(profileData.objetivo || '');
-      setFotoUrl(profileData.fotoUrl || '');
       setSexo(profileData.sexo || '');
       setFaixaEtaria(profileData.faixaEtaria || '');
     }
@@ -52,7 +51,6 @@ export default function UserProfile({ onBack, onSaved, onNavigate, isFirstTime }
         pesoCorporal: pesoCorporal !== '' ? Number(pesoCorporal) : undefined,
         altura: altura !== '' ? Number(altura) : undefined,
         objetivo: objetivo || undefined,
-        fotoUrl: fotoUrl.trim() || undefined,
         sexo: sexo || undefined,
         faixaEtaria: faixaEtaria || undefined,
       });
@@ -103,26 +101,7 @@ export default function UserProfile({ onBack, onSaved, onNavigate, isFirstTime }
       <section className="card space-y-5">
         <h3 className="text-brand text-xs font-bold uppercase tracking-widest border-b border-outline pb-4">Dados Pessoais</h3>
 
-        {/* Avatar preview */}
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-surface-hover border border-outline overflow-hidden flex items-center justify-center flex-shrink-0">
-            {fotoUrl ? (
-              <img src={fotoUrl} alt="Avatar" className="w-full h-full object-cover" onError={() => setFotoUrl('')} />
-            ) : (
-              <User size={32} className="text-gray-600" />
-            )}
-          </div>
-          <div className="flex-1 space-y-1">
-            <label className="input-label">URL da Foto (opcional)</label>
-            <input
-              type="url"
-              className="form-input"
-              placeholder="https://..."
-              value={fotoUrl}
-              onChange={(e) => setFotoUrl(e.target.value)}
-            />
-          </div>
-        </div>
+
 
         <div className="space-y-1.5">
           <label className="input-label">Nome *</label>

@@ -54,6 +54,8 @@ export interface ExercicioNoPlano {
   tempoPlanejadoSegundos?: number;
   /** Distância planejada por série em metros (corrida) */
   distanciaPlanejadaMetros?: number;
+  /** Se true, a série não exige meta de reps — executar até a falha */
+  ateAFalha?: boolean;
 }
 
 export type TipoSessaoTAF =
@@ -69,13 +71,20 @@ export interface Plano {
   id: string;
   userId: string;
   semana: number;
-  diaDaSemana: string;
+  /** Nome livre da sessão (ex.: "Treino A", "Pernas"). Substitui diaDaSemana. */
+  nomeSessao?: string;
+  /** Legado — mantido para retrocompatibilidade com planos antigos. */
+  diaDaSemana?: string;
+  /** Sugestão de dia da semana para executar esta sessão (ex.: "Segunda", "Quarta"). */
+  diaSugerido?: string;
   nomeTreino: string;
   exercicios: ExercicioNoPlano[];
   /** Bloco de periodização (ex.: 1 = semanas 1-4, 2 = semanas 5-8) */
   bloco?: number;
   /** Tipo de sessão para planos TAF */
   tipoSessao?: TipoSessaoTAF;
+  /** Tempo de descanso entre ciclos no modo circuito (segundos). Padrão: 60s */
+  tempoDescansoCircuito?: number;
 }
 
 export type FaixaEtariaTAF = '18_24' | '25_29' | '30_34' | '35_39' | '40_44' | '45_mais';
@@ -91,7 +100,6 @@ export interface Profile {
   faixaEtaria?: FaixaEtariaTAF;
   /** Sexo biológico para seleção da tabela TAF correta */
   sexo?: SexoBio;
-  fotoUrl?: string;
   zeppConnected?: boolean; // reservado para integração futura Zepp Health
   createdAt?: any;
   updatedAt?: any;
